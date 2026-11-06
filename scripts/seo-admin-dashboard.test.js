@@ -13,7 +13,9 @@ const css=read("admin/seo/seo-dashboard.css");
 const api=read("functions/api/admin/seo.js");
 const cloudflareApi=read("functions/api/admin/seo/cloudflare.js");
 const headers=read("cloudflare/_headers");
-const workflow=read(".github/workflows/cloudflare-preview.yml");
+/* SEC-02: de previewdeploy en de Cloudflare-bindingcontroles staan in de vertrouwde workflow_run-workflow;
+   cloudflare-preview.yml is de secretloze PR-build (zie scripts/workflow-secretgrens.test.js). */
+const workflow=read(".github/workflows/cloudflare-preview-deploy.yml");
 const productionWorkflow=read(".github/workflows/cloudflare-production.yml");
 const preload=read("scripts/cloudflare-access-preload.cjs");
 const accessHelper=read("scripts/cloudflare-access-service-token.js");

@@ -2,16 +2,13 @@ name: MeteoAlarm EDR-verkenning
 
 # Test de MeteoAlarm-API-sleutel (GitHub-secret METEOALARM_API_TOKEN) en legt de
 # structuur van een echt antwoord vast voor de koppeling "waarschuwingen per
-# plaats". Handmatig te starten en op een pull request dat het script of deze
-# workflow wijzigt. De sleutel gaat alleen als Authorization-header mee; het log
+# plaats". Handmatig te starten. Op pull requests draait hij bewust niet (SEC-02):
+# hij gebruikt een geheim en PR-code mag geen secrets ontvangen. De sleutel gaat
+# alleen als Authorization-header mee; het log
 # en de steekproef bevatten geen sleutel en geen ondertekende opslaglinks.
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "scripts/meteoalarm-edr-verken.js"
-      - ".github/workflows/meteoalarm-verkenning.yml"
 
 permissions:
   contents: read

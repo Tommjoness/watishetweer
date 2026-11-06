@@ -43,7 +43,7 @@ Belangrijkste onderdelen:
 | Pages-projectconfig | `wrangler.jsonc` |
 | deploy en domeinkoppeling | `.github/workflows/cloudflare-production.yml` |
 | Web Analytics setup | `.github/workflows/cloudflare-web-analytics.yml`, `scripts/cloudflare-web-analytics-setup.js` |
-| previewdeployments | `.github/workflows/cloudflare-preview.yml` |
+| previewdeployments | `.github/workflows/cloudflare-preview.yml` (secretloze PR-build) en `.github/workflows/cloudflare-preview-deploy.yml` (vertrouwde deploy en previewcontroles) |
 | kwaliteits- en productiemonitoring | `.github/workflows/senior-fix-verification.yml`, `.github/workflows/checkpoint-eindronde.yml`, `.github/workflows/production-smoke.yml` |
 
 ## Databronnen en afhankelijkheden
@@ -128,6 +128,32 @@ Vastgelegd op 6 november 2026 op basis van het Cloudflare-dashboard (5 november)
 - **Wat de productiedeploy moet bevestigen:** in `Cloudflare production` meldt de stap "Koppel custom domains idempotent" voor beide domeinen `active`, en slagen "Smoke publieke domeinen na actieve cutover" en "Bewijs echte API edge-cache op publieke domeinen" (`success`, niet `skipped`). Wordt een van beide overgeslagen en draait "Meld eventuele resterende DNS-validatie", dan is minstens één domein niet actief; onderzoek dat, het is geen normale toestand. De `www`-combinaties van de edge-cachecontrole volgen de redirect en bewijzen dus de apexroute, niet een afzonderlijke `www`-cache.
 - **Referentie:** run [42156390878](https://github.com/Tommjoness/watishetweer/actions/runs/42156390878) (geplande productiedeploy van 6 november 2026) op `main`-SHA `7bc36b6b5b1d803a1ba10f726c695f7dabb6050d`: beide domeinen `active`, beide stappen `success`; alleen de DNS-validatiemelding is overgeslagen.
 
+### Secretgrens: PR-code en credentials (SEC-02)
+
+PR-code is onbetrouwbaar: een pull request mag scripts, tests en `package.json` wijzigen, en die draaien in CI. Daarom geldt:
+
+| Workflow | Draait | Credentials |
+|---|---|---|
+| `cloudflare-preview.yml` (PR-build) | `pull_request`, PR-code | geen enkel secret, alleen-lezen token |
+| `cloudflare-preview-deploy.yml`, job `preview` | `workflow_run`, vanuit `main` | Cloudflare-, Analytics- en Access-secrets; voert alleen scripts, `wrangler` en `wrangler.jsonc` uit `main` uit |
+| `cloudflare-preview-deploy.yml`, jobs `preview-worldwide`, `preview-release-navigation`, `preview-cwv` | `workflow_run`, checkt PR-code uit | uitsluitend het Access-servicetoken (`CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET`) en een alleen-lezen token |
+| `cloudflare-preview-deploy.yml`, job `status` | `workflow_run` | alleen `statuses: write`, voert geen PR-code uit |
+| `cloudflare-production.yml`, `cloudflare-web-analytics.yml`, `cloudflare-human-analytics-report.yml` | `push` op `main`, planning, handmatig | volledige credentials; `push` alleen voor `main` |
+| `knmi-modelverificatie.yml`, `meteoalarm-gebieden.yml`, `meteoalarm-verkenning.yml` | planning en handmatig | eigen API-sleutel; draaien niet meer op pull requests |
+
+De PR-build levert een bundel af (`public/`, `functions/`, `api/`, `lib/` en `meta.json`). De vertrouwde job behandelt die als gegevens: `scripts/ci/preview-bundel-valideer.js` weigert symbolische links, onverwachte bestanden, configuratiebestanden en een afwijkende SHA of PR, waarna alleen `public/` met de bronmappen wordt uitgerold. PR-nummer en SHA komen uit de GitHub-gebeurtenis, nooit uit de bundel. Pull requests uit forks worden niet uitgerold. Een overgeslagen of geannuleerde previewjob wordt als `error` gemeld, nooit als geslaagd. `scripts/workflow-secretgrens.test.js` (stap in de vereiste `quality`-check) bewaakt dit contract: geen `pull_request_target`, geen secrets in `pull_request`-workflows, geen secrets buiten het Access-servicetoken in jobs met PR-code, en `push`-triggers met secrets alleen voor `main`.
+
+**Bewust niet afgedekt door de code:** iemand met schrijfrechten op de repository kan altijd een branch pushen en een workflow handmatig starten, ook met een aangepaste workflow. Dat sluit alleen een GitHub-omgeving met branchbeperking af (accountinstelling, zie hieronder). Het Access-servicetoken is zichtbaar voor PR-code in de preview-testjobs; het is alleen bedoeld voor beschermde previews.
+
+**Acties voor de eigenaar (accountniveau, niet door code uit te voeren):**
+
+1. **Controleer de rechten van `CLOUDFLARE_API_TOKEN`** in het Cloudflare-dashboard (Mijn profiel, API-tokens). Cloudflare kent geen aparte preview-only-rechten voor Pages: een token dat kan deployen kan ook naar production. Overweeg aparte tokens voor Pages-deploy, zone-rate-limit/WAF en Web Analytics-setup.
+2. **Controleer het Access-servicetoken:** de policy mag alleen de beschermde preview-applicatie(s) dekken, niet de productie-admin (`/admin/seo`). Geef het token een kortere geldigheid en roteer het regelmatig.
+3. **Maak een GitHub-omgeving `production` met deploy-branchbeperking `main`**, verplaats de productiesecrets daarheen en verwijder ze als repository-secret. Pas daarna kan een aangepaste workflow op een andere branch ze niet meer lezen. Dit vergt een aparte code-PR (`environment: production` in de productieworkflows) na akkoord.
+4. **Controleer Actions-instellingen:** goedkeuring vereisen voor alle externe bijdragers en "secrets naar fork-PR-workflows sturen" uit.
+5. **Controleer het Cloudflare Audit Log** op onbekend tokengebruik en overweeg een voorzorgsrotatie van de tokens: vóór deze wijziging draaide PR-code met `CLOUDFLARE_API_TOKEN`. Er is geen aanwijzing voor misbruik, maar dat is niet geverifieerd.
+6. **Eerste uitrol:** de nieuwe deployworkflow draait pas vanaf `main`. Valideer na de merge de keten eenmalig met een kleine testPR (preview-URL, statussen op de PR-head) voordat verdere PR's worden geopend.
+
 ## Ontwikkelen, testen en deployen
 
 Gebruik Node 22 voor de kwaliteitsketen. De productiedeploy gebruikt momenteel Node 24; beide versies worden door de workflows expliciet vastgelegd.
@@ -143,7 +169,7 @@ Werk via een branch en pull request. De normale route is:
 1. maak een kleine, afgebakende wijziging;
 2. draai de relevante lokale tests en daarna `npm test`;
 3. open een PR naar `main`;
-4. wacht op quality, checkpoint en de dynamische Cloudflare-preview;
+4. wacht op quality, checkpoint en de dynamische Cloudflare-preview (de PR-build levert een bundel af, `Cloudflare preview deploy` rolt die vanuit `main` uit en zet de previewstatussen op de PR-head);
 5. controleer de immutable preview en laat alleen groen werk mergen;
 6. na merge bouwt `Cloudflare production` exact de `main`-SHA, rolt die eerst uit als releasekandidaat (Pages-preview, branch `release-candidate`) en zet hetzelfde artifact pas na een groene readiness en smoke op production;
 7. `WeatherNow production smoke` moet de exacte live SHA, routes, API's en wereldmatrix groen bevestigen.

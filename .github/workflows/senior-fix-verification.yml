@@ -23,6 +23,8 @@ jobs:
           package-manager-cache: false
       - name: Installeer builddependencies
         run: npm ci --ignore-scripts
+      - name: Secretgrens van workflows (SEC-02)
+        run: node scripts/workflow-secretgrens.test.js
       - name: Volledige niet-browser suite
         run: npm run build
       - name: Koppel Chromium voor directe browsertests
