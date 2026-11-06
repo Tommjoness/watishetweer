@@ -114,6 +114,20 @@ Niet-geheime configuratie:
 
 Plaats nooit tokens, providerkeys, account-ID's, registrarcodes of Search Console-verificatiegegevens in broncode, documentatie, issues of workflowlogs. Roteer de Cloudflare-token en WeatherAPI-key bij iedere eigendomsoverdracht.
 
+### Domeinen en www-redirect (Cloudflare)
+
+Vastgelegd op 6 november 2026 op basis van het Cloudflare-dashboard (5 november) en de productierun van 6 november. De redirectregel staat uitsluitend in Cloudflare; er is geen kopie of `_redirects`-bestand in deze repository.
+
+- **Pages-custom domains:** `watishetweer.nl` en `www.watishetweer.nl` moeten allebei de status Active hebben (SSL enabled). Beide hebben een geproxied CNAME-record naar `watishetweer.pages.dev`.
+- **Certificaten (momentopname 5 november 2026):** het actieve Universal SSL-certificaat dekt beide domeinen en verloopt op 22 januari 2027; het backupcertificaat verloopt op 26 november 2026. Er zijn geen CAA-records. Controleer deze data bij een overdracht opnieuw.
+- **Redirectregel `www` naar apex:** dynamische redirect op zoneniveau (Cloudflare-dashboard, zone `watishetweer.nl`, Rules), HTTP 301, naar het apexdomein met behoud van pad en queryparameters, regelvolgorde First. Gecontroleerd op 6 november 2026: `https://www.watishetweer.nl/weer/amsterdam/?x=1&y=2` en `http://www.watishetweer.nl/` geven 301 naar het apexdomein met hetzelfde pad en dezelfde query.
+  - Oorspronkelijke voorwaarde: `(http.host eq "www.watishetweer.nl")`
+  - Huidige voorwaarde: `(http.host eq "www.watishetweer.nl" and not starts_with(http.request.uri.path, "/.well-known/"))`
+- **Waarom `/.well-known/` is uitgezonderd:** onder dat pad lopen gewoonlijk de HTTP-controles voor domeinverificatie en certificaatuitgifte (bijvoorbeeld `/.well-known/acme-challenge/`; dit is de algemene werking, niet specifiek voor dit domein vastgelegd). Een redirect op `www` hoort die verzoeken niet te onderscheppen. Houd de uitzondering daarom bestaan. Gevolg: verzoeken onder `/.well-known/` op `www` worden niet doorgestuurd maar door Pages beantwoord (gecontroleerd op 5 november 2026: 404 voor niet-bestaande paden, ook op het apexdomein). Controleer bij iedere wijziging van de regel in de Rule Simulator dat gewone `www`-verzoeken nog 301 krijgen en dat een pad onder `/.well-known/` niet door deze regel wordt geraakt, en controleer na de eerstvolgende productierun dat beide domeinen Active blijven.
+- **Wat bewezen is en wat niet:** `www.watishetweer.nl` stond in de Pages-API op `pending` (waargenomen in de productieruns van 25 oktober, 4 november en 5 november 2026; zie issue #559, gesloten op 6 november 2026) en was in de run van 6 november 2026 bij de eerste poging `active`. De eigenaar heeft de voorwaarde van de redirectregel aangepast voordat die run `active` meldde; het exacte tijdstip is niet vastgelegd. Dat de oorspronkelijke regel de domeinverificatie blokkeerde is **vermoedelijk, maar niet definitief bewezen**: de foutmelding van Cloudflare voor `pending` is niet vastgelegd en de aanpassing is niet los van andere mogelijke factoren getest.
+- **Wat de productiedeploy moet bevestigen:** in `Cloudflare production` meldt de stap "Koppel custom domains idempotent" voor beide domeinen `active`, en slagen "Smoke publieke domeinen na actieve cutover" en "Bewijs echte API edge-cache op publieke domeinen" (`success`, niet `skipped`). Wordt een van beide overgeslagen en draait "Meld eventuele resterende DNS-validatie", dan is minstens één domein niet actief; onderzoek dat, het is geen normale toestand. De `www`-combinaties van de edge-cachecontrole volgen de redirect en bewijzen dus de apexroute, niet een afzonderlijke `www`-cache.
+- **Referentie:** run [42156390878](https://github.com/Tommjoness/watishetweer/actions/runs/42156390878) (geplande productiedeploy van 6 november 2026) op `main`-SHA `7bc36b6b5b1d803a1ba10f726c695f7dabb6050d`: beide domeinen `active`, beide stappen `success`; alleen de DNS-validatiemelding is overgeslagen.
+
 ## Ontwikkelen, testen en deployen
 
 Gebruik Node 22 voor de kwaliteitsketen. De productiedeploy gebruikt momenteel Node 24; beide versies worden door de workflows expliciet vastgelegd.
@@ -185,7 +199,7 @@ De rate-limitimplementatie gebruikt bewust één Free-planregel-slot: 60 request
 
 1. Lees `weather-build-sha` uit de live HTML. Alle publieke pagina's dragen de markering (ook Over, privacy, de seizoenspagina's, Nachtzicht met parken en Maan); `scripts/verify-build-provenance.js` bewaakt dat in de build en `scripts/production-smoke.js` controleert er één per paginatype.
 2. Vergelijk die waarde met de bedoelde `main`-SHA en de laatste `Cloudflare production`-run.
-3. Controleer of zowel `watishetweer.nl` als `www.watishetweer.nl` actief aan Pages gekoppeld zijn.
+3. Controleer of zowel `watishetweer.nl` als `www.watishetweer.nl` actief aan Pages gekoppeld zijn (status Active; zie "Domeinen en www-redirect (Cloudflare)").
 4. Start de productie-workflow alleen opnieuw als dezelfde huidige `main`-SHA nog leidend is; de workflow blokkeert een verouderde deploy.
 5. Verifieer daarna opnieuw de publieke production-smoke.
 
