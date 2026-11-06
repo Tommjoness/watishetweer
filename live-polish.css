@@ -434,6 +434,10 @@ html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
 .tip-strook dd{font-size:17px}
 }
 }
+/* Omschrijving van het gekozen uur ("Bewolkt"): vanaf 1100 px 14 px in plaats van de 12 px die de strook erft (typografie-PR 6 november 2026). */
+@media (min-width:1100px){
+.tip-strook .tip-oms{font-size:14px}
+}
 /* Vier kolommen van twee gegevens pas vanaf 780 px echte stripbreedte (rand en padding meegeteld); daaronder twee kolommen
    (nooit vier krappe kolommen). Een container query meet de content-box: 780 - 2x10 px padding - 2x1 px rand = 758 px. */
 @container (min-width:758px){

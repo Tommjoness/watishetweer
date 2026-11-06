@@ -14,6 +14,11 @@
    tooltip effectief minimaal 13px; informatiestrook 13px labels en 13,5px waarden (tot 1023px, vanaf 440px stripbreedte).
    Telefoon (tot 759px): koppen 18px; tegellabels 13px vanaf 380px (daaronder 12px); toelichting 14px; waarschuwing 17/16px;
    modelcontext 14px; terugknop 13px; informatiestrook ongewijzigd 12px labels en 12,5px waarden. Tabellen blijven daar op hun maat (12px en 14px): de kolombreedtes zijn op 320px afgestemd (zie leesbaarheid-fase2a-browser.test.js).
+   Typografie-PR 6 november 2026 (alleen desktop vanaf 1100px, ook 1440px en breder): functionele koptoetsen (Mijn locatie, Ververs, taalschakelaar)
+   en de themaknoppen 14px; plaatsmeta (tijd, regio, "Gegevens opgehaald"), de kansleutel van de neerslagtegel, de omschrijving in de informatiestrook,
+   de tabelknop, de neerslagwaarden van Zeven dagen ("0,0 mm", "vanaf nu") 14px; kleine hoofdletterlabels in de voet (Weergave, Populaire plaatsen) 13px; "Bronnen voor deze weergave" blijft 12px: op 13px staat de eerste bron
+   buiten de 260px van onderkant-browser.test.js (zie die test). De 1024px-laag en de
+   SVG-grafiektekst vallen buiten deze ronde.
    Bewaakt wordt ook wat de grotere tekst niet mag veroorzaken: geen horizontale paginascroll, geen tegeltekst buiten zijn tegel,
    geen overlappende grafiek- of tooltiptekst, een tooltip die binnen de tekening blijft aan beide randen, en een uurtabel die
    alleen volledige rijen toont. Letterfamilies en kleuren worden niet getoetst: die zijn bewust ongewijzigd. */
@@ -60,7 +65,9 @@ const ROLLEN={
   wtitel:"#waarschuwingen .waarsch h3",wtekst:"#waarschuwingen .waarsch p",mlabel:"#modelrisico .modelrisico-label",mnote:"#modelrisico .modelrisico-note",
   uurkop:"#wiw-hour-table thead th",uurtijd:"#wiw-hour-table tbody time",uurprim:"#wiw-hour-table .wiw-hour-primary",uursec:"#wiw-hour-table .wiw-hour-secondary",
   uurdatum:"#wiw-hour-table .wiw-hour-date",dagkop:"#days .row.kop > div",altth:"#chartdata th",alttd:"#chartdata td",terug:"#back",
-  grafiek:"#chart > text",tooltip:"#chart #scrub text",stripdt:"#tip-strook dt",stripdd:"#tip-strook dd"
+  grafiek:"#chart > text",tooltip:"#chart #scrub text",stripdt:"#tip-strook dt",stripdd:"#tip-strook dd",
+  kopknop:"#here,#ververs,.tools > a.taal-keuze",plaatsmeta:"#stamp,#plaatstijd,#plaatsregio",kans:".mobile-neerslag-sleutel",stripoms:"#tip-strook .tip-oms",
+  tabelknop:"#chartdata summary.wiw-chartdata-summary",dagmm:"#days small.q1-dag-mm",vanafnu:"#days .wiw-vanaf-nu",voetlabel:".wiw-weergave-label,.seo-plaatsnav-kop",themaknop:"#thema .wiw-theme-auto,#thema [data-thema-handmatig]"
 };
 function meet(page){
   return page.evaluate(rollen=>{
@@ -78,6 +85,12 @@ function meet(page){
       if(w.length)uit.maten[naam]={min:Math.round(Math.min(...w)*100)/100,max:Math.round(Math.max(...w)*100)/100,n:w.length};
     }
     uit.overloop=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
+    const kopEls=[...document.querySelectorAll(".tools button,.tools a,.tools input")].filter(zichtbaar),kopOverlap=[];
+    for(let i=0;i<kopEls.length;i++)for(let j=i+1;j<kopEls.length;j++){const a=kopEls[i].getBoundingClientRect(),b=kopEls[j].getBoundingClientRect();
+      if(Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1&&!kopEls[i].contains(kopEls[j])&&!kopEls[j].contains(kopEls[i]))kopOverlap.push((kopEls[i].id||kopEls[i].className)+" x "+(kopEls[j].id||kopEls[j].className));}
+    uit.kopOverlap=kopOverlap;
+    const regelsVan=sel=>{const e=document.querySelector(sel);if(!e||!zichtbaar(e))return 0;const c=getComputedStyle(e);const lh=c.lineHeight==="normal"?1.2*parseFloat(c.fontSize):parseFloat(c.lineHeight);return Math.round(e.getBoundingClientRect().height/lh);};
+    uit.stempelRegels=regelsVan("#stamp");uit.themaRegels=Math.max(0,...[...document.querySelectorAll("#thema .wiw-theme-auto,#thema [data-thema-handmatig]")].filter(zichtbaar).map(e=>{const r=document.createRange();r.selectNodeContents(e);return new Set([...r.getClientRects()].filter(q=>q.width>0).map(q=>Math.round(q.top))).size;}));uit.themaPast=!document.getElementById("thema")||document.getElementById("thema").scrollWidth<=document.getElementById("thema").clientWidth+1;
     const buiten=[];
     for(const st of document.querySelectorAll(".stat")){
       if(!zichtbaar(st)||st.hidden)continue;const br=st.getBoundingClientRect(),tw=document.createTreeWalker(st,NodeFilter.SHOW_TEXT);let n;
@@ -120,7 +133,7 @@ const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:
 /* Strook-lettermaten per desktopbreedte (zie live-polish.css): twee kolommen (stripcontainer < 758px, viewport tot ca. 1350px) 16/18, vier smalle kolommen
    (758 t/m 859px, viewport ca. 1351 t/m 1599px) 15/16, vier ruime kolommen (vanaf 860px, viewport 1600px en breder) 16/17. */
 const stripMaat=w=>w<=1350?{stripdt:16,stripdd:18}:w<1600?{stripdt:15,stripdd:16}:{stripdt:16,stripdd:17};
-const DESKTOP={stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
+const DESKTOP={kopknop:14,plaatsmeta:14,kans:14,stripoms:14,tabelknop:14,dagmm:14,vanafnu:14,voetlabel:13,themaknop:14,stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
 const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
 const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
 
@@ -134,6 +147,11 @@ const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wt
       assert.ok(m.maten[rol].max<=px+(rol==="uursec"||rol==="alttd"?0:0),`${L}: ${rol} varieert (${m.maten[rol].min}-${m.maten[rol].max}px)`);
     }
     assert.ok(m.overloop<=0,`${L}: horizontale paginascroll ${m.overloop}px`);
+    if(klasse==="desktop"){
+      assert.deepEqual(m.kopOverlap,[],`${L}: bedienelementen in de kop overlappen (${m.kopOverlap})`);
+      assert.ok(m.stempelRegels<=1,`${L}: "Gegevens opgehaald" breekt af over ${m.stempelRegels} regels`);
+      assert.ok(m.themaRegels<=1&&m.themaPast,`${L}: de themakeuze past niet op één regel (${m.themaRegels} regels, past ${m.themaPast})`);
+    }
     assert.deepEqual(m.tegelBuiten,[],`${L}: tegeltekst buiten de tegel`);
     assert.deepEqual(m.grafiekOverlap,[],`${L}: overlappende grafiek- of tooltiptekst`);
     /* 909px (tablet, 760–1099px) toont alle uren als lijst onder de grafiek; er is geen paneel dat rijen afkapt, dus daar bestaat de eis "alleen volledige rijen in het paneel" niet (productiebuild van main gedraagt zich gelijk). */

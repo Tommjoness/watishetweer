@@ -4,9 +4,9 @@
    Ondergrens voor betekenisdragende tekst: 12px (secundaire waarden) en 13px (zinnen). */
 html body .wiw-hour-value .wiw-hour-secondary:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
 html body .wiw-hour-time .wiw-hour-date:not(#wiw-leesbaarheid){font-size:12px!important}
-html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:12px!important}
+html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:var(--wiw-t-data)!important}
 html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.45!important}
-html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:13px!important}
+html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:var(--wiw-t-link)!important}
 html body #chartdata p.chartdata-scrollhint:not(#wiw-leesbaarheid){font-size:13px!important}
 html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nachtzichtregel:not(#wiw-leesbaarheid),html body .nachtmaan .nachtmaanregel:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.4!important}
 @media(max-width:759px){
@@ -48,9 +48,9 @@ html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nach
   html body .final-top-grid>.stats .stat:nth-child(odd):not(#wiw-leesbaarheid){padding-right:clamp(6px,calc(50vw - 154px),22px)!important}
   html body .final-top-grid>.stats .stat:nth-child(even):not(#wiw-leesbaarheid){padding-left:clamp(6px,calc(50vw - 154px),22px)!important}
 }
-html body .seo-route-context h2:not(#wiw-leesbaarheid),
+html body .seo-route-context h2:not(#wiw-leesbaarheid){font-size:12px!important}
 html body #thema button:not(#wiw-leesbaarheid),
-html body #thema .wiw-theme-icon:not(#wiw-leesbaarheid){font-size:12px!important}
+html body #thema .wiw-theme-icon:not(#wiw-leesbaarheid){font-size:var(--wiw-t-fn)!important}
 html body small.wiw-dag-onzeker:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
 @media(max-width:759px){
   html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
@@ -104,8 +104,10 @@ html body #chart text:not(#wiw-leesbaarheid){opacity:1!important}
    #days .row.kop>div, #wiw-hour-table thead th ...); alleen een gelijke of hogere specificiteit in een latere laag wint daar.
    Tokens: kop = sectiekop, label = tegellabel en tabelkop, uitleg = toelichting onder een tegel, eenheid = eenheid naast een waarde,
    wt/wp = titel/tekst van een waarschuwing, tp/ts = primaire/secundaire waarde in de uurtabel, alt = alternatieve gegevenstabel,
-   terug = terugknop na dagselectie, model = modelcontext, hint = korte uitleg bij een module. */
-:root{--wiw-t-kop:18px;--wiw-t-label:12px;--wiw-t-uitleg:14px;--wiw-t-eenheid:13px;--wiw-t-wt:17px;--wiw-t-wp:16px;--wiw-t-tp:15px;--wiw-t-ts:13px;--wiw-t-alt:14px;--wiw-t-terug:13px;--wiw-t-model:14px;--wiw-t-hint:15px;--wiw-t-dag:15px;--wiw-t-meta:13px}
+   terug = terugknop na dagselectie, model = modelcontext, hint = korte uitleg bij een module.
+   Desktoprol (vanaf 1100px, typografie-PR 6 november 2026): fn = functioneel label of knop (themakeuze; ook de koptoetsen in desktop-premium),
+   data = secundaire gegevensregel ("vanaf nu"), link = tekstlink naast een tabel ("Grafiekgegevens als tabel"); allen 14px. */
+:root{--wiw-t-kop:18px;--wiw-t-label:12px;--wiw-t-uitleg:14px;--wiw-t-eenheid:13px;--wiw-t-wt:17px;--wiw-t-wp:16px;--wiw-t-tp:15px;--wiw-t-ts:13px;--wiw-t-alt:14px;--wiw-t-terug:13px;--wiw-t-model:14px;--wiw-t-hint:15px;--wiw-t-dag:15px;--wiw-t-meta:13px;--wiw-t-fn:12px;--wiw-t-data:12px;--wiw-t-link:13px}
 /* Telefoons vanaf 380px: tegellabels en andere labels 13px. "LUCHTVOCHTIGHEID" is dan 139px breed en valt nog binnen zijn tegel;
    onder 380px blijft het label op 12px (zie de maten bij 320px hierboven). */
 @media(min-width:380px) and (max-width:759px){
@@ -115,7 +117,7 @@ html body #chart text:not(#wiw-leesbaarheid){opacity:1!important}
   :root{--wiw-t-label:13px;--wiw-t-eenheid:14px;--wiw-t-wt:18px;--wiw-t-tp:15px;--wiw-t-ts:14px;--wiw-t-alt:15px;--wiw-t-terug:14px;--wiw-t-meta:14px}
 }
 @media(min-width:1100px){
-  :root{--wiw-t-kop:20px;--wiw-t-label:14px;--wiw-t-uitleg:15px;--wiw-t-eenheid:14px;--wiw-t-wt:18px;--wiw-t-wp:16px;--wiw-t-tp:16px;--wiw-t-ts:14px;--wiw-t-alt:15px;--wiw-t-terug:14px;--wiw-t-hint:16px;--wiw-t-dag:16px;--wiw-t-meta:14px}
+  :root{--wiw-t-kop:20px;--wiw-t-label:14px;--wiw-t-uitleg:15px;--wiw-t-eenheid:14px;--wiw-t-wt:18px;--wiw-t-wp:16px;--wiw-t-tp:16px;--wiw-t-ts:14px;--wiw-t-alt:15px;--wiw-t-terug:14px;--wiw-t-hint:16px;--wiw-t-dag:16px;--wiw-t-meta:14px;--wiw-t-fn:14px;--wiw-t-data:14px;--wiw-t-link:14px}
 }
 /* Van 1100 tot 1200px staan de tegels smal naast de uurtabel: "LUCHTVOCHTIGHEID" op 14px stak er 5px buiten, dus daar blijft het label op 13px. */
 @media(min-width:1100px) and (max-width:1199px){
