@@ -17,7 +17,9 @@ const OWNER_ID="wiw-samenhang-20260926";
      aan de schermranden, met grote gaten tussen de kolommen en de bronnen en
      voet helemaal links.
    - Letters: vanaf 1100px zijn labels minimaal 12px, uitleg en voet 14px en
-     tabelwaarden 15px; vanaf 1440px (breed scherm) 12,5, 15 en 16px. De
+     tabelwaarden 15px; vanaf 1440px (breed scherm) 12,5, 15 en 16px. Typografie-PR
+     van 6 november 2026 (vanaf 1100px, ook op 1440px en breder): functionele
+     koptoetsen 14px, hoofdletterlabels 13px en tweede regels 14px. De
      uurtabel naast de grafiek houdt tot 1600px haar maat (de kolom is daar
      smal); daarboven staat ieder uur op één regel in een iets bredere kolom
      (grafiek 1,9 : tabel 1).
@@ -50,13 +52,14 @@ const CSS=`
   /* Labels in hoofdletters */
   html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},
   html body #chartlab${NIET},html body #days .row.kop>div${NIET},html body #nights .row.kop>*${NIET},html body #nights .row.kop span${NIET},
-  html body footer .bronlabel${NIET},html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET},
-  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET}{font-size:12px!important}
+  html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET}{font-size:13px!important}
+  /* Functionele koptoetsen (Mijn locatie, Ververs, taalschakelaar): 14px, de rol --wiw-t-fn (leesbaarheid-20261021.css). */
+  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .tools>a.taal-keuze${NIET}{font-size:var(--wiw-t-fn,14px)!important}
   /* De kop van de uurtabel stond tot 1600px op 11px, kleiner dan de cellen eronder (12 en 13,5px). */
   html body #wiw-hour-table thead th${NIET}{font-size:12px!important}
   /* Tweede regels en eenheden */
-  html body #stamp${NIET},html body #plaatstijd${NIET},html body #app .sval>s${NIET},
-  html body #moonlab${NIET},html body #moonlab span${NIET},html body #nights .nachtmaanregel${NIET},html body #days .row:not(.kop) small${NIET}{font-size:13px!important}
+  html body #stamp${NIET},html body #plaatstijd${NIET},html body #plaatsregio${NIET},html body .mobile-neerslag-sleutel${NIET},html body #app .sval>s${NIET},
+  html body #moonlab${NIET},html body #moonlab span${NIET},html body #nights .nachtmaanregel${NIET},html body #days .row:not(.kop) small${NIET}{font-size:14px!important}
   /* Uitleg, tegelzinnen, voet en navigatie */
   html body #app .stat .ssub${NIET},html body #app p.hint${NIET},html body #waarschuwingen .msg${NIET},
   html body #app footer .bron${NIET},html body #app footer a${NIET},html body #app footer summary${NIET},html body #app footer .footer-contact${NIET},html body #app footer .footer-contact span${NIET},
@@ -72,12 +75,6 @@ const CSS=`
   html body #wiw-hour-table thead th${NIET}{letter-spacing:.02em!important}
 }
 @media (min-width:1440px){
-  html body #app .stat .eyebrow${NIET},html body #app h2>span${NIET},
-  html body #chartlab${NIET},html body #days .row.kop>div${NIET},html body #nights .row.kop>*${NIET},html body #nights .row.kop span${NIET},
-  html body footer .bronlabel${NIET},html body .wiw-weergave-label${NIET},html body .seo-plaatsnav-kop${NIET},
-  html body #here${NIET},html body #here span${NIET},html body #ververs${NIET},html body .wiw-theme-auto${NIET}{font-size:12.5px!important}
-  html body #stamp${NIET},html body #plaatstijd${NIET},html body #app .sval>s${NIET},
-  html body #moonlab${NIET},html body #moonlab span${NIET},html body #nights .nachtmaanregel${NIET},html body #days .row:not(.kop) small${NIET}{font-size:13.5px!important}
   html body #app .stat .ssub${NIET},html body #app p.hint${NIET},html body #waarschuwingen .msg${NIET},
   html body #app footer .bron${NIET},html body #app footer a${NIET},html body #app footer summary${NIET},html body #app footer .footer-contact${NIET},html body #app footer .footer-contact span${NIET},
   html body .seo-plaatsnav-links a${NIET},html body #nights .perc${NIET},html body #nights .nacht-meer${NIET},html body .chip${NIET}{font-size:15px!important}
