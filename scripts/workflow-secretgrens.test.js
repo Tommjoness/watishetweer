@@ -36,7 +36,10 @@ const root = path.join(__dirname, "..");
 const workflowDir = path.join(root, ".github", "workflows");
 
 const HOOGWAARDIGE_SECRETS = /^(CLOUDFLARE_|METEOALARM_|KNMI_)/;
-const TOEGESTAAN_VOOR_PR_CODE = new Set(["CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"]);
+const TOEGESTAAN_VOOR_PR_CODE = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PREVIEW_CLIENT_SECRET"]);
+/* Previewcredentials horen uitsluitend in de previewdeployworkflow; productiecredentials daar nooit. */
+const PREVIEWSECRETS = /^(CLOUDFLARE_PREVIEW_|CF_ACCESS_PREVIEW_)/;
+const PRODUCTIESECRETS_IN_PREVIEW = /secrets\.(CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_ANALYTICS_API_TOKEN|CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN|CF_ACCESS_CLIENT_ID|CF_ACCESS_CLIENT_SECRET|KNMI_EDR_API_KEY|METEOALARM_API_TOKEN)\b/;
 
 function ontleed(tekst) {
   const on = /^on:\s*\n((?:[ \t]+.*\n|[ \t]*\n)+)/m.exec(tekst);
@@ -174,9 +177,9 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   assert(/statuses:\s*write/.test(status), "alleen de statusjob mag statussen schrijven");
 
   /* Isolatie na deploy (SEC-02, regel 7). */
-  const toegestaneSecrets = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"]);
+  const toegestaneSecrets = new Set(["CLOUDFLARE_PREVIEW_API_TOKEN", "CLOUDFLARE_PREVIEW_ACCOUNT_ID", "CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PREVIEW_CLIENT_SECRET"]);
   const alleSecrets = secretsIn(deploy);
-  assert.deepStrictEqual(alleSecrets.filter(x => !toegestaneSecrets.has(x)), [], "de previewdeploy mag geen andere secrets kennen dan het deploytoken, het account-id en het Access-servicetoken");
+  assert.deepStrictEqual(alleSecrets.filter(x => !toegestaneSecrets.has(x)), [], "de previewdeploy mag geen andere secrets kennen dan de previewcredentials (deploytoken, account-id en Access-servicetoken van het previewaccount)");
   const zonderCommentaar = deploy.split("\n").filter(l => !/^\s*#/.test(l)).join("\n");
   for (const verboden of ["ANALYTICS", "GA4", "GOOGLE", "SEO_ADMIN", "CF_ACCESS_AUD", "CF_ACCESS_TEAM_DOMAIN"]) {
     assert(!zonderCommentaar.includes(verboden), `de previewdeploy mag ${verboden} niet kennen: dat hoort niet in het previewproject`);
@@ -198,6 +201,22 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   const voorafStap = preview.slice(vooraf, volgorde("Deploy preview naar Cloudflare Pages"));
   assert(/preview-access-controleer\.js --project "\$CLOUDFLARE_PROJECT" --branch "\$CLOUDFLARE_PREVIEW_BRANCH"\s*$/m.test(voorafStap), "de controle vooraf gebruikt project en branch van de gebeurtenis, zonder --url");
   assert(!/continue-on-error/.test(voorafStap) && !/\bif:/.test(voorafStap), "de controle vooraf mag niet overgeslagen of genegeerd worden");
+  /* Afzonderlijk previewaccount: previewcredentials strikt gescheiden van productiecredentials. */
+  assert(!PRODUCTIESECRETS_IN_PREVIEW.test(zonderCommentaar), "de previewdeploy mag geen productiesecrets kennen (afzonderlijk previewaccount)");
+  assert(/CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFLARE_PREVIEW_API_TOKEN\s*\}\}/.test(preview), "deploytoken moet uit het previewaccount-secret komen");
+  assert(/CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_PREVIEW_ACCOUNT_ID\s*\}\}/.test(preview), "account-id moet uit het previewaccount-secret komen");
+  assert(/^ {4}environment:\s*pr-preview\s*$/m.test(preview), "de vertrouwde deployjob moet in de beschermde omgeving pr-preview draaien");
+  for (const j of ["preview-worldwide", "preview-release-navigation", "preview-cwv", "status"]) {
+    assert(!/^\s*environment:/m.test(jobs[j]), `${j} draait PR-code of schrijft statussen en mag niet in de deployomgeving draaien`);
+    assert(!/CLOUDFLARE_PREVIEW_/.test(jobs[j]), `${j} mag het Pages-deploytoken van het previewaccount niet kennen`);
+  }
+  {
+    const anderen = bestanden.filter(n => n !== "cloudflare-preview-deploy.yml");
+    for (const n of anderen) {
+      const t = fs.readFileSync(path.join(workflowDir, n), "utf8");
+      assert(!secretsIn(t).some(x => PREVIEWSECRETS.test(x)), `${n} mag geen previewcredentials gebruiken: alleen cloudflare-preview-deploy.yml`);
+    }
+  }
   const naStap = preview.slice(volgorde("Bewijs dat de preview achter Cloudflare Access staat"), volgorde("Wacht tot Pages Functions actief zijn"));
   assert(/preview-access-controleer\.js .*--url "\$PREVIEW_URL"/.test(naStap) && !/continue-on-error/.test(naStap), "ook na de deploy wordt de werkelijke URL gecontroleerd");
 }
@@ -242,6 +261,7 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     success: true,
     result: {
       name: PREVIEWPROJECT,
+      subdomain: `${PREVIEWPROJECT}.pages.dev`,
       production_branch: PREVIEW_PRODUCTIEBRANCH,
       source: null,
       canonical_deployment: null,
@@ -275,6 +295,11 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
     faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
   }
+  /* Subdomein (afzonderlijk previewaccount): exact <project>.pages.dev, anders zijn alle hostnamen onjuist. */
+  faalt("subdomein met achtervoegsel", check(p => { p.result.subdomain = "watishetweer-preview-4kx.pages.dev"; }), /subdomein van het previewproject is watishetweer-preview-4kx\.pages\.dev; verwacht watishetweer-preview\.pages\.dev/);
+  faalt("ander subdomein", check(p => { p.result.subdomain = "iets-anders.pages.dev"; }), /verwacht watishetweer-preview\.pages\.dev/);
+  faalt("subdomein ontbreekt", check(p => { delete p.result.subdomain; }), /subdomein van het previewproject is onbekend/);
+  faalt("subdomein is productie", check(p => { p.result.subdomain = "watishetweer.pages.dev"; }), /verwacht watishetweer-preview\.pages\.dev/);
   /* Productiebranch en projectalias (SEC-02): een deploy naar de productiebranch is publiek via <project>.pages.dev. */
   assert.notStrictEqual(PREVIEW_PRODUCTIEBRANCH, "main", "de verplichte productiebranch is niet de standaardwaarde");
   assert(!/^pr-[1-9][0-9]*$/.test(PREVIEW_PRODUCTIEBRANCH), "de verplichte productiebranch kan nooit een PR-branch zijn");
@@ -301,7 +326,7 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
 /* ---- 5b. CLI-gedrag, ook voor een net aangemaakt project zonder deployments ---- */
 (async () => {
   const env = { CLOUDFLARE_API_TOKEN: "t", CLOUDFLARE_ACCOUNT_ID: "acc", CLOUDFLARE_PROJECT: PREVIEWPROJECT, PREVIEW_BRANCH: "pr-594" };
-  const projectJson = over => ({ success: true, result: Object.assign({ name: PREVIEWPROJECT, production_branch: PREVIEW_PRODUCTIEBRANCH, source: null, canonical_deployment: null, latest_deployment: null, deployment_configs: { preview: { env_vars: {}, compatibility_flags: [] }, production: { env_vars: {}, compatibility_flags: [] } } }, over) });
+  const projectJson = over => ({ success: true, result: Object.assign({ name: PREVIEWPROJECT, subdomain: `${PREVIEWPROJECT}.pages.dev`, production_branch: PREVIEW_PRODUCTIEBRANCH, source: null, canonical_deployment: null, latest_deployment: null, deployment_configs: { preview: { env_vars: {}, compatibility_flags: [] }, production: { env_vars: {}, compatibility_flags: [] } } }, over) });
   const haalMet = (project, prodLijst, aangeroepen = []) => async url => {
     aangeroepen.push(String(url));
     const body = /\/deployments\?env=production/.test(url) ? prodLijst : /\/domains$/.test(url) ? { success: true, result: [] } : project;
