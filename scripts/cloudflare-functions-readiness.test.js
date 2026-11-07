@@ -24,6 +24,7 @@ function antwoord(status,body){
   assert.equal(vereisteOpeenvolgendeSuccessen,3,"één toevallige groene propagatiemeting mag productie niet vrijgeven");
 
   assert.equal(geldigeRoot("https://abc123.watishetweer.pages.dev/"),"https://abc123.watishetweer.pages.dev");
+  assert.equal(geldigeRoot("https://abc123.watishetweer-preview.pages.dev/"),"https://abc123.watishetweer-preview.pages.dev");
   assert.throws(()=>geldigeRoot("https://watishetweer.nl"),/pages\.dev-deployment/);
 
   assert.equal(routeIsGereed(200,'{"ok":true}'),true,"200 + JSON is gereed");
