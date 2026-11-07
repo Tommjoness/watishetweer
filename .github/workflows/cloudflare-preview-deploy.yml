@@ -125,6 +125,13 @@ jobs:
             --commit-message="Cloudflare preview $SOURCE_SHA" \
             --commit-dirty=true | tee /tmp/cloudflare-deploy.log
 
+      - name: Bewijs dat de PR-deploy geen productiedeployment is (fail-closed)
+        # Dezelfde controle als vóór de deploy: nog steeds geen productiedeployment (publieke projectalias) en
+        # dezelfde isolatiegrens.
+        env:
+          PREVIEW_BRANCH: ${{ env.CLOUDFLARE_PREVIEW_BRANCH }}
+        run: node scripts/ci/preview-isolatie-controleer.js
+
       - name: Noteer preview-URL
         id: preview_url
         shell: bash

@@ -10,7 +10,8 @@
    De vertrouwde deployworkflow rolt PR-code daarom uitsluitend uit naar een afzonderlijk previewproject en
    controleert vóór elke deploy, fail-closed, dat dat project:
    - bestaat en niet het productieproject is;
-   - geen eigen domeinen heeft (alleen *.pages.dev achter Access) en geen pr-<nummer> als productiebranch heeft;
+   - geen eigen domeinen heeft (alleen *.pages.dev achter Access), een expliciet ingestelde productiebranch heeft die
+     nooit een PR-branch is, niet aan Git gekoppeld is en nog geen productiedeployment heeft;
    - in preview én production uitsluitend toegestane variabelen heeft (geen Analytics-token, account-id, Access-
      of admin-configuratie, Google-serviceaccount);
    - geen KV-, D1-, R2-, Durable Object-, service- of andere bindings heeft.
@@ -34,6 +35,12 @@ const NEUTRALE_CONFIGSLEUTELS = Object.freeze([
 
 const PREVIEWBRANCH = /^pr-[1-9][0-9]*$/;
 
+/* Productiebranch van het previewproject. Een deploy naar de productiebranch is een productiedeployment op de
+   publieke projectalias <project>.pages.dev, en die valt niet onder het Access-beleid voor previews (Cloudflare-
+   documentatie). Het project moet daarom EXPLICIET een branchnaam hebben die nooit een PR-branch is en waarnaar de
+   workflow nooit deployt. De standaardwaarde (main) geldt niet als expliciet en wordt geweigerd. */
+const PREVIEW_PRODUCTIEBRANCH = "geen-productiedeploy";
+
 function isLeeg(waarde) {
   if (waarde === null || waarde === undefined || waarde === false || waarde === "") return true;
   if (Array.isArray(waarde)) return waarde.length === 0;
@@ -41,7 +48,7 @@ function isLeeg(waarde) {
   return false;
 }
 
-function controleerIsolatie({ project, domeinen, previewProject = PREVIEWPROJECT, productieProject = PRODUCTIEPROJECT, branch } = {}) {
+function controleerIsolatie({ project, domeinen, productieDeployments, previewProject = PREVIEWPROJECT, productieProject = PRODUCTIEPROJECT, branch } = {}) {
   const f = [];
   if (!previewProject || previewProject === productieProject) f.push(`previewproject mag niet het productieproject (${productieProject}) zijn`);
   if (branch !== undefined && !PREVIEWBRANCH.test(String(branch))) f.push(`previewbranch moet pr-<nummer> zijn (kreeg: ${branch}); nooit de productietak`);
@@ -53,10 +60,12 @@ function controleerIsolatie({ project, domeinen, previewProject = PREVIEWPROJECT
   const r = project.result;
   if (r.name !== previewProject) f.push(`projectnaam ${r.name} komt niet overeen met het verwachte previewproject ${previewProject}`);
 
-  /* Een deploy naar de productiebranch van het project is een productiedeployment op de projectalias
-     <project>.pages.dev, en die valt niet onder het Access-beleid voor previews (Cloudflare-documentatie). */
-  if (typeof r.production_branch !== "string" || !r.production_branch) f.push("production_branch van het previewproject is niet leesbaar");
-  else if (PREVIEWBRANCH.test(r.production_branch) || (branch !== undefined && r.production_branch === String(branch))) f.push(`production_branch ${r.production_branch} mag geen pr-<nummer> zijn: dan is de PR-deploy een publieke productiedeployment`);
+  if (typeof r.production_branch !== "string" || !r.production_branch) f.push("production_branch van het previewproject is niet leesbaar of niet ingesteld");
+  else if (r.production_branch !== PREVIEW_PRODUCTIEBRANCH) f.push(`production_branch ${r.production_branch} is niet de verplichte, expliciet ingestelde ${PREVIEW_PRODUCTIEBRANCH}: een deploy naar de productiebranch is publiek bereikbaar via de projectalias (zie runbook)`);
+  if (!isLeeg(r.source)) f.push("previewproject is gekoppeld aan een Git-repository; alleen Direct Upload is toegestaan (pushes zouden buiten de workflow om kunnen deployen)");
+  if (!isLeeg(r.canonical_deployment)) f.push("previewproject heeft een productiedeployment (canonical_deployment); de projectalias serveert dan publiek inhoud");
+  if (!productieDeployments || productieDeployments.success !== true || !Array.isArray(productieDeployments.result)) f.push("productiedeployments van het previewproject niet leesbaar");
+  else if (productieDeployments.result.length) f.push(`previewproject heeft ${productieDeployments.result.length}+ productiedeployment(s); de projectalias serveert dan publiek inhoud`);
 
   if (!domeinen || domeinen.success !== true || !Array.isArray(domeinen.result)) f.push("domeinen van het previewproject niet leesbaar");
   else if (domeinen.result.length) f.push(`previewproject heeft eigen domeinen (${domeinen.result.map(d => d && d.name).join(", ")}); alleen *.pages.dev is toegestaan`);
@@ -78,28 +87,29 @@ function controleerIsolatie({ project, domeinen, previewProject = PREVIEWPROJECT
   return f;
 }
 
-async function main(env) {
+async function main(env, haalFn = fetch) {
   const { CLOUDFLARE_API_TOKEN: token, CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_PROJECT: naam, PREVIEW_BRANCH: branch } = env;
   if (!token || !account || !naam) { console.error("CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID en CLOUDFLARE_PROJECT zijn verplicht."); return 2; }
   const basis = `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${encodeURIComponent(naam)}`;
   const haal = async url => {
     try {
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+      const r = await haalFn(url, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
       return await r.json().catch(() => null);
     } catch { return null; }
   };
   const project = await haal(basis);
   const domeinen = await haal(basis + "/domains");
-  const fouten = controleerIsolatie({ project, domeinen, previewProject: naam, branch: branch === undefined ? "" : branch });
+  const productieDeployments = await haal(basis + "/deployments?env=production&per_page=1");
+  const fouten = controleerIsolatie({ project, domeinen, productieDeployments, previewProject: naam, branch: branch === undefined ? "" : branch });
   if (fouten.length) {
     console.error("Isolatiegrens van het previewproject NIET geborgd; er wordt geen PR-code uitgerold:");
     for (const x of fouten) console.error(`- ${x}`);
     return 1;
   }
-  console.log(`Isolatiegrens van ${naam} geborgd: geen eigen domeinen, alleen toegestane variabelen, geen bindings, branch ${branch}.`);
+  console.log(`Isolatiegrens van ${naam} geborgd: geen eigen domeinen, geen productiedeployment, alleen toegestane variabelen, geen bindings, branch ${branch}.`);
   return 0;
 }
 
 if (require.main === module) main(process.env).then(code => process.exit(code));
 
-module.exports = { controleerIsolatie, PRODUCTIEPROJECT, PREVIEWPROJECT, TOEGESTANE_VARIABELEN, NEUTRALE_CONFIGSLEUTELS, PREVIEWBRANCH };
+module.exports = { controleerIsolatie, main, PREVIEW_PRODUCTIEBRANCH, PRODUCTIEPROJECT, PREVIEWPROJECT, TOEGESTANE_VARIABELEN, NEUTRALE_CONFIGSLEUTELS, PREVIEWBRANCH };

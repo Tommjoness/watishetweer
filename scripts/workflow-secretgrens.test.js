@@ -29,7 +29,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { valideerBundel } = require("./ci/preview-bundel-valideer.js");
-const { controleerIsolatie, PRODUCTIEPROJECT, PREVIEWPROJECT } = require("./ci/preview-isolatie-controleer.js");
+const { controleerIsolatie, main: isolatieCli, PREVIEW_PRODUCTIEBRANCH, PRODUCTIEPROJECT, PREVIEWPROJECT } = require("./ci/preview-isolatie-controleer.js");
 const { controleer: controleerAccess, beoordeel: beoordeelAccess } = require("./ci/preview-access-controleer.js");
 
 const root = path.join(__dirname, "..");
@@ -189,6 +189,9 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   assert(volgorde("Bewijs dat de preview achter Cloudflare Access staat") < volgorde("scripts/cloudflare-functions-readiness.js"), "de Access-controle moet vóór de eerste verzoeken en de tests staan");
   assert(volgorde("Noteer preview-URL") < volgorde("Bewijs dat de preview achter Cloudflare Access staat"), "de Access-controle gebruikt de preview-URL");
   assert(volgorde("scripts/ci/preview-isolatie-controleer.js") < volgorde("scripts/ci/preview-access-controleer.js"), "de Access-controle komt na de isolatiecontrole");
+  const naDeploy = preview.indexOf("scripts/ci/preview-isolatie-controleer.js", volgorde("pages deploy public"));
+  assert(naDeploy > 0 && naDeploy < volgorde("Noteer preview-URL"), "na de deploy bewijst dezelfde isolatiecontrole dat de PR-deploy geen productiedeployment is");
+  assert(!/continue-on-error/.test(preview.slice(preview.lastIndexOf("- name:", naDeploy), volgorde("Noteer preview-URL"))), "die controle na de deploy mag niet genegeerd worden");
   const vooraf = volgorde("Bewijs vooraf dat Cloudflare Access de previewhosts beschermt");
   assert(vooraf < volgorde("pages deploy public"), "Access moet VOOR de deploy van PR-code aantoonbaar actief zijn (fail-closed)");
   assert(volgorde("scripts/ci/preview-isolatie-controleer.js") < vooraf, "isolatiecontrole vóór de Access-controle vooraf");
@@ -239,7 +242,9 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     success: true,
     result: {
       name: PREVIEWPROJECT,
-      production_branch: "main",
+      production_branch: PREVIEW_PRODUCTIEBRANCH,
+      source: null,
+      canonical_deployment: null,
       deployment_configs: {
         preview: { env_vars: { VISUAL_CROSSING_API_KEY: { type: "secret_text" }, WEATHERAPI_KEY: { type: "secret_text" } }, kv_namespaces: {}, d1_databases: {}, r2_buckets: {}, compatibility_date: "2026-08-26", compatibility_flags: [], fail_open: true, usage_model: "standard", placement: {} },
         production: { env_vars: {}, kv_namespaces: {}, durable_object_namespaces: {}, service_bindings: {}, compatibility_flags: [] }
@@ -247,9 +252,10 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     }
   });
   const geenDomeinen = { success: true, result: [] };
+  const geenProductie = { success: true, result: [] };
   const check = (mut, opties = {}) => {
     const p = goedProject(); if (mut) mut(p);
-    return controleerIsolatie({ project: p, domeinen: opties.domeinen || geenDomeinen, branch: opties.branch !== undefined ? opties.branch : "pr-594", previewProject: opties.previewProject });
+    return controleerIsolatie({ project: p, domeinen: opties.domeinen || geenDomeinen, productieDeployments: "prod" in opties ? opties.prod : geenProductie, branch: opties.branch !== undefined ? opties.branch : "pr-594", previewProject: opties.previewProject });
   };
   assert.deepStrictEqual(check(), [], "een correct previewproject voldoet");
   assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.env_vars = {}; }), [], "een previewproject zonder variabelen is toegestaan");
@@ -269,15 +275,50 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
     faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
   }
-  faalt("productiebranch is een pr-branch", check(p => { p.result.production_branch = "pr-594"; }), /production_branch pr-594 mag geen pr-<nummer>/);
-  faalt("productiebranch gelijk aan de deploybranch", check(p => { p.result.production_branch = "pr-12"; }, { branch: "pr-12" }), /production_branch pr-12/);
-  faalt("productiebranch onleesbaar", check(p => { delete p.result.production_branch; }), /production_branch .* niet leesbaar/);
+  /* Productiebranch en projectalias (SEC-02): een deploy naar de productiebranch is publiek via <project>.pages.dev. */
+  assert.notStrictEqual(PREVIEW_PRODUCTIEBRANCH, "main", "de verplichte productiebranch is niet de standaardwaarde");
+  assert(!/^pr-[1-9][0-9]*$/.test(PREVIEW_PRODUCTIEBRANCH), "de verplichte productiebranch kan nooit een PR-branch zijn");
+  for (const pb of ["main", "master", "production", "pr-594", "pr-12", "preview", "Main"]) {
+    faalt(`productiebranch ${pb}`, check(p => { p.result.production_branch = pb; }, { branch: "pr-12" }), new RegExp(`production_branch ${pb} is niet de verplichte, expliciet ingestelde ${PREVIEW_PRODUCTIEBRANCH}`));
+  }
+  faalt("productiebranch ontbreekt", check(p => { delete p.result.production_branch; }), /niet leesbaar of niet ingesteld/);
+  faalt("productiebranch leeg", check(p => { p.result.production_branch = ""; }), /niet leesbaar of niet ingesteld/);
+  faalt("productiebranch geen tekst", check(p => { p.result.production_branch = null; }), /niet leesbaar of niet ingesteld/);
+  faalt("gekoppeld aan Git", check(p => { p.result.source = { type: "github", config: { owner: "x", repo_name: "y", production_branch: PREVIEW_PRODUCTIEBRANCH } }; }), /Git-repository/);
+  faalt("canonical_deployment bestaat", check(p => { p.result.canonical_deployment = { id: "abc", url: "https://abc.watishetweer-preview.pages.dev" }; }), /canonical_deployment/);
+  faalt("productiedeployment in lijst", check(null, { prod: { success: true, result: [{ id: "abc", environment: "production" }] } }), /productiedeployment\(s\)/);
+  faalt("productiedeployments onleesbaar", check(null, { prod: { success: false } }), /productiedeployments .* niet leesbaar/);
+  faalt("productiedeployments ontbreken in invoer", check(null, { prod: undefined }), /productiedeployments .* niet leesbaar/);
+  faalt("productiedeployments geen lijst", check(null, { prod: { success: true, result: null } }), /productiedeployments .* niet leesbaar/);
+  assert.deepStrictEqual(check(p => { delete p.result.source; delete p.result.canonical_deployment; }), [], "een net aangemaakt Direct Upload-project zonder deployments, met expliciete productiebranch, voldoet");
   faalt("ontbrekende omgeving", check(p => { delete p.result.deployment_configs.production; }), /ontbreekt/);
   for (const branch of ["main", "release-candidate", "pr-0", "pr-", "pr-5x", "feature", "pr-1; rm -rf", ""]) {
     faalt(`branch ${JSON.stringify(branch)}`, check(null, { branch }), /pr-<nummer>/);
   }
   assert.deepStrictEqual(check(null, { branch: "pr-594" }), [], "pr-<nummer> is een geldige previewbranch");
 }
+
+/* ---- 5b. CLI-gedrag, ook voor een net aangemaakt project zonder deployments ---- */
+(async () => {
+  const env = { CLOUDFLARE_API_TOKEN: "t", CLOUDFLARE_ACCOUNT_ID: "acc", CLOUDFLARE_PROJECT: PREVIEWPROJECT, PREVIEW_BRANCH: "pr-594" };
+  const projectJson = over => ({ success: true, result: Object.assign({ name: PREVIEWPROJECT, production_branch: PREVIEW_PRODUCTIEBRANCH, source: null, canonical_deployment: null, latest_deployment: null, deployment_configs: { preview: { env_vars: {}, compatibility_flags: [] }, production: { env_vars: {}, compatibility_flags: [] } } }, over) });
+  const haalMet = (project, prodLijst, aangeroepen = []) => async url => {
+    aangeroepen.push(String(url));
+    const body = /\/deployments\?env=production/.test(url) ? prodLijst : /\/domains$/.test(url) ? { success: true, result: [] } : project;
+    return { json: async () => body };
+  };
+  const stil = async f => { const e = console.error, l = console.log; console.error = console.log = () => {}; try { return await f(); } finally { console.error = e; console.log = l; } };
+
+  const aangeroepen = [];
+  assert.strictEqual(await stil(() => isolatieCli(env, haalMet(projectJson(), { success: true, result: [] }, aangeroepen))), 0, "net aangemaakt project (geen deployments, expliciete productiebranch): slaagt");
+  assert(aangeroepen.some(u => /\/pages\/projects\/watishetweer-preview\/deployments\?env=production/.test(u)), "de CLI vraagt de productiedeployments expliciet op");
+  assert.strictEqual(await stil(() => isolatieCli(env, haalMet(projectJson({ production_branch: "main" }), { success: true, result: [] }))), 1, "standaardproductiebranch main: geblokkeerd");
+  assert.strictEqual(await stil(() => isolatieCli(env, haalMet(projectJson(), { success: true, result: [{ id: "x" }] }))), 1, "bestaande productiedeployment: geblokkeerd");
+  assert.strictEqual(await stil(() => isolatieCli(env, haalMet(projectJson(), null))), 1, "onleesbaar antwoord over deployments: geblokkeerd (fail-closed)");
+  assert.strictEqual(await stil(() => isolatieCli(env, async () => { throw new Error("netwerk"); })), 1, "netwerkfout: geblokkeerd (fail-closed)");
+  assert.strictEqual(await stil(() => isolatieCli({ ...env, PREVIEW_BRANCH: "main" }, haalMet(projectJson(), { success: true, result: [] }))), 1, "branch main: geblokkeerd");
+  console.log("workflow-secretgrens: productiebranch en projectalias (fail-closed) geslaagd");
+})().catch(e => { console.error(e); process.exit(1); });
 
 /* ---- 6. Access vooraf: ontbrekende beveiliging blokkeert de deploy (fail-closed) ---- */
 (async () => {
@@ -328,4 +369,4 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   console.log("workflow-secretgrens: Access vooraf (fail-closed) geslaagd");
 })().catch(e => { console.error(e); process.exit(1); });
 
-console.log("workflow-secretgrens: contract, bundelvalidatie en previewisolatie geslaagd");
+process.stdout.write("workflow-secretgrens: contract, bundelvalidatie en previewisolatie geslaagd\n");
