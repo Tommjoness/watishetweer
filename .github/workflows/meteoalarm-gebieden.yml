@@ -5,14 +5,11 @@ name: MeteoAlarm-gebieden
 # gaat alleen als Authorization-header mee; log en artifact bevatten geen sleutel
 # en geen ondertekende opslaglinks. De API heeft een daglimiet (ongeveer 50
 # aanvragen per 24 uur); deze workflow gebruikt er ongeveer 21. Daarom alleen
-# handmatig te starten en op een pull request dat het script of deze workflow wijzigt.
+# handmatig te starten. Op pull requests draait hij bewust niet (SEC-02): hij gebruikt
+# een geheim en PR-code mag geen secrets ontvangen.
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "scripts/meteoalarm-gebieden.js"
-      - ".github/workflows/meteoalarm-gebieden.yml"
 
 permissions:
   contents: read

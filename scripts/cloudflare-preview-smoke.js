@@ -7,7 +7,7 @@ const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
 const ANALYTICS_SOURCE="https://static.cloudflareinsights.com";
 const GOOGLE_TAG_SOURCE="https://www.googletagmanager.com";
 const TE_STRIKT_ANALYTICS_PAD="https://static.cloudflareinsights.com/beacon.min.js";
-if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer.pages.dev-preview.");
+if(!/^https:\/\/[a-z0-9-]+\.watishetweer(?:-preview)?\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer(-preview).pages.dev-preview.");
 if(!/^[0-9a-f]{40}$/i.test(EXPECTED_SHA))throw new Error("EXPECTED_SHA ontbreekt of is geen volledige commit-SHA.");
 
 const timeoutMs=20000;

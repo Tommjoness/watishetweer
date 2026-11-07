@@ -9,7 +9,8 @@ const lees=bestand=>fs.readFileSync(path.join(root,bestand),"utf8");
 const readme=lees("README.md");
 const runbook=lees("docs/overdracht-runbook.md");
 const audit=lees("docs/sale-readiness-audit-2026-08-31.md");
-const preview=lees(".github/workflows/cloudflare-preview.yml");
+/* SEC-02: de previewdeploy staat in de vertrouwde workflow_run-workflow; cloudflare-preview.yml is de secretloze PR-build. */
+const preview=lees(".github/workflows/cloudflare-preview-deploy.yml");
 const analyticsWorkflow=lees(".github/workflows/cloudflare-web-analytics.yml");
 const production=lees(".github/workflows/cloudflare-production.yml");
 const packageJson=JSON.parse(lees("package.json"));
@@ -45,7 +46,7 @@ assert(audit.includes("100 | 100 | 100 | 100 | 2/2"),"auditrapport mist de vastg
 
 assert(!preview.includes("migrate/cloudflare-pages-20260826"),"previewworkflow mag niet meer aan de oude migratiebranch vastzitten");
 assert(!preview.includes("pr-164"),"previewworkflow mag geen oude PR-preview hardcoden");
-assert(preview.includes("CLOUDFLARE_PREVIEW_BRANCH: pr-${{ github.event.pull_request.number || github.run_id }}"),"previewworkflow moet per PR of handmatige run een eigen branch gebruiken");
+assert(preview.includes("CLOUDFLARE_PREVIEW_BRANCH: pr-${{ github.event.workflow_run.pull_requests[0].number }}"),"previewworkflow moet per PR een eigen branch gebruiken, afgeleid van de GitHub-gebeurtenis");
 assert(preview.includes("cancel-in-progress: true"),"verouderde previewruns moeten worden geannuleerd");
 assert(preview.includes("node scripts/run-production-worldwide-browser.js"),"preview moet de wereldwijde browsercontrole via de gecontroleerde retry-runner behouden");
 assert(preview.includes("node scripts/weatherapi-live-fallback-browser.js"),"preview moet de echte WeatherAPI-fallback met geblokkeerde Open-Meteo bewijzen");

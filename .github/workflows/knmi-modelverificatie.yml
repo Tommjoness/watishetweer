@@ -3,7 +3,9 @@ name: KNMI modelverificatie
 # Vergelijkt de modelverwachting (Open-Meteo, best_match) per heel uur met de
 # metingen van de KNMI-weerstations. Draait vier keer per jaar vanzelf (de 5e
 # van januari, april, juli en oktober, over de afgelopen 28 dagen), handmatig
-# te starten, en op een pull request dat het script of deze workflow wijzigt.
+# te starten. Op pull requests draait deze workflow bewust niet (SEC-02): hij gebruikt
+# een geheim (KNMI_EDR_API_KEY) en PR-code mag geen secrets ontvangen. De
+# unittests van het script lopen wel mee in `npm test`.
 # Bij de geplande en handmatige runs komt de uitkomst als reactie in het issue
 # "KNMI modelverificatie: resultaten", zodat de eigenaar een melding krijgt en
 # de uitkomst zonder inloggen leesbaar is. Alleen geaggregeerde weerdata, geen
@@ -19,10 +21,6 @@ on:
         description: "Aantal volledige dagen terug (1-60)"
         required: false
         default: "14"
-  pull_request:
-    paths:
-      - "scripts/knmi-modelverificatie*.js"
-      - ".github/workflows/knmi-modelverificatie.yml"
 
 permissions:
   contents: read

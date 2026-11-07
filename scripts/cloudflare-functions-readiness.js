@@ -13,8 +13,8 @@ const vereisteOpeenvolgendeSuccessen=3;
 
 function geldigeRoot(waarde){
   const root=String(waarde||"").replace(/\/$/,"");
-  if(!/^https:\/\/[a-z0-9-]+\.watishetweer\.pages\.dev$/i.test(root)){
-    throw new Error("CLOUDFLARE_ROOT ontbreekt of is geen watishetweer.pages.dev-deployment.");
+  if(!/^https:\/\/[a-z0-9-]+\.watishetweer(?:-preview)?\.pages\.dev$/i.test(root)){
+    throw new Error("CLOUDFLARE_ROOT ontbreekt of is geen watishetweer(-preview).pages.dev-deployment.");
   }
   return root;
 }
