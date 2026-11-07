@@ -10,7 +10,7 @@
    De vertrouwde deployworkflow rolt PR-code daarom uitsluitend uit naar een afzonderlijk previewproject en
    controleert vóór elke deploy, fail-closed, dat dat project:
    - bestaat en niet het productieproject is;
-   - geen eigen domeinen heeft (alleen *.pages.dev achter Access);
+   - geen eigen domeinen heeft (alleen *.pages.dev achter Access) en geen pr-<nummer> als productiebranch heeft;
    - in preview én production uitsluitend toegestane variabelen heeft (geen Analytics-token, account-id, Access-
      of admin-configuratie, Google-serviceaccount);
    - geen KV-, D1-, R2-, Durable Object-, service- of andere bindings heeft.
@@ -52,6 +52,11 @@ function controleerIsolatie({ project, domeinen, previewProject = PREVIEWPROJECT
   }
   const r = project.result;
   if (r.name !== previewProject) f.push(`projectnaam ${r.name} komt niet overeen met het verwachte previewproject ${previewProject}`);
+
+  /* Een deploy naar de productiebranch van het project is een productiedeployment op de projectalias
+     <project>.pages.dev, en die valt niet onder het Access-beleid voor previews (Cloudflare-documentatie). */
+  if (typeof r.production_branch !== "string" || !r.production_branch) f.push("production_branch van het previewproject is niet leesbaar");
+  else if (PREVIEWBRANCH.test(r.production_branch) || (branch !== undefined && r.production_branch === String(branch))) f.push(`production_branch ${r.production_branch} mag geen pr-<nummer> zijn: dan is de PR-deploy een publieke productiedeployment`);
 
   if (!domeinen || domeinen.success !== true || !Array.isArray(domeinen.result)) f.push("domeinen van het previewproject niet leesbaar");
   else if (domeinen.result.length) f.push(`previewproject heeft eigen domeinen (${domeinen.result.map(d => d && d.name).join(", ")}); alleen *.pages.dev is toegestaan`);

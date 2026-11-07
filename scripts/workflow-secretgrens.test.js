@@ -30,6 +30,7 @@ const os = require("os");
 const path = require("path");
 const { valideerBundel } = require("./ci/preview-bundel-valideer.js");
 const { controleerIsolatie, PRODUCTIEPROJECT, PREVIEWPROJECT } = require("./ci/preview-isolatie-controleer.js");
+const { controleer: controleerAccess, beoordeel: beoordeelAccess } = require("./ci/preview-access-controleer.js");
 
 const root = path.join(__dirname, "..");
 const workflowDir = path.join(root, ".github", "workflows");
@@ -187,7 +188,15 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   assert(volgorde("scripts/ci/preview-bundel-valideer.js") < volgorde("scripts/ci/preview-isolatie-controleer.js"), "valideer de bundel vóór de isolatiecontrole en deploy");
   assert(volgorde("Bewijs dat de preview achter Cloudflare Access staat") < volgorde("scripts/cloudflare-functions-readiness.js"), "de Access-controle moet vóór de eerste verzoeken en de tests staan");
   assert(volgorde("Noteer preview-URL") < volgorde("Bewijs dat de preview achter Cloudflare Access staat"), "de Access-controle gebruikt de preview-URL");
-  assert(/cloudflareaccess\\\.com/.test(preview), "de Access-controle eist een doorverwijzing naar cloudflareaccess.com");
+  assert(volgorde("scripts/ci/preview-isolatie-controleer.js") < volgorde("scripts/ci/preview-access-controleer.js"), "de Access-controle komt na de isolatiecontrole");
+  const vooraf = volgorde("Bewijs vooraf dat Cloudflare Access de previewhosts beschermt");
+  assert(vooraf < volgorde("pages deploy public"), "Access moet VOOR de deploy van PR-code aantoonbaar actief zijn (fail-closed)");
+  assert(volgorde("scripts/ci/preview-isolatie-controleer.js") < vooraf, "isolatiecontrole vóór de Access-controle vooraf");
+  const voorafStap = preview.slice(vooraf, volgorde("Deploy preview naar Cloudflare Pages"));
+  assert(/preview-access-controleer\.js --project "\$CLOUDFLARE_PROJECT" --branch "\$CLOUDFLARE_PREVIEW_BRANCH"\s*$/m.test(voorafStap), "de controle vooraf gebruikt project en branch van de gebeurtenis, zonder --url");
+  assert(!/continue-on-error/.test(voorafStap) && !/\bif:/.test(voorafStap), "de controle vooraf mag niet overgeslagen of genegeerd worden");
+  const naStap = preview.slice(volgorde("Bewijs dat de preview achter Cloudflare Access staat"), volgorde("Wacht tot Pages Functions actief zijn"));
+  assert(/preview-access-controleer\.js .*--url "\$PREVIEW_URL"/.test(naStap) && !/continue-on-error/.test(naStap), "ook na de deploy wordt de werkelijke URL gecontroleerd");
 }
 
 /* ---- 4. bundelvalidatie ---- */
@@ -230,6 +239,7 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     success: true,
     result: {
       name: PREVIEWPROJECT,
+      production_branch: "main",
       deployment_configs: {
         preview: { env_vars: { VISUAL_CROSSING_API_KEY: { type: "secret_text" }, WEATHERAPI_KEY: { type: "secret_text" } }, kv_namespaces: {}, d1_databases: {}, r2_buckets: {}, compatibility_date: "2026-08-26", compatibility_flags: [], fail_open: true, usage_model: "standard", placement: {} },
         production: { env_vars: {}, kv_namespaces: {}, durable_object_namespaces: {}, service_bindings: {}, compatibility_flags: [] }
@@ -259,11 +269,63 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
     faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
   }
+  faalt("productiebranch is een pr-branch", check(p => { p.result.production_branch = "pr-594"; }), /production_branch pr-594 mag geen pr-<nummer>/);
+  faalt("productiebranch gelijk aan de deploybranch", check(p => { p.result.production_branch = "pr-12"; }, { branch: "pr-12" }), /production_branch pr-12/);
+  faalt("productiebranch onleesbaar", check(p => { delete p.result.production_branch; }), /production_branch .* niet leesbaar/);
   faalt("ontbrekende omgeving", check(p => { delete p.result.deployment_configs.production; }), /ontbreekt/);
   for (const branch of ["main", "release-candidate", "pr-0", "pr-", "pr-5x", "feature", "pr-1; rm -rf", ""]) {
     faalt(`branch ${JSON.stringify(branch)}`, check(null, { branch }), /pr-<nummer>/);
   }
   assert.deepStrictEqual(check(null, { branch: "pr-594" }), [], "pr-<nummer> is een geldige previewbranch");
 }
+
+/* ---- 6. Access vooraf: ontbrekende beveiliging blokkeert de deploy (fail-closed) ---- */
+(async () => {
+  const toegang = "https://team.cloudflareaccess.com/cdn-cgi/access/login/x?kid=1";
+  const antwoord = (status, location) => ({ status, headers: { get: n => (n.toLowerCase() === "location" ? location || null : null) } });
+  const stub = regels => async url => {
+    const host = new URL(url).hostname;
+    const r = regels(host);
+    if (r instanceof Error) throw r;
+    return r;
+  };
+  const project = PREVIEWPROJECT;
+  const alias = `pr-594.${project}.pages.dev`;
+  const isProjectalias = h => h === `${project}.pages.dev`;
+  const stil = f => f();
+  const run = (regels, extra = {}) => stil(() => controleerAccess({ project, branch: "pr-594", haal: stub(regels), hash: "deadbeef", log: () => {}, ...extra }));
+  const blokkeert = (naam, fouten, verwacht) => assert(fouten.length && fouten.some(x => verwacht.test(x)), `${naam}: verwachtte blokkade ${verwacht}, kreeg ${JSON.stringify(fouten)}`);
+
+  assert.deepStrictEqual(await run(h => (isProjectalias(h) ? antwoord(404) : antwoord(302, toegang))), [], "Access actief op alias en hash-host, projectalias zonder inhoud: bewezen");
+  assert.deepStrictEqual(await run(h => (isProjectalias(h) ? antwoord(302, toegang) : antwoord(302, toegang))), [], "projectalias achter Access is ook toegestaan");
+
+  /* Regressie: dit is de oude toestand (Access pas na de deploy gecontroleerd). Een project zonder beleid geeft op een
+     nog niet bestaande host geen Access-redirect; de workflow moet dan stoppen vóór er iets is uitgerold. */
+  blokkeert("geen Access: Pages geeft 404", await run(h => antwoord(404)), /stuurt niet door naar Cloudflare Access \(status 404\)/);
+  blokkeert("publiek: 200 op de branchalias", await run(h => (h === alias ? antwoord(200) : antwoord(302, toegang))), new RegExp(`branchalias \\(https://${alias}/\\): stuurt niet door`));
+  blokkeert("alleen de hash-host onbeschermd", await run(h => (h === `deadbeef.${project}.pages.dev` ? antwoord(200) : isProjectalias(h) ? antwoord(404) : antwoord(302, toegang))), /deployment-URL \(vorm\)/);
+  blokkeert("redirect naar een andere host", await run(h => antwoord(302, "https://evil.example.com/cdn-cgi/access/login")), /stuurt niet door naar Cloudflare Access/);
+  blokkeert("nep-Access-host", await run(h => antwoord(302, "https://cloudflareaccess.com.evil.example/")), /stuurt niet door naar Cloudflare Access/);
+  blokkeert("redirect zonder Location", await run(h => antwoord(302)), /stuurt niet door naar Cloudflare Access/);
+  blokkeert("projectalias toont inhoud", await run(h => (isProjectalias(h) ? antwoord(200) : antwoord(302, toegang))), /projectalias .*toont publiek inhoud/);
+  blokkeert("projectalias stuurt elders heen", await run(h => (isProjectalias(h) ? antwoord(301, "https://watishetweer.nl/") : antwoord(302, toegang))), /iets anders dan Cloudflare Access/);
+  blokkeert("netwerkfout is geen bewijs", await run(h => new Error("getaddrinfo ENOTFOUND")), /niet te controleren/);
+  blokkeert("serverfout is geen bewijs", await run(h => antwoord(503)), /stuurt niet door naar Cloudflare Access \(status 503\)/);
+
+  /* Na de deploy: de werkelijke onveranderlijke URL moet ook beschermd zijn. */
+  const url = `https://0a1b2c3d.${project}.pages.dev`;
+  assert.deepStrictEqual(await run(h => (isProjectalias(h) ? antwoord(404) : antwoord(302, toegang)), { url }), [], "na de deploy: alle routes beschermd");
+  blokkeert("onveranderlijke URL publiek", await run(h => (h === `0a1b2c3d.${project}.pages.dev` ? antwoord(200) : isProjectalias(h) ? antwoord(404) : antwoord(302, toegang)), { url }), /deployment-URL \(https:\/\/0a1b2c3d/);
+  blokkeert("URL van een ander project", await run(h => antwoord(302, toegang), { url: "https://abc123.watishetweer.pages.dev" }), /hoort niet bij project/);
+
+  /* Ongeldige invoer wordt geweigerd zonder netwerk. */
+  const geenNetwerk = async () => { throw new Error("mag niet worden aangeroepen"); };
+  blokkeert("productieproject", await stil(() => controleerAccess({ project: PRODUCTIEPROJECT, branch: "pr-1", haal: geenNetwerk, log: () => {} })), /productieproject/);
+  for (const branch of ["main", "pr-0", "pr-1.evil", ""]) blokkeert(`branch ${JSON.stringify(branch)}`, await stil(() => controleerAccess({ project, branch, haal: geenNetwerk, log: () => {} })), /pr-<nummer>/);
+  blokkeert("ongeldige projectnaam", await stil(() => controleerAccess({ project: "a.b", branch: "pr-1", haal: geenNetwerk, log: () => {} })), /ongeldige projectnaam/);
+  assert.deepStrictEqual(beoordeelAccess([]), [], "geen waarnemingen: geen fouten (aanroeper levert altijd routes)");
+
+  console.log("workflow-secretgrens: Access vooraf (fail-closed) geslaagd");
+})().catch(e => { console.error(e); process.exit(1); });
 
 console.log("workflow-secretgrens: contract, bundelvalidatie en previewisolatie geslaagd");

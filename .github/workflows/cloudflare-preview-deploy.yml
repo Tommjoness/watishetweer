@@ -13,8 +13,8 @@ name: Cloudflare preview deploy
 # - ISOLATIE NA DEPLOY: de PR-bundel bevat Pages Functions, en een Function leest alle variabelen en
 #   bindings van haar omgeving via context.env. PR-code wordt daarom uitsluitend uitgerold naar het afzonderlijke
 #   project `watishetweer-preview`. Vóór elke deploy bewijst scripts/ci/preview-isolatie-controleer.js (fail-closed)
-#   dat dat project geen domeinen, geen bindings en alleen toegestane variabelen heeft; een Access-controle bewijst
-#   daarna dat de preview niet publiek is. Bestaat die grens niet, dan wordt er niets uitgerold.
+#   dat dat project geen domeinen, geen bindings en alleen toegestane variabelen heeft, en bewijst
+#   scripts/ci/preview-access-controleer.js vóór de deploy dat Cloudflare Access de previewhosts beschermt (daarna nogmaals). Bestaat die grens niet, dan wordt er niets uitgerold.
 # - Dit bestand kent bewust geen Analytics-, GA4-, Access-admin- of Google-gegevens en synchroniseert er geen
 #   bindings naartoe: dat soort bindings hoort niet in het previewproject.
 # - De testjobs die PR-code uitchecken (preview-*) krijgen uitsluitend het
@@ -106,6 +106,11 @@ jobs:
           PREVIEW_BRANCH: ${{ env.CLOUDFLARE_PREVIEW_BRANCH }}
         run: node scripts/ci/preview-isolatie-controleer.js
 
+      - name: Bewijs vooraf dat Cloudflare Access de previewhosts beschermt (fail-closed)
+        # Draait vóór de deploy en zonder iets uit te rollen: Access beslist op hostnaam, dus de branchalias van deze PR en
+        # een nooit gebruikte hash-host moeten al naar Cloudflare Access doorsturen. Anders gaat er geen PR-code naartoe.
+        run: node scripts/ci/preview-access-controleer.js --project "$CLOUDFLARE_PROJECT" --branch "$CLOUDFLARE_PREVIEW_BRANCH"
+
       - name: Deploy preview naar Cloudflare Pages
         shell: bash
         working-directory: ${{ runner.temp }}/preview-bundle
@@ -142,19 +147,8 @@ jobs:
       - name: Bewijs dat de preview achter Cloudflare Access staat
         env:
           PREVIEW_URL: ${{ steps.preview_url.outputs.url }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Zonder Access-gegevens moet de preview doorsturen naar Cloudflare Access. Een publiek bereikbare
-          # preview voert PR-code zonder toegangscontrole uit: dan stoppen alle verdere stappen en testjobs.
-          uit="$(curl -sS -o /dev/null --max-time 30 -w '%{http_code} %{redirect_url}' "$PREVIEW_URL/")"
-          echo "Respons zonder Access-gegevens: ${uit%%\?*}"
-          if [[ "$uit" =~ ^30[0-9]\ https://[a-z0-9-]+\.cloudflareaccess\.com/ ]]; then
-            echo "Preview staat achter Cloudflare Access."
-          else
-            echo "Preview is NIET achter Cloudflare Access beschermd; zet het toegangsbeleid van het previewproject aan (runbook)." >&2
-            exit 1
-          fi
+        # Tweede laag na de deploy: de werkelijke onveranderlijke URL, de branchalias en de projectalias.
+        run: node scripts/ci/preview-access-controleer.js --project "$CLOUDFLARE_PROJECT" --branch "$CLOUDFLARE_PREVIEW_BRANCH" --url "$PREVIEW_URL"
 
       - name: Wacht tot Pages Functions actief zijn
         env:
