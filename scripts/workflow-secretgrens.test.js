@@ -14,6 +14,11 @@
    5. De vertrouwde deployjob valideert de bundel vóór het uitrollen en gebruikt
       wrangler en wrangler.jsonc uit main (niet uit de bundel).
    6. De bundelvalidatie wijst gemanipuleerde bundels af.
+   7. Isolatie NA de deploy: PR-code wordt als Pages Functions uitgerold en leest alle bindings van haar omgeving
+      (context.env). De vertrouwde deployjob rolt daarom alleen uit naar het afzonderlijke previewproject, bewijst
+      daarvoor eerst fail-closed dat dat project geen domeinen, geen bindings en alleen toegestane variabelen heeft,
+      kent geen Analytics-/GA4-/Access-admin-/Google-secrets en bewijst na de deploy dat de preview achter Access staat.
+   8. De isolatiecontrole zelf wijst elk afwijkend project af (zie sectie 5).
 
    Beperking, bewust vastgelegd: een gebruiker met schrijfrechten op de repository kan
    altijd een branch pushen en een workflow_dispatch starten; dat sluit alleen een
@@ -24,6 +29,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { valideerBundel } = require("./ci/preview-bundel-valideer.js");
+const { controleerIsolatie, PRODUCTIEPROJECT, PREVIEWPROJECT } = require("./ci/preview-isolatie-controleer.js");
 
 const root = path.join(__dirname, "..");
 const workflowDir = path.join(root, ".github", "workflows");
@@ -165,6 +171,23 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   const status = jobs.status;
   assert(status && /skipped\) state=error/.test(status) && /cancelled\) state=error/.test(status), "een overgeslagen of geannuleerde job mag nooit als geslaagd tellen (REL-01)");
   assert(/statuses:\s*write/.test(status), "alleen de statusjob mag statussen schrijven");
+
+  /* Isolatie na deploy (SEC-02, regel 7). */
+  const toegestaneSecrets = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"]);
+  const alleSecrets = secretsIn(deploy);
+  assert.deepStrictEqual(alleSecrets.filter(x => !toegestaneSecrets.has(x)), [], "de previewdeploy mag geen andere secrets kennen dan het deploytoken, het account-id en het Access-servicetoken");
+  const zonderCommentaar = deploy.split("\n").filter(l => !/^\s*#/.test(l)).join("\n");
+  for (const verboden of ["ANALYTICS", "GA4", "GOOGLE", "SEO_ADMIN", "CF_ACCESS_AUD", "CF_ACCESS_TEAM_DOMAIN"]) {
+    assert(!zonderCommentaar.includes(verboden), `de previewdeploy mag ${verboden} niet kennen: dat hoort niet in het previewproject`);
+  }
+  assert(!/cloudflare-admin-analytics-runtime/.test(zonderCommentaar), "de previewdeploy mag geen Analytics-bindings naar het previewproject synchroniseren");
+  assert(new RegExp(`CLOUDFLARE_PROJECT:\\s*${PREVIEWPROJECT}\\s*$`, "m").test(preview), "de previewdeploy gebruikt uitsluitend het afzonderlijke previewproject");
+  assert(!new RegExp(`CLOUDFLARE_PROJECT:\\s*${PRODUCTIEPROJECT}\\s*$`, "m").test(deploy), "PR-code mag nooit naar het productieproject");
+  assert(volgorde("scripts/ci/preview-isolatie-controleer.js") < volgorde("pages deploy public"), "de isolatiecontrole moet vóór de deploy staan");
+  assert(volgorde("scripts/ci/preview-bundel-valideer.js") < volgorde("scripts/ci/preview-isolatie-controleer.js"), "valideer de bundel vóór de isolatiecontrole en deploy");
+  assert(volgorde("Bewijs dat de preview achter Cloudflare Access staat") < volgorde("scripts/cloudflare-functions-readiness.js"), "de Access-controle moet vóór de eerste verzoeken en de tests staan");
+  assert(volgorde("Noteer preview-URL") < volgorde("Bewijs dat de preview achter Cloudflare Access staat"), "de Access-controle gebruikt de preview-URL");
+  assert(/cloudflareaccess\\\.com/.test(preview), "de Access-controle eist een doorverwijzing naar cloudflareaccess.com");
 }
 
 /* ---- 4. bundelvalidatie ---- */
@@ -201,4 +224,46 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-console.log("workflow-secretgrens: contract en bundelvalidatie geslaagd");
+/* ---- 5. isolatiecontrole van het previewproject ---- */
+{
+  const goedProject = () => ({
+    success: true,
+    result: {
+      name: PREVIEWPROJECT,
+      deployment_configs: {
+        preview: { env_vars: { VISUAL_CROSSING_API_KEY: { type: "secret_text" }, WEATHERAPI_KEY: { type: "secret_text" } }, kv_namespaces: {}, d1_databases: {}, r2_buckets: {}, compatibility_date: "2026-08-26", compatibility_flags: [], fail_open: true, usage_model: "standard", placement: {} },
+        production: { env_vars: {}, kv_namespaces: {}, durable_object_namespaces: {}, service_bindings: {}, compatibility_flags: [] }
+      }
+    }
+  });
+  const geenDomeinen = { success: true, result: [] };
+  const check = (mut, opties = {}) => {
+    const p = goedProject(); if (mut) mut(p);
+    return controleerIsolatie({ project: p, domeinen: opties.domeinen || geenDomeinen, branch: opties.branch !== undefined ? opties.branch : "pr-594", previewProject: opties.previewProject });
+  };
+  assert.deepStrictEqual(check(), [], "een correct previewproject voldoet");
+  assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.env_vars = {}; }), [], "een previewproject zonder variabelen is toegestaan");
+
+  const faalt = (naam, f, verwacht, opties) => assert(f.some(x => verwacht.test(x)), `${naam}: verwachtte ${verwacht}, kreeg ${JSON.stringify(f)}`);
+  faalt("ontbrekend project", controleerIsolatie({ project: { success: false }, domeinen: geenDomeinen, branch: "pr-1" }), /bestaat niet/);
+  faalt("productieproject", controleerIsolatie({ project: goedProject(), domeinen: geenDomeinen, previewProject: PRODUCTIEPROJECT, branch: "pr-1" }), /productieproject/);
+  faalt("verkeerde naam", check(p => { p.result.name = "iets-anders"; }), /komt niet overeen/);
+  faalt("eigen domein", check(null, { domeinen: { success: true, result: [{ name: "watishetweer.nl" }] } }), /eigen domeinen/);
+  faalt("domeinen onleesbaar", check(null, { domeinen: { success: false } }), /niet leesbaar/);
+  for (const naam of ["CLOUDFLARE_ANALYTICS_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "GA4_PROPERTY_ID", "SEO_ADMIN_EMAILS", "CF_ACCESS_AUD", "CF_ACCESS_TEAM_DOMAIN", "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY", "GSC_SITE_URL"]) {
+    faalt(`variabele ${naam} in preview`, check(p => { p.result.deployment_configs.preview.env_vars[naam] = { type: "secret_text" }; }), new RegExp(`preview: variabele ${naam} is niet toegestaan`));
+    faalt(`variabele ${naam} in production`, check(p => { p.result.deployment_configs.production.env_vars[naam] = { type: "secret_text" }; }), new RegExp(`production: variabele ${naam} is niet toegestaan`));
+  }
+  faalt("providersleutel als platte tekst", check(p => { p.result.deployment_configs.preview.env_vars.WEATHERAPI_KEY = { type: "plain_text" }; }), /secret_text/);
+  for (const binding of ["kv_namespaces", "d1_databases", "r2_buckets", "durable_object_namespaces", "service_bindings", "ai_bindings", "queue_producers", "hyperdrive_bindings", "onbekende_nieuwe_binding"]) {
+    faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
+    faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
+  }
+  faalt("ontbrekende omgeving", check(p => { delete p.result.deployment_configs.production; }), /ontbreekt/);
+  for (const branch of ["main", "release-candidate", "pr-0", "pr-", "pr-5x", "feature", "pr-1; rm -rf", ""]) {
+    faalt(`branch ${JSON.stringify(branch)}`, check(null, { branch }), /pr-<nummer>/);
+  }
+  assert.deepStrictEqual(check(null, { branch: "pr-594" }), [], "pr-<nummer> is een geldige previewbranch");
+}
+
+console.log("workflow-secretgrens: contract, bundelvalidatie en previewisolatie geslaagd");

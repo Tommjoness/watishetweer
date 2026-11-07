@@ -21,7 +21,7 @@ function protectedPreviewUrl(input){
   try{
     const waarde=typeof input==="string"||input instanceof URL?String(input):String(input&&input.url||"");
     const url=new URL(waarde);
-    return url.protocol==="https:"&&/(?:^|\.)watishetweer\.pages\.dev$/i.test(url.hostname);
+    return url.protocol==="https:"&&/(?:^|\.)watishetweer(?:-preview)?\.pages\.dev$/i.test(url.hostname);
   }catch{
     return false;
   }
@@ -49,7 +49,7 @@ function installFetch(env=process.env){
 }
 
 async function addPreviewRoute(target,headers){
-  await target.route(/^https:\/\/(?:[a-z0-9-]+\.)?watishetweer\.pages\.dev(?:\/|$)/i,async route=>{
+  await target.route(/^https:\/\/(?:[a-z0-9-]+\.)?watishetweer(?:-preview)?\.pages\.dev(?:\/|$)/i,async route=>{
     const merged=mergeHeaders(route.request().headers(),headers);
     await route.fallback({headers:Object.fromEntries(merged.entries())});
   });

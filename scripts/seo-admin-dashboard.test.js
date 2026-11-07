@@ -158,6 +158,9 @@ assert.deepEqual(accessHeaders({CF_ACCESS_CLIENT_ID:"id",CF_ACCESS_CLIENT_SECRET
 },"Service-tokenheaders wijken af.");
 assert.equal(protectedPreviewUrl("https://pr-321.watishetweer.pages.dev/"),true,"Branch-preview wordt niet herkend als beschermd.");
 assert.equal(protectedPreviewUrl("https://abc123.watishetweer.pages.dev/api/forecast"),true,"Immutable preview wordt niet herkend als beschermd.");
+assert.equal(protectedPreviewUrl("https://pr-321.watishetweer-preview.pages.dev/"),true,"Preview van het afzonderlijke previewproject wordt niet herkend als beschermd.");
+assert.equal(protectedPreviewUrl("https://watishetweer-preview.pages.dev.evil.example/"),false,"Suffix-loze nepdomeinen mogen het Access-token niet ontvangen.");
+assert.equal(protectedPreviewUrl("https://evilwatishetweer-preview.pages.dev/"),false,"Een host zonder punt voor de projectnaam mag het Access-token niet ontvangen.");
 assert.equal(protectedPreviewUrl("https://watishetweer.nl/"),false,"Productiedomein mag geen CI-service-tokenheaders krijgen.");
 assert.equal(protectedPreviewUrl("https://api.open-meteo.com/v1/forecast"),false,"CI-service-token mag niet naar externe providers lekken.");
 assert(!accessHelper.includes("extraHTTPHeaders"),"Browserauth mag Access-secrets niet als globale headers naar externe providers sturen.");
@@ -171,14 +174,12 @@ for(const required of ["CF_ACCESS_CLIENT_ID","CF_ACCESS_CLIENT_SECRET","cloudfla
   assert(productionWorkflow.includes(required),`Cloudflare productionworkflow mist service-tokencontract: ${required}`);
 }
 
-assert(workflow.includes('CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}'),"Previewworkflow mist de dedicated Analytics-secret.");
-assert(workflow.includes('token:process.env.CLOUDFLARE_ANALYTICS_API_TOKEN'),"Previewworkflow moet de dedicated Analytics-token read-only bewijzen zonder deploytokenfallback.");
-assert(workflow.includes('Sync Cloudflare admin analytics preview-bindings'),"Previewworkflow synchroniseert Analytics-bindings niet vóór deploy.");
-assert(workflow.includes('CLOUDFLARE_DEPLOYMENT_ENV: preview'),"Previewworkflow moet de gedeelde runtime-sync expliciet op preview richten.");
-assert(workflow.includes('run: node scripts/cloudflare-admin-analytics-runtime.js'),"Previewworkflow gebruikt niet de gedeelde veilige runtime-sync.");
-assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ANALYTICS_API_TOKEN.type == "secret_text"'),"Post-deploy gate mist de Analytics-tokenbinding.");
-assert(workflow.includes('.result.deployment_configs.preview.env_vars.CLOUDFLARE_ACCOUNT_ID.type == "secret_text"'),"Post-deploy gate mist de account-idbinding.");
-assert(workflow.includes('.result.deployment_configs.preview.env_vars.GA4_PROPERTY_ID.type == "secret_text"'),"Post-deploy gate mist de duurzame GA4-binding.");
+/* SEC-02: de Analytics-, GA4- en Access-adminbindings horen niet in het previewproject waarin PR-code draait
+   (een Function leest context.env). Ze worden alleen nog in de productieworkflow gesynchroniseerd en gecontroleerd;
+   de vertrouwde previewdeploy dwingt het omgekeerde af (zie scripts/workflow-secretgrens.test.js). */
+for(const verboden of ["CLOUDFLARE_ANALYTICS_API_TOKEN","GA4_PROPERTY_ID","SEO_ADMIN_EMAILS","CF_ACCESS_AUD","CF_ACCESS_TEAM_DOMAIN","cloudflare-admin-analytics-runtime"]){
+  assert(!workflow.includes(verboden),`Previewworkflow mag ${verboden} niet meer kennen: PR-code mag die binding niet kunnen lezen.`);
+}
 
 assert(productionWorkflow.includes('run: node scripts/cloudflare-admin-analytics-runtime.js'),"Productionworkflow gebruikt niet de gedeelde veilige runtime-sync.");
 assert(productionWorkflow.includes('.result.deployment_configs.production.env_vars.GA4_PROPERTY_ID.type == "secret_text"'),"Production post-deploy gate mist de duurzame GA4-binding.");
