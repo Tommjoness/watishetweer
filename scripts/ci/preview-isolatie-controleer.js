@@ -59,6 +59,10 @@ function controleerIsolatie({ project, domeinen, productieDeployments, previewPr
   }
   const r = project.result;
   if (r.name !== previewProject) f.push(`projectnaam ${r.name} komt niet overeen met het verwachte previewproject ${previewProject}`);
+  /* Het .pages.dev-subdomein is wereldwijd uniek. Is de naam bij Cloudflare niet vrij, dan krijgt het project een
+     toegevoegd achtervoegsel; alle hostnamen in de workflow en de Access-controle gaan dan uit van een ander adres. */
+  const verwachtSubdomein = `${previewProject}.pages.dev`;
+  if (r.subdomain !== verwachtSubdomein) f.push(`subdomein van het previewproject is ${r.subdomain || "onbekend"}; verwacht ${verwachtSubdomein} (naam niet vrij of niet door de API geleverd)`);
 
   if (typeof r.production_branch !== "string" || !r.production_branch) f.push("production_branch van het previewproject is niet leesbaar of niet ingesteld");
   else if (r.production_branch !== PREVIEW_PRODUCTIEBRANCH) f.push(`production_branch ${r.production_branch} is niet de verplichte, expliciet ingestelde ${PREVIEW_PRODUCTIEBRANCH}: een deploy naar de productiebranch is publiek bereikbaar via de projectalias (zie runbook)`);
