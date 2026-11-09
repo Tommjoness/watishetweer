@@ -173,6 +173,10 @@ jobs:
         env:
           PREVIEW_ROOT: ${{ steps.preview_url.outputs.url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          # Het previewproject heeft bewust geen providersleutels (PR-code kan ze lezen): de smoke bewijst hier het
+          # 503-contract van /api/forecast, niet de live Visual Crossing-fallback. Productie en releasekandidaat zetten
+          # dit nooit en houden de strenge live-controle (scripts/ci/preview-providermodus.js).
+          PREVIEW_PROVIDERMODUS: geen-sleutel
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-preview-smoke.js
 
@@ -232,10 +236,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Bewijs WeatherAPI-fallback met geblokkeerde Open-Meteo
+      - name: Bewijs fallbackcontract met geblokkeerde Open-Meteo (preview zonder providersleutel)
         env:
           PRODUCTION_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
+          # Zonder providersleutel in het previewproject: 503-contract en gecontroleerde geen-data-toestand, geen live
+          # Visual Crossing-bewijs (zie scripts/ci/preview-providermodus.js). Het live bewijs blijft in de releasekandidaat.
+          PREVIEW_PROVIDERMODUS: geen-sleutel
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/weatherapi-live-fallback-browser.js
 
