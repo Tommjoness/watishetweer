@@ -40,5 +40,7 @@ assert(route.includes('X-WIW-Weather-Source\": \"visualcrossing')||route.include
 assert(route.includes('"X-WIW-Weather-Source": "weatherapi"'),"WeatherAPI noodbronbewijs ontbreekt");
 
 execFileSync(process.execPath,[path.join(__dirname,"visualcrossing-forecast.test.mjs")],{stdio:"inherit"});
+/* SEC-02: contract van de providermodus van de PR-preview (503 zonder sleutels). Hier gestart zodat de testketen exact 272 commando's houdt. */
+execFileSync(process.execPath,[path.join(__dirname,"preview-providermodus.test.js")],{stdio:"inherit"});
 
 console.log(`Weather fallback budget groen: normale load start enkelvoudig; na ${hedgeMs} ms delen lichte Open-Meteo en de same-origin providerroute een ${fallbackMs} ms venster; serverketen Visual Crossing ${vcMs} ms -> WeatherAPI ${weatherMs}+${historyMs} ms blijft binnen dat budget.`);
