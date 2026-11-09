@@ -9,6 +9,10 @@ const GOOGLE_TAG_SOURCE="https://www.googletagmanager.com";
 const TE_STRIKT_ANALYTICS_PAD="https://static.cloudflareinsights.com/beacon.min.js";
 if(!/^https:\/\/[a-z0-9-]+\.watishetweer(?:-preview)?\.pages\.dev$/i.test(ROOT))throw new Error("PREVIEW_ROOT ontbreekt of is geen watishetweer(-preview).pages.dev-preview.");
 if(!/^[0-9a-f]{40}$/i.test(EXPECTED_SHA))throw new Error("EXPECTED_SHA ontbreekt of is geen volledige commit-SHA.");
+const {MODI,leesModus,beoordeelZonderSleutel}=require("./ci/preview-providermodus.js");
+/* Standaard "sleutel" = de strenge live-providercontrole (productie en releasekandidaat). "geen-sleutel" is alleen
+   voor het previewproject zonder providersleutels en wordt in leesModus aan het domein gebonden. */
+const MODUS=leesModus(process.env,ROOT);
 
 const timeoutMs=20000;
 async function request(path,options={}){
@@ -90,6 +94,12 @@ function volledigeForecastDekking(body){
   assert("naam" in plaats.body&&"land" in plaats.body,"plaatsnaam-API mist contractvelden");
 
   const forecast=await json("/api/forecast?lat=52.3508&lon=5.2647");
+  if(MODUS===MODI.GEEN_SLEUTEL){
+    /* Previewproject zonder providersleutels: bewijs het echte foutcontract van de route. Geen live providerbewijs. */
+    security(forecast.r,"providerforecast zonder sleutel");
+    const fouten=beoordeelZonderSleutel({status:forecast.r.status,header:naam=>forecast.r.headers.get(naam),body:forecast.body});
+    assert.deepEqual(fouten,[],"providerroute zonder sleutel voldoet niet aan het 503-contract: "+fouten.join("; "));
+  }else{
   assert.equal(forecast.r.status,200,"providerfallbackroute is niet 200; controleer de VISUAL_CROSSING_API_KEY-secret en WeatherAPI-noodfallback");
   security(forecast.r,"providerforecast");
   cloudflareCache(forecast.r,"providerforecast");
@@ -99,6 +109,7 @@ function volledigeForecastDekking(body){
   assert(volledigeForecastDekking(forecast.body),"Visual Crossing-fallback mist volledige uurdekking voor een of meer kalenderdagen");
   assert(forecast.body&&forecast.body.current&&Number.isFinite(Number(forecast.body.current.temperature_2m)),"Visual Crossing-fallback mist een geldige actuele temperatuur");
   assert.equal(typeof (forecast.body&&forecast.body.timezone),"string","Visual Crossing-fallback mist de geselecteerde locatietijdzone");
+  }
 
   const neerslag=await json("/api/neerslag?lat=52.3508&lon=5.2647&land=NL");
   assert.equal(neerslag.r.status,200,"neerslag-API is niet 200");
@@ -134,5 +145,5 @@ function volledigeForecastDekking(body){
   assert.equal(head.status,200,"HEAD op plaatsnaam-API is niet 200");
   assert.equal((await head.text()).length,0,"HEAD bevat onverwacht een responsebody");
 
-  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache, vier API-contracten en de verwijderde luchtkwaliteitsroute groen.`);
+  console.log(`CLOUDFLARE PREVIEW SMOKE GESLAAGD: ${ROOT}; SHA ${EXPECTED_SHA}; statisch, compressie, strikt securitybeleid, versiecompatibele Analytics-CSP, CDN-cache, vier API-contracten en de verwijderde luchtkwaliteitsroute groen.`+(MODUS===MODI.GEEN_SLEUTEL?" LET OP: modus geen-sleutel; het 503-contract zonder providersleutel is bewezen, de Visual Crossing-fallback is in deze run NIET live getest (mocktests dekken het contract; live bewijs volgt in releasekandidaat en productiesmoke).":""));
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});

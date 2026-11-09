@@ -295,6 +295,21 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
     faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
   }
+  /* wrangler_config_hash (SHA-256 van het wrangler-configuratiebestand, door Cloudflare opgeslagen na de eerste wrangler-deploy) is
+     geen binding. Gezien in de eerste echte PR-deploy (PR 596); alleen een geldige hash of leeg is neutraal, al het andere blijft een binding. */
+  const hash = "0123456789abcdef".repeat(4);
+  assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.wrangler_config_hash = hash; p.result.deployment_configs.production.wrangler_config_hash = hash; }), [], "een geldige wrangler_config_hash is geen binding");
+  assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.wrangler_config_hash = ""; p.result.deployment_configs.production.wrangler_config_hash = null; }), [], "een lege wrangler_config_hash is geen binding");
+  for (const [naam, waarde] of Object.entries({ "te kort": hash.slice(0, 63), "te lang": hash + "0", "hoofdletters": hash.toUpperCase(), "geen hex": "g".repeat(64), "object": { MIJN: { id: "x" } }, "leeg object": {}, "lege lijst": [], "false": false, "true": true, "nul": 0, "getal": 1, "lijst": [hash], "spaties": " " + hash, "nieuwe regel": hash + "\n" }))
+    faalt(`wrangler_config_hash ${naam}`, check(p => { p.result.deployment_configs.preview.wrangler_config_hash = waarde; }), /binding wrangler_config_hash is niet toegestaan/);
+  for (const [naam, waarde] of Object.entries({ "leeg object": {}, "lege lijst": [], "false": false, "tekst": "x" }))
+    faalt(`wrangler_config_hash ${naam} in production`, check(p => { p.result.deployment_configs.production.wrangler_config_hash = waarde; }), /production: binding wrangler_config_hash is niet toegestaan/);
+  assert.deepStrictEqual(check(p => { delete p.result.deployment_configs.preview.wrangler_config_hash; delete p.result.deployment_configs.production.wrangler_config_hash; }), [], "een ontbrekende wrangler_config_hash is toegestaan");
+  /* Overige onbekende sleutels blijven fail-closed, ook naast een geldige hash. */
+  faalt("onbekend veld naast geldige hash (preview)", check(p => { p.result.deployment_configs.preview.wrangler_config_hash = hash; p.result.deployment_configs.preview.onbekend_veld = "x"; }), /preview: binding onbekend_veld is niet toegestaan/);
+  faalt("onbekend veld naast geldige hash (production)", check(p => { p.result.deployment_configs.production.wrangler_config_hash = hash; p.result.deployment_configs.production.onbekend_veld = { a: 1 }; }), /production: binding onbekend_veld is niet toegestaan/);
+  faalt("naam lijkt op hash-sleutel", check(p => { p.result.deployment_configs.preview.wrangler_config_hash_2 = hash; }), /binding wrangler_config_hash_2 is niet toegestaan/);
+  faalt("wrangler_config_hash ongeldig in production", check(p => { p.result.deployment_configs.production.wrangler_config_hash = "x"; }), /production: binding wrangler_config_hash is niet toegestaan/);
   /* Subdomein (afzonderlijk previewaccount): exact <project>.pages.dev, anders zijn alle hostnamen onjuist. */
   faalt("subdomein met achtervoegsel", check(p => { p.result.subdomain = "watishetweer-preview-4kx.pages.dev"; }), /subdomein van het previewproject is watishetweer-preview-4kx\.pages\.dev; verwacht watishetweer-preview\.pages\.dev/);
   faalt("ander subdomein", check(p => { p.result.subdomain = "iets-anders.pages.dev"; }), /verwacht watishetweer-preview\.pages\.dev/);
@@ -393,5 +408,40 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
 
   console.log("workflow-secretgrens: Access vooraf (fail-closed) geslaagd");
 })().catch(e => { console.error(e); process.exit(1); });
+
+/* 9. Providermodus (scripts/ci/preview-providermodus.js): het previewproject heeft bewust geen providersleutels. Alleen de
+   previewdeployworkflow mag PREVIEW_PROVIDERMODUS=geen-sleutel zetten, en uitsluitend in de twee stappen die de
+   smoke en de live-fallbacktest draaien. Productie, releasekandidaat en release-recovery houden de strenge controle. */
+{
+  const modusRegel = /^\s*PREVIEW_PROVIDERMODUS:\s*(\S+)\s*$/;
+  const deployTekst = fs.readFileSync(path.join(workflowDir, "cloudflare-preview-deploy.yml"), "utf8");
+  const regels = deployTekst.split("\n");
+  const treffers = regels.map((r, i) => ({ r, i })).filter(x => modusRegel.test(x.r));
+  assert.strictEqual(treffers.length, 2, "PREVIEW_PROVIDERMODUS moet in cloudflare-preview-deploy.yml in precies twee stappen staan");
+  const scripts = [];
+  for (const t of treffers) {
+    assert.strictEqual(modusRegel.exec(t.r)[1], "geen-sleutel", "alleen de waarde geen-sleutel is toegestaan");
+    const volgende = regels.slice(t.i + 1).find(r => /^\s*run:/.test(r));
+    scripts.push((volgende.match(/scripts\/[\w.-]+\.js/) || [""])[0]);
+  }
+  assert.deepStrictEqual(scripts.sort(), ["scripts/cloudflare-preview-smoke.js", "scripts/weatherapi-live-fallback-browser.js"], "de modus hoort alleen bij de smoke en de live-fallbacktest");
+  assert(!/secrets\.[^}]*PROVIDERMODUS/i.test(deployTekst), "de modus is geen secret");
+  for (const n of bestanden.filter(n => n !== "cloudflare-preview-deploy.yml")) {
+    assert(!/PREVIEW_PROVIDERMODUS/.test(fs.readFileSync(path.join(workflowDir, n), "utf8")), `${n} mag PREVIEW_PROVIDERMODUS niet zetten: productie en releasekandidaat houden de strenge live-providercontrole`);
+  }
+  /* De scripts lezen de modus uitsluitend via leesModus (domeingebonden) en houden hun strenge pad. */
+  const smoke = fs.readFileSync(path.join(root, "scripts", "cloudflare-preview-smoke.js"), "utf8");
+  const fallback = fs.readFileSync(path.join(root, "scripts", "weatherapi-live-fallback-browser.js"), "utf8");
+  for (const [naam, tekst] of [["cloudflare-preview-smoke.js", smoke], ["weatherapi-live-fallback-browser.js", fallback]]) {
+    assert(tekst.includes('require("./ci/preview-providermodus.js")'), `${naam} moet de gedeelde modusmodule gebruiken`);
+    assert(/const MODUS=leesModus\(process\.env,ROOT\);/.test(tekst), `${naam} moet de modus via leesModus (domeingebonden) bepalen`);
+    assert(!/process\.env\.PREVIEW_PROVIDERMODUS/.test(tekst), `${naam} mag de modusvariabele niet zelf lezen`);
+  }
+  assert(smoke.includes('assert.equal(forecast.r.status,200,"providerfallbackroute is niet 200;'), "de strenge live-controle van de smoke moet bestaan blijven");
+  assert(smoke.includes('assert.equal(forecast.r.headers.get("x-wiw-weather-source"),"visualcrossing"'), "de smoke moet in de strenge modus Visual Crossing als bron eisen");
+  assert(fallback.includes('assert.equal(response.status(),200,"providerfallbackroute is niet 200");'), "de live-fallbacktest moet in de strenge modus HTTP 200 eisen");
+  assert(fallback.includes('assert.equal(response.headers()["x-wiw-weather-source"],"visualcrossing"'), "de live-fallbacktest moet in de strenge modus Visual Crossing eisen");
+  process.stdout.write("workflow-secretgrens: providermodus alleen in de preview, productie blijft streng, geslaagd\n");
+}
 
 process.stdout.write("workflow-secretgrens: contract, bundelvalidatie en previewisolatie geslaagd\n");

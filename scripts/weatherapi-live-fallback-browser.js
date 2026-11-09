@@ -3,9 +3,13 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
+const {MODI,leesModus,beoordeelZonderSleutel}=require("./ci/preview-providermodus.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||process.env.PREVIEW_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
+/* Standaard "sleutel": de strenge live-fallbackcontrole (productie, release-recovery). "geen-sleutel" bestaat alleen voor
+   het previewproject zonder providersleutels en is in leesModus aan *.watishetweer-preview.pages.dev gebonden. */
+const MODUS=leesModus(process.env,ROOT);
 
 function timeout(promise,ms,label){
   let timer=null;
@@ -40,6 +44,15 @@ function verwachteOpenMeteo503(msg){
     && /Failed to load resource: the server responded with a status of 503/i.test(tekst);
 }
 
+/* Alleen in modus geen-sleutel: het 503-antwoord van /api/forecast is dan het verwachte resultaat. */
+function verwachteForecast503(msg){
+  if(!msg||msg.type()!=="error")return false;
+  const locatie=msg.location&&msg.location();
+  let pad="";
+  try{pad=new URL(String(locatie&&locatie.url||"")).pathname;}catch{}
+  return pad==="/api/forecast"&&/Failed to load resource: the server responded with a status of 503/i.test(String(msg.text()||""));
+}
+
 (async()=>{
   assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor Visual Crossing live-fallbackbewijs");
   const browser=await chromium.launch({headless:true});
@@ -52,12 +65,16 @@ function verwachteOpenMeteo503(msg){
     });
     const page=await context.newPage();
     const consoleErrors=[],pageErrors=[];
-    let openMeteoForecasts=0,verwachteOpenMeteoErrors=0;
+    let openMeteoForecasts=0,verwachteOpenMeteoErrors=0,verwachteForecastErrors=0;
     page.on("console",msg=>{
       if(msg.type()!=="error")return;
       if(isAlleenGemeld(msg.text()))return;
       if(verwachteOpenMeteo503(msg)){
         verwachteOpenMeteoErrors++;
+        return;
+      }
+      if(MODUS===MODI.GEEN_SLEUTEL&&verwachteForecast503(msg)){
+        verwachteForecastErrors++;
         return;
       }
       const locatie=msg.location&&msg.location();
@@ -80,6 +97,48 @@ function verwachteOpenMeteo503(msg){
     });
     await page.goto(ROOT+"/?visualcrossing-fallback-proof="+Date.now(),{waitUntil:"domcontentloaded",timeout:30000});
     const response=await timeout(fallbackResponse,20000,"Visual Crossing fallbackresponse");
+    if(MODUS===MODI.GEEN_SLEUTEL){
+      /* Previewproject zonder providersleutels: dit bewijst NIET de live Visual Crossing-fallback. Het bewijst het echte
+         foutcontract van de route en dat de app daarmee gecontroleerd in de bestaande "geen data"-toestand eindigt. */
+      /* De browser bevestigt de 503; status, headers en body van het contract lezen we met een directe aanvraag aan
+         dezelfde URL (de Access-preload zet daar de servicetokenheaders), omdat de body van een 503-subresource in
+         Playwright niet betrouwbaar leesbaar is. */
+      assert.equal(response.status(),503,"de browser zag geen 503 van /api/forecast");
+      const direct=await fetch(response.url(),{headers:{accept:"application/json"},redirect:"manual",signal:AbortSignal.timeout(20000)});
+      let body=null;
+      try{body=await direct.json();}catch{}
+      const fouten=beoordeelZonderSleutel({status:direct.status,header:naam=>direct.headers.get(naam),body});
+      assert.deepEqual(fouten,[],"providerroute zonder sleutel voldoet niet aan het 503-contract: "+fouten.join("; "));
+      await page.waitForFunction(()=>{
+        const melding=document.getElementById("locatie-laadstatus");
+        return melding&&/Ophalen mislukt/.test(melding.textContent||"");
+      },null,{timeout:20000});
+      const staat=await page.evaluate(()=>{
+        const zichtbaar=id=>{const e=document.getElementById(id);return Boolean(e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=="hidden"&&!e.closest("[hidden]"));};
+        const app=document.getElementById("app");
+        return {
+          build:document.querySelector('meta[name="weather-build-sha"]')?.content||"",
+          zonderData:Boolean(app&&app.hasAttribute("data-zonder-data")),
+          temp:(document.getElementById("t")?.textContent||"").trim(),
+          meldingZichtbaar:zichtbaar("locatie-laadstatus"),
+          opstartfoutZichtbaar:zichtbaar("bootstrap-failure"),
+          ready:window.__WEATHERNOW_APP_READY__===true&&document.documentElement.dataset.appBootstrap==="ready"
+        };
+      });
+      assert.equal(staat.build,EXPECTED_SHA,"pagina serveert niet de verwachte SHA");
+      assert.equal(staat.zonderData,true,"zonder bruikbare bron hoort de app in de geen-data-toestand te staan");
+      assert(/^\s*(?:--|–)\s*$/.test(staat.temp),"zonder bron hoort geen temperatuur te worden getoond (kreeg: "+staat.temp+")");
+      assert.equal(staat.meldingZichtbaar,true,"de zichtbare ophaalmelding ontbreekt");
+      assert.equal(staat.opstartfoutZichtbaar,false,"de opstartfoutmelding mag niet zichtbaar zijn: de app is gestart");
+      assert.equal(staat.ready,true,"app-readycontract ontbreekt in de geen-data-toestand");
+      assert(openMeteoForecasts>=2,"gerichte test heeft niet zowel volledige als lichte Open-Meteo-aanvraag laten falen");
+      assert(verwachteForecastErrors>=1,"het verwachte 503-antwoord van /api/forecast is niet door de browser gezien");
+      assert.deepEqual(pageErrors,[],"page errors tijdens fallback zonder sleutel: "+pageErrors.join(" | "));
+      assert.deepEqual(consoleErrors,[],"onverwachte console errors tijdens fallback zonder sleutel: "+consoleErrors.join(" | "));
+      console.log(JSON.stringify({ok:true,modus:MODI.GEEN_SLEUTEL,visualCrossingLive:false,opmerking:"Visual Crossing-fallback NIET live getest (previewproject heeft bewust geen providersleutel); alleen het 503-contract en de geen-data-toestand zijn bewezen. Live bewijs: releasekandidaat en productiesmoke.",root:ROOT,openMeteoForecasts,verwachteOpenMeteoErrors,verwachteForecastErrors,staat},null,2));
+      await context.close();
+      return;
+    }
     assert.equal(response.status(),200,"providerfallbackroute is niet 200");
     assert.equal(response.headers()["x-wiw-weather-source"],"visualcrossing","providerfallbackroute gebruikt Visual Crossing niet als eerste serverfallback");
     const payload=await response.json();

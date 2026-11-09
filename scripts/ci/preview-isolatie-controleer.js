@@ -33,6 +33,13 @@ const NEUTRALE_CONFIGSLEUTELS = Object.freeze([
   "build_image_major_version", "always_use_latest_compatibility_date", "limits"
 ]);
 
+/* `wrangler_config_hash` is geen binding: wrangler stuurt bij elke Pages-deploy de SHA-256 (64 hex-tekens) van het configuratiebestand
+   mee en Cloudflare slaat die op in deployment_configs (scripts-bron: wrangler pages deploy; API-documentatie: "hash of the Wrangler
+   configuration"). Het veld bestaat pas ná de eerste wrangler-deploy en is daarom bij het ontwerp van deze controle niet gezien. Het is
+   alleen neutraal als het ontbreekt, null of een lege tekenreeks is, of precies zo'n hash (64 kleine hex-tekens) is; elke andere vorm (ook een
+   leeg object, een lege lijst, false, een getal of hoofdletters) geldt nog steeds als niet-toegestane binding. */
+const WRANGLER_CONFIG_HASH = /^[0-9a-f]{64}$/;
+
 const PREVIEWBRANCH = /^pr-[1-9][0-9]*$/;
 
 /* Productiebranch van het previewproject. Een deploy naar de productiebranch is een productiedeployment op de
@@ -85,6 +92,12 @@ function controleerIsolatie({ project, domeinen, productieDeployments, previewPr
     }
     for (const [sleutel, waarde] of Object.entries(c)) {
       if (NEUTRALE_CONFIGSLEUTELS.includes(sleutel)) continue;
+      if (sleutel === "wrangler_config_hash") {
+        /* Alleen null, een lege tekenreeks of een SHA-256-hash is neutraal; ook {}, [] en false zijn hier GEEN geldige waarde. */
+        if (waarde === null || waarde === "" || (typeof waarde === "string" && WRANGLER_CONFIG_HASH.test(waarde))) continue;
+        f.push(`${omgeving}: binding ${sleutel} is niet toegestaan in het previewproject (geen geldige wrangler-configuratiehash)`);
+        continue;
+      }
       if (!isLeeg(waarde)) f.push(`${omgeving}: binding ${sleutel} is niet toegestaan in het previewproject`);
     }
   }

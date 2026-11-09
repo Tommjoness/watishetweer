@@ -114,8 +114,19 @@ assert.match(routeIntern.visualCrossingUrl("test-key", 52.370234, 4.895234), /ic
     );
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("x-wiw-weather-source"), "visualcrossing");
-    assert.equal((await response.json()).provider, "visualcrossing");
+    const routeBody = await response.json();
+    assert.equal(routeBody.provider, "visualcrossing");
     assert.equal(urls.length, 1, "geldige Visual Crossing-response start WeatherAPI niet");
+    /* Zelfde voorwaarden als de live-controles (cloudflare-preview-smoke.js en weatherapi-live-fallback-browser.js), nu
+       deterministisch op de echte route met gemockte providerdata. Het previewproject heeft geen providersleutel, dus
+       alleen deze test (en de releasekandidaat met de echte sleutel) bewijst het positieve pad. */
+    assert.equal(routeBody.daily.time.length, 7, "route-antwoord heeft geen zeven dagen");
+    for (const dag of routeBody.daily.time) {
+      const aantal = routeBody.hourly.time.filter(uur => typeof uur === "string" && uur.startsWith(dag + "T")).length;
+      assert(aantal >= 23 && aantal <= 25, `route-antwoord heeft ${aantal} uurwaarden voor ${dag}`);
+    }
+    assert(Number.isFinite(Number(routeBody.current.temperature_2m)), "route-antwoord mist een geldige actuele temperatuur");
+    assert.equal(typeof routeBody.timezone, "string", "route-antwoord mist de locatietijdzone");
   } finally {
     globalThis.fetch = origineel;
   }
