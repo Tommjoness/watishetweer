@@ -1,0 +1,326 @@
+name: SEC-02b grensproef (tijdelijk)
+
+# TIJDELIJKE NEGATIEVE PROEF (SEC-02b). Dit bestand bestaat alleen op de testbranches en komt nooit op main.
+#
+# Vraag: krijgt code op een niet-toegestane branch toegang tot de secrets van de beschermde omgevingen
+# (productie, provider-controles, pr-preview), of tot de oude repository-secrets?
+#
+# Triggers die werken zonder dat het bestand op main staat:
+#   - push          : GitHub gebruikt het workflowbestand van de gepushte commit (route "branch met eigen workflow").
+#   - pull_request  : naar de testbranch als basis; GitHub gebruikt het bestand van de merge-commit en de ref is
+#                     refs/pull/<nr>/merge (route "pull request uit een branch van deze repository").
+#   Bewust geen workflow_dispatch: die start alleen als het bestand op de standaardbranch bestaat.
+#   De bestaande workflows starten hier niet door: die filteren allemaal op de basis- of pushbranch main.
+#
+# Geen enkele secretwaarde komt op de runner: per naam wordt alleen `secrets.NAAM != ''` (true/false) doorgegeven.
+# Er wordt niets uitgecheckt, gebouwd of uitgerold en er gaat geen verzoek naar Cloudflare, KNMI of MeteoAlarm.
+
+on:
+  push:
+    branches:
+      - 'sec-02b/grensproef-voor'
+      - 'sec-02b/grensproef-na'
+  pull_request:
+    branches:
+      - 'sec-02b/grensproef-voor'
+      - 'sec-02b/grensproef-na'
+
+permissions: {}
+
+concurrency:
+  group: sec02b-grensproef-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # voor = vóór het verwijderen van de oude repository-secrets (oude namen mogen nog bestaan; dat is de bekende stand).
+  # na   = eindcontrole: ook de oude namen moeten leeg zijn.
+  # Kies fase op basis van de echte ref: bij push de branch, bij PR de basisbranch.
+  # Zo kan de eindproef niet per ongeluk met de soepelere "voor"-regels lopen.
+  FASE: ${{ (github.ref == 'refs/heads/sec-02b/grensproef-na' || github.base_ref == 'sec-02b/grensproef-na') && 'na' || 'voor' }}
+
+jobs:
+  # Controle zonder omgeving: wat krijgt een willekeurige branchworkflow?
+  zonder-omgeving:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      oud: ${{ steps.meet.outputs.oud }}
+      nieuw: ${{ steps.meet.outputs.nieuw }}
+    env:
+      OUD_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+      OUD_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+      OUD_CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN != '' }}
+      OUD_CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN != '' }}
+      OUD_CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID != '' }}
+      OUD_CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET != '' }}
+      OUD_KNMI_EDR_API_KEY: ${{ secrets.KNMI_EDR_API_KEY != '' }}
+      OUD_METEOALARM_API_TOKEN: ${{ secrets.METEOALARM_API_TOKEN != '' }}
+      NIEUW_CLOUDFLARE_PRODUCTIE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN != '' }}
+      NIEUW_CLOUDFLARE_PRODUCTIE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID != '' }}
+      NIEUW_CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN != '' }}
+      NIEUW_CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN != '' }}
+      NIEUW_CF_ACCESS_PRODUCTIE_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID != '' }}
+      NIEUW_CF_ACCESS_PRODUCTIE_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET != '' }}
+      NIEUW_KNMI_CONTROLE_EDR_API_KEY: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY != '' }}
+      NIEUW_METEOALARM_CONTROLE_API_TOKEN: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN != '' }}
+      NIEUW_CLOUDFLARE_PREVIEW_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN != '' }}
+      NIEUW_CLOUDFLARE_PREVIEW_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PREVIEW_ACCOUNT_ID != '' }}
+    steps:
+      - name: Meet welke secretnamen een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          oud=""; nieuw=""
+          while IFS='=' read -r naam waarde; do
+            case "$naam" in
+              OUD_*) if [ "$waarde" = true ]; then oud="$oud ${naam#OUD_}"; fi ;;
+              NIEUW_*) if [ "$waarde" = true ]; then nieuw="$nieuw ${naam#NIEUW_}"; fi ;;
+            esac
+          done < <(env | grep -E '^(OUD|NIEUW)_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "oud=${oud# }" >> "$GITHUB_OUTPUT"
+          echo "nieuw=${nieuw# }" >> "$GITHUB_OUTPUT"
+          echo "Zonder omgeving beschikbaar, oude namen: ${oud:- geen}"
+          echo "Zonder omgeving beschikbaar, omgevingsnamen: ${nieuw:- geen}"
+
+  # Per omgeving twee varianten: gewone omgevingsverwijzing en deployment: false.
+  productie-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: productie
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_CLOUDFLARE_PRODUCTIE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN != '' }}
+      S_CF_ACCESS_PRODUCTIE_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID != '' }}
+      S_CF_ACCESS_PRODUCTIE_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  productie-zonder-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment:
+      name: productie
+      deployment: false
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_CLOUDFLARE_PRODUCTIE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN != '' }}
+      S_CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN != '' }}
+      S_CF_ACCESS_PRODUCTIE_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID != '' }}
+      S_CF_ACCESS_PRODUCTIE_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  provider-controles-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: provider-controles
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_KNMI_CONTROLE_EDR_API_KEY: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY != '' }}
+      S_METEOALARM_CONTROLE_API_TOKEN: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  provider-controles-zonder-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment:
+      name: provider-controles
+      deployment: false
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_KNMI_CONTROLE_EDR_API_KEY: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY != '' }}
+      S_METEOALARM_CONTROLE_API_TOKEN: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  pr-preview-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: pr-preview
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_CLOUDFLARE_PREVIEW_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN != '' }}
+      S_CLOUDFLARE_PREVIEW_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PREVIEW_ACCOUNT_ID != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  pr-preview-zonder-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment:
+      name: pr-preview
+      deployment: false
+    outputs:
+      gestart: ${{ steps.meet.outputs.gestart }}
+      beschikbaar: ${{ steps.meet.outputs.beschikbaar }}
+    env:
+      S_CLOUDFLARE_PREVIEW_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN != '' }}
+      S_CLOUDFLARE_PREVIEW_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PREVIEW_ACCOUNT_ID != '' }}
+    steps:
+      - name: Meet welke omgevingssecrets een waarde hebben (alleen true of false)
+        id: meet
+        shell: bash
+        run: |
+          set -euo pipefail
+          beschikbaar=""
+          while IFS='=' read -r naam waarde; do
+            if [ "$waarde" = true ]; then beschikbaar="$beschikbaar ${naam#S_}"; fi
+          done < <(env | grep -E '^S_' | sort)
+          echo "gestart=true" >> "$GITHUB_OUTPUT"
+          echo "beschikbaar=${beschikbaar# }" >> "$GITHUB_OUTPUT"
+          echo "Job is gestart op ${GITHUB_REF}. Beschikbare omgevingssecrets: ${beschikbaar:- geen}"
+
+  # Het oordeel draait altijd en leest alleen de uitkomsten van de jobs hierboven.
+  oordeel:
+    needs:
+      - zonder-omgeving
+      - productie-deployment
+      - productie-zonder-deployment
+      - provider-controles-deployment
+      - provider-controles-zonder-deployment
+      - pr-preview-deployment
+      - pr-preview-zonder-deployment
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      UITKOMSTEN: ${{ toJSON(needs) }}
+      GEBEURTENIS: ${{ github.event_name }}
+      REF: ${{ github.ref }}
+      BASISBRANCH: ${{ github.base_ref }}
+    steps:
+      - name: Beoordeel de grens
+        shell: bash
+        run: |
+          set -euo pipefail
+          fout=0
+          bewijs_open=0
+          meld() { echo "::notice title=SEC-02b grensproef::$1"; echo "- $1" >> "$GITHUB_STEP_SUMMARY"; }
+          faal() { echo "::error title=SEC-02b grensproef::$1"; echo "- **FOUT:** $1" >> "$GITHUB_STEP_SUMMARY"; fout=1; }
+          echo "## SEC-02b grensproef ($FASE), $GEBEURTENIS op $REF" >> "$GITHUB_STEP_SUMMARY"
+
+          # De fase is uitsluitend geldig op de bedoelde push- of PR-basisref.
+          case "$GEBEURTENIS:$REF:$BASISBRANCH" in
+            push:refs/heads/sec-02b/grensproef-voor:*) verwacht=voor ;;
+            push:refs/heads/sec-02b/grensproef-na:*) verwacht=na ;;
+            pull_request:refs/pull/*/merge:sec-02b/grensproef-voor) verwacht=voor ;;
+            pull_request:refs/pull/*/merge:sec-02b/grensproef-na) verwacht=na ;;
+            *) verwacht=ongeldig; faal "onverwacht event/ref/basisbranch; de grensproef is ongeldig" ;;
+          esac
+          if [ "$FASE" != "$verwacht" ]; then faal "fase $FASE komt niet overeen met verwachte fase $verwacht"; fi
+
+          # 1. De controlejob moet gelopen hebben, anders is de proef zelf niet geldig.
+          gestart="$(jq -r '."zonder-omgeving".outputs.gestart // ""' <<<"$UITKOMSTEN")"
+          oud="$(jq -r '."zonder-omgeving".outputs.oud // ""' <<<"$UITKOMSTEN")"
+          nieuw="$(jq -r '."zonder-omgeving".outputs.nieuw // ""' <<<"$UITKOMSTEN")"
+          if [ "$gestart" != true ]; then faal "controlejob zonder omgeving is niet gelopen: de proef is ongeldig"; fi
+          if [ -n "$nieuw" ]; then faal "zonder omgeving beschikbaar op deze branch: $nieuw (deze namen horen niet als repository-secret te bestaan)"; else meld "zonder omgeving: geen enkel omgevingssecret beschikbaar"; fi
+          if [ "$FASE" = na ]; then
+            if [ -n "$oud" ]; then faal "oude repository-secrets bestaan nog en zijn op deze branch beschikbaar: $oud"; else meld "oude repository-secrets: geen enkele meer beschikbaar"; fi
+          else
+            meld "oude repository-secrets nu nog beschikbaar op deze branch (bekende stand vóór het verwijderen): ${oud:-geen}"
+          fi
+
+          # 2. Elke omgevingsjob moet aantoonbaar door DE ENVIRONMENT-BRANCHREGEL zijn geweigerd.
+          # Alleen status failure + geen meetstap bewijst die oorzaak NIET: dat kan ook een andere jobinitialisatiefout zijn.
+          # De specifieke GitHub-annotations/jobmelding moet nadien onafhankelijk gelezen worden.
+          for job in productie-deployment productie-zonder-deployment provider-controles-deployment provider-controles-zonder-deployment pr-preview-deployment pr-preview-zonder-deployment; do
+            resultaat="$(jq -r --arg j "$job" '.[$j].result // "onbekend"' <<<"$UITKOMSTEN")"
+            gestart="$(jq -r --arg j "$job" '.[$j].outputs.gestart // ""' <<<"$UITKOMSTEN")"
+            beschikbaar="$(jq -r --arg j "$job" '.[$j].outputs.beschikbaar // ""' <<<"$UITKOMSTEN")"
+            if [ "$gestart" != true ]; then
+              if [ "$resultaat" = failure ]; then
+                meld "$job: failure zonder meetstap; mogelijke environmentweigering, nog NIET bewezen. Verifieer de exacte GitHub-jobmelding."
+                bewijs_open=1
+              else
+                faal "$job: niet gestart met resultaat $resultaat; geen bewezen environmentweigering"
+              fi
+            elif [ -n "$beschikbaar" ]; then
+              faal "$job: LEK, de job liep op een niet-toegestane ref en kreeg: $beschikbaar"
+            else
+              faal "$job: de job is op een niet-toegestane ref gestart (zonder secrets). De branchbeperking hield de start niet tegen; deze variant niet gebruiken"
+            fi
+          done
+          # Geen vals groen: een failure zonder meetstap is slechts een kandidaat.
+          # Handmatige verificatie van de exacte GitHub-branchregelmelding is vereist om de grens als bewezen te markeren.
+          if [ "$fout" -ne 0 ]; then exit 1; fi
+          if [ "$bewijs_open" -ne 0 ]; then
+            echo "::warning title=SEC-02b grensproef::Geen geverifieerde oorzaak: inspecteer per geweigerde job de exacte melding over de environment-branchbeperking. Een rode tijdelijke testrun is hier verwacht."
+            echo "- **BEWIJS NOG OPEN:** controleer voor alle zes omgevingsjobs de GitHub-jobmelding/annotatie. Alleen expliciete weigering door de juiste branchbeperking telt." >> "$GITHUB_STEP_SUMMARY"
+            exit 2
+          fi
+          exit 0
