@@ -295,6 +295,21 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
     faalt(`binding ${binding}`, check(p => { p.result.deployment_configs.preview[binding] = { MIJN: { id: "x" } }; }), new RegExp(`binding ${binding} is niet toegestaan`));
     faalt(`binding ${binding} (lijst)`, check(p => { p.result.deployment_configs.production[binding] = [{ naam: "x" }]; }), new RegExp(`binding ${binding} is niet toegestaan`));
   }
+  /* wrangler_config_hash (SHA-256 van het wrangler-configuratiebestand, door Cloudflare opgeslagen na de eerste wrangler-deploy) is
+     geen binding. Gezien in de eerste echte PR-deploy (PR 596); alleen een geldige hash of leeg is neutraal, al het andere blijft een binding. */
+  const hash = "0123456789abcdef".repeat(4);
+  assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.wrangler_config_hash = hash; p.result.deployment_configs.production.wrangler_config_hash = hash; }), [], "een geldige wrangler_config_hash is geen binding");
+  assert.deepStrictEqual(check(p => { p.result.deployment_configs.preview.wrangler_config_hash = ""; p.result.deployment_configs.production.wrangler_config_hash = null; }), [], "een lege wrangler_config_hash is geen binding");
+  for (const [naam, waarde] of Object.entries({ "te kort": hash.slice(0, 63), "te lang": hash + "0", "hoofdletters": hash.toUpperCase(), "geen hex": "g".repeat(64), "object": { MIJN: { id: "x" } }, "leeg object": {}, "lege lijst": [], "false": false, "true": true, "nul": 0, "getal": 1, "lijst": [hash], "spaties": " " + hash, "nieuwe regel": hash + "\n" }))
+    faalt(`wrangler_config_hash ${naam}`, check(p => { p.result.deployment_configs.preview.wrangler_config_hash = waarde; }), /binding wrangler_config_hash is niet toegestaan/);
+  for (const [naam, waarde] of Object.entries({ "leeg object": {}, "lege lijst": [], "false": false, "tekst": "x" }))
+    faalt(`wrangler_config_hash ${naam} in production`, check(p => { p.result.deployment_configs.production.wrangler_config_hash = waarde; }), /production: binding wrangler_config_hash is niet toegestaan/);
+  assert.deepStrictEqual(check(p => { delete p.result.deployment_configs.preview.wrangler_config_hash; delete p.result.deployment_configs.production.wrangler_config_hash; }), [], "een ontbrekende wrangler_config_hash is toegestaan");
+  /* Overige onbekende sleutels blijven fail-closed, ook naast een geldige hash. */
+  faalt("onbekend veld naast geldige hash (preview)", check(p => { p.result.deployment_configs.preview.wrangler_config_hash = hash; p.result.deployment_configs.preview.onbekend_veld = "x"; }), /preview: binding onbekend_veld is niet toegestaan/);
+  faalt("onbekend veld naast geldige hash (production)", check(p => { p.result.deployment_configs.production.wrangler_config_hash = hash; p.result.deployment_configs.production.onbekend_veld = { a: 1 }; }), /production: binding onbekend_veld is niet toegestaan/);
+  faalt("naam lijkt op hash-sleutel", check(p => { p.result.deployment_configs.preview.wrangler_config_hash_2 = hash; }), /binding wrangler_config_hash_2 is niet toegestaan/);
+  faalt("wrangler_config_hash ongeldig in production", check(p => { p.result.deployment_configs.production.wrangler_config_hash = "x"; }), /production: binding wrangler_config_hash is niet toegestaan/);
   /* Subdomein (afzonderlijk previewaccount): exact <project>.pages.dev, anders zijn alle hostnamen onjuist. */
   faalt("subdomein met achtervoegsel", check(p => { p.result.subdomain = "watishetweer-preview-4kx.pages.dev"; }), /subdomein van het previewproject is watishetweer-preview-4kx\.pages\.dev; verwacht watishetweer-preview\.pages\.dev/);
   faalt("ander subdomein", check(p => { p.result.subdomain = "iets-anders.pages.dev"; }), /verwacht watishetweer-preview\.pages\.dev/);
