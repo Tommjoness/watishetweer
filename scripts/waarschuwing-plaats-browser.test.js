@@ -203,25 +203,33 @@ async function scherm(page,naam){
       assert.deepEqual(fouten,[],"geen browserfouten door vertaalveld");
       await context.close();
     }
-    /* De NWS-tekst wordt alleen bij NL met geaccepteerde vertaling voorop gezet. */
+    /* De finale NWS-renderer bewaart twee aparte alinea's in details:
+       officiële titel/bron en precies één officiële waarschuwingstekst. */
     for(const taal of [null,"en"]){
       const {context,page,fouten}=await open(browser,root,NWS_VERTALING,taal?1440:390,844,{taal});
-      const kaart=page.locator("#waarschuwingen .waarsch");
-      const bron=kaart.locator("details p");
-      const bronAantal=await bron.count();
-      if(bronAantal!==1) console.error("NWS-DOM-diagnose",JSON.stringify({taal:taal||"nl",kaarten:await kaart.count(),aantalBronnen:bronAantal,html:await page.locator("#waarschuwingen").innerHTML()}));
-      assert.equal(bronAantal,1,"NWS: officiële brontekst precies één keer");
-      assert.equal((await bron.first().textContent()).trim(),NWS_BRON,"NWS: officiële tekst intact");
+      const kaart=page.locator("#waarschuwingen > .waarsch");
+      assert.equal(await kaart.count(),1,"NWS: precies één waarschuwingkaart");
+      const details=kaart.locator(".waarsch-officieel-details");
+      assert.equal(await details.count(),1,"NWS: één uitklap met officiële tekst");
+      const bron=details.locator(".final-warning-official-text");
+      const bronMeta=details.locator(".final-warning-official-meta");
+      assert.equal(await bron.count(),1,"NWS: precies één officiële brontekst, los van bronvermelding");
+      assert.equal(await bronMeta.count(),1,"NWS: aparte officiële titel en bronvermelding");
+      assert.equal((await bron.textContent()).trim(),NWS_BRON,"NWS: officiële brontekst letterlijk intact");
+      assert.equal((await kaart.innerText()).split(NWS_BRON).length-1,1,"NWS: geen dubbele Engelse brontekst");
+      assert((await bronMeta.innerText()).includes("High Wind Warning"),"NWS: officiële titel behouden");
+      assert((await bronMeta.innerText()).includes("National Weather Service"),"NWS: bronnaam behouden");
+      assert.equal(await bron.getAttribute("lang"),"en","NWS: Engelse voorleestaal");
+      assert.equal(await bron.getAttribute("translate"),"no","NWS: geen automatische browservertaling van de officiële tekst");
+      assert.equal(await bronMeta.locator("span").getAttribute("translate"),"no","NWS: officiële titel niet automatisch vertalen");
+      assert.equal((await details.locator("summary").textContent()).trim(),"Officiële tekst van de National Weather Service");
       if(!taal){
-        assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling zichtbaar");
+        assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling direct zichtbaar");
         assert.equal((await kaart.locator(".waarsch-vertaling-label").innerText()).trim(),"Automatisch vertaald (niet officieel):");
-        assert.equal(await bron.first().getAttribute("lang"),"en","NWS: Engelse voorleestaal");
-        assert.equal(await bron.first().getAttribute("translate"),"no","NWS: officiële brontekst wordt niet vertaald");
-        assert.equal(await kaart.locator("h3").getAttribute("translate"),"no","NWS: officiële Engelse titel behouden");
-        assert.equal((await kaart.locator("summary").textContent()).trim(),"Bekijk officiële oorspronkelijke tekst");
+        assert.equal((await kaart.locator("h3").textContent()).trim(),"Waarschuwing voor zeer harde wind","NWS: bestaande betrouwbare Nederlandse gebeurteniskop behouden");
       }else{
         assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS: Engelse interface negeert NL-vertaling");
-        assert.equal((await kaart.locator("h3").textContent()).trim(),"High Wind Warning");
+        assert.equal((await kaart.locator("h3").textContent()).trim(),"High Wind Warning","NWS: Engelse kop officieel");
       }
       assert.deepEqual(fouten,[],"NWS: geen browserfouten");
       await context.close();
@@ -230,9 +238,12 @@ async function scherm(page,naam){
       lijst:[{...NWS_VERTALING.antwoord.lijst[0],vertaling:null}]}};
     {
       const {context,page,fouten}=await open(browser,root,nwsZonderVertaling,390,844);
-      const kaart=page.locator("#waarschuwingen .waarsch");
+      const kaart=page.locator("#waarschuwingen > .waarsch");
+      assert.equal(await kaart.count(),1);
       assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS zonder vertaling blijft origineel");
-      assert.equal((await kaart.locator("details p").textContent()).trim(),NWS_BRON);
+      assert.equal(await kaart.locator(".final-warning-explanation").count(),1,"NWS: bestaande uitleg blijft bij afwezige vertaling");
+      assert.equal((await kaart.locator(".final-warning-official-text").textContent()).trim(),NWS_BRON);
+      assert.equal((await kaart.innerText()).split(NWS_BRON).length-1,1,"NWS: officiële tekst zonder vertaling éénmaal");
       assert.deepEqual(fouten,[]);
       await context.close();
     }
