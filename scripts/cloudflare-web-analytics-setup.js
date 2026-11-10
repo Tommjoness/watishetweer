@@ -20,6 +20,7 @@ function authHeaders(token){
 
 function apiHint(status,url){
   if(status!==403)return "";
+  if(url.includes("/zones?name="))return " Cloudflare-token mist waarschijnlijk Zone > Zone > Read voor watishetweer.nl.";
   if(url.includes("/rum/site_info"))return " Cloudflare-token mist waarschijnlijk Account Settings Read/Write voor Web Analytics.";
   if(url.includes("/rulesets"))return " Cloudflare-token mist waarschijnlijk Zone > Config Rules > Edit.";
   return "";
@@ -45,9 +46,21 @@ async function haalZoneTag({accountId,token,project=PROJECT,fetchImpl=fetch}){
   if(!Array.isArray(domeinen))throw new Error("Cloudflare Pages-domainlijst ontbreekt.");
   const root=domeinen.find(x=>x&&x.name===DOMAIN);
   const www=domeinen.find(x=>x&&x.name===`www.${DOMAIN}`);
-  const zoneTag=geldigeId(root&&root.zone_tag,"Cloudflare zone_tag");
-  if(www&&www.zone_tag&&String(www.zone_tag)!==zoneTag)throw new Error("Cloudflare custom domains wijzen onverwacht naar verschillende zones.");
-  return zoneTag;
+  if(!root)throw new Error(`Cloudflare Pages-hoofddomein ${DOMAIN} ontbreekt.`);
+  const rootTag=root.zone_tag ? geldigeId(root.zone_tag,"Cloudflare zone_tag") : null;
+  const wwwTag=www&&www.zone_tag ? geldigeId(www.zone_tag,"Cloudflare www zone_tag") : null;
+  if(rootTag&&wwwTag&&wwwTag!==rootTag)throw new Error("Cloudflare custom domains wijzen onverwacht naar verschillende zones.");
+  if(rootTag||wwwTag)return rootTag||wwwTag;
+
+  /* Sommige Pages-domainantwoorden geven geen zone_tag. Val dan uitsluitend terug op
+     de officiële Zones-API, met exact domein én account als controle. Daarvoor
+     heeft het token Zone > Zone > Read voor deze zone nodig. Geen hardcoded ID. */
+  const zoneApi=`${API_ROOT}/zones?name=${encodeURIComponent(DOMAIN)}`;
+  const {result:zones}=await cloudflareJson(zoneApi,{method:"GET",headers},fetchImpl);
+  if(!Array.isArray(zones))throw new Error("Cloudflare zonelijst ontbreekt.");
+  const gevonden=zones.filter(z=>z&&z.name===DOMAIN&&z.account&&String(z.account.id)===account);
+  if(gevonden.length!==1)throw new Error(`Cloudflare-zone ${DOMAIN} ontbreekt of is niet eenduidig gekoppeld aan het verwachte account.`);
+  return geldigeId(gevonden[0].id,"Cloudflare zone-id");
 }
 
 async function lijstWebAnalyticsSites({accountId,headers,fetchImpl=fetch}){

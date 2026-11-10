@@ -1,7 +1,7 @@
 "use strict";
 
 const assert=require("assert");
-const {RULE_REF,isSiteVoorZone,siteActief,activeerWebAnalytics}=require("./cloudflare-web-analytics-setup.js");
+const {RULE_REF,isSiteVoorZone,siteActief,activeerWebAnalytics,haalZoneTag}=require("./cloudflare-web-analytics-setup.js");
 
 const ACCOUNT="a".repeat(32),ZONE="b".repeat(32),SITE="c".repeat(32),RULESET="d".repeat(32),RULE="e".repeat(32);
 function response(body,status=200){return {ok:status>=200&&status<300,status,text:async()=>JSON.stringify(body)};}
@@ -44,6 +44,48 @@ assert(siteActief({auto_install:true,ruleset:{enabled:true,zone_tag:ZONE}},ZONE)
 assert(!siteActief({auto_install:false,ruleset:{enabled:true,zone_tag:ZONE}},ZONE));
 
 (async()=>{
+  /* SEC-02b: Pages-domainlijst kan zone_tag weglaten; controleer zone én account
+     via de officiële Zones-API. Geen schrijftoegang of hardcoded zone-id vereist. */
+  function zoneFetch({domains, zones, status=200}) {
+    const calls=[];
+    const fetchImpl=async url=>{
+      calls.push(url);
+      if(url.endsWith("/pages/projects/watishetweer/domains"))return response(success(domains));
+      if(url.includes("/zones?name=watishetweer.nl"))return status===200
+        ? response(success(zones))
+        : response({success:false,errors:[{message:"Forbidden"}]},status);
+      throw new Error("Onverwachte Cloudflare-call "+url);
+    };
+    return {fetchImpl,calls};
+  }
+  const geenTags=[{name:"watishetweer.nl",zone_tag:null},{name:"www.watishetweer.nl",zone_tag:null}];
+  {
+    const mock=zoneFetch({domains:geenTags,zones:[{id:ZONE,name:"watishetweer.nl",account:{id:ACCOUNT}}]});
+    assert.equal(await haalZoneTag({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl}),ZONE,
+      "zonder zone_tag is de uitsluitend bij dit account horende zone eenduidig");
+    assert.equal(mock.calls.length,2,"Zones-API uitsluitend als fallback");
+  }
+  {
+    const mock=zoneFetch({domains:geenTags,zones:[{id:ZONE,name:"watishetweer.nl",account:{id:"f".repeat(32)}}]});
+    await assert.rejects(()=>haalZoneTag({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl}),
+      /niet eenduidig gekoppeld aan het verwachte account/,"zone in ander account mag nooit gekozen worden");
+  }
+  {
+    const mock=zoneFetch({domains:geenTags,zones:[],status:403});
+    await assert.rejects(()=>haalZoneTag({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl}),
+      /Zone > Zone > Read/,"zonder Zone Read moet de lookup gesloten falen met een duidelijke hint");
+  }
+  {
+    const mock=zoneFetch({domains:[{name:"watishetweer.nl",zone_tag:ZONE},{name:"www.watishetweer.nl",zone_tag:ZONE}],zones:[]});
+    assert.equal(await haalZoneTag({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl}),ZONE);
+    assert.equal(mock.calls.length,1,"met zone_tag geen extra tokenrechten of API-call nodig");
+  }
+  {
+    const mock=zoneFetch({domains:[{name:"www.watishetweer.nl",zone_tag:ZONE}],zones:[]});
+    await assert.rejects(()=>haalZoneTag({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl}),
+      /Pages-hoofddomein/,"zonder gekoppeld apex-domain geen zone aannemen");
+    assert.equal(mock.calls.length,1);
+  }
   {
     const mock=maakFetch({siteBestaat:false,blockBestaat:true});
     const uit=await activeerWebAnalytics({accountId:ACCOUNT,token:"token",fetchImpl:mock.fetchImpl});
