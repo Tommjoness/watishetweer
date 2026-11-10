@@ -51,6 +51,12 @@ const PORTUGESE_BRON="Aviso de vento forte. Rajadas intensas. <img src=x onerror
 const PORTUGAL={pad:"/?lat=38.7223&lon=-9.1393&plaats=Lisboa&land=PT",lat:38.7223,lon:-9.1393,
   antwoord:{bron:"MeteoAlarm portugal",dekking:true,plaatsSpecifiek:true,land:"PT",lijst:[Object.assign({},DRENTHE_EN,{taal:"pt-PT",tekst:PORTUGESE_BRON,gebied:"Lisboa"})]}};
 
+const FRANSE_TITEL="Alerte locale pour des vents violents";
+const FRANSE_MELDING={pad:"/?lat=48.8566&lon=2.3522&plaats=Paris&land=FR",lat:48.8566,lon:2.3522,
+  antwoord:{bron:"MeteoAlarm france",dekking:true,plaatsSpecifiek:true,land:"FR",
+    lijst:[Object.assign({},DRENTHE_EN,{titel:FRANSE_TITEL,titelIsVertaling:false,taal:"fr-FR",
+      tekst:"Rafales dangereuses possibles.",gebied:"Paris"})]}};
+
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
 const server=http.createServer((req,res)=>{
   let p=new URL(req.url,"http://localhost").pathname;if(p.endsWith("/"))p+="index.html";
@@ -206,6 +212,21 @@ async function scherm(page,naam){
         assert.deepEqual(fouten,[],item.taal+": geen browserfouten");
         await context.close();
       }
+    }
+    /* Zonder herkende CAP-categorie is ook de titel officieel en onvertaald. */
+    for(const taal of [null,"en"]){
+      const {context,page,fouten}=await open(browser,root,FRANSE_MELDING,taal?1440:390,900,{taal});
+      const kop=await page.locator("#waarschuwingen .waarsch h3").evaluate(el=>({
+        text:el.textContent.trim(),lang:el.getAttribute("lang"),translate:el.getAttribute("translate")
+      }));
+      const label=await page.locator("#waarschuwingen .waarsch-bronlabel").innerText();
+      assert.equal(kop.text,FRANSE_TITEL,"onbekende CAP-soort: originele Franse titel");
+      assert.equal(kop.lang,"fr-FR","voorleessoftware leest ook de originele titel in de bron-taal");
+      assert.equal(kop.translate,"no","niet-gematchte officiële titel niet automatisch vertalen");
+      assert.equal(label,taal?"Official source text (not translated):":"Officiële brontekst (niet vertaald):",
+        "geen categorievertaalclaim bij officiële Franse titel");
+      assert.deepEqual(fouten,[],"geen browserfouten voor originele CAP-titel");
+      await context.close();
     }
     {
       const {context,page,fouten}=await open(browser,root,PLAATSEN.onbekend,390,844);
