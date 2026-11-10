@@ -179,13 +179,13 @@ async function scherm(page,naam){
     }
     /* Geen NL- of EN-blok beschikbaar: Frans, Spaans, Duits en Italiaans blijven origineel. */
     for(const item of [
-      {taal:"fr-FR",land:"FR",stad:"Paris",tekst:"Alerte de vent fort."},
-      {taal:"es-ES",land:"ES",stad:"Madrid",tekst:"Aviso por viento fuerte."},
-      {taal:"de-DE",land:"DE",stad:"Berlin",tekst:"Warnung vor starkem Wind."},
-      {taal:"it-IT",land:"IT",stad:"Roma",tekst:"Allerta per vento forte."}
+      {taal:"fr-FR",land:"FR",stad:"Paris",lat:48.8566,lon:2.3522,tekst:"Alerte de vent fort."},
+      {taal:"es-ES",land:"ES",stad:"Madrid",lat:40.4168,lon:-3.7038,tekst:"Aviso por viento fuerte."},
+      {taal:"de-DE",land:"DE",stad:"Berlin",lat:52.52,lon:13.405,tekst:"Warnung vor starkem Wind."},
+      {taal:"it-IT",land:"IT",stad:"Roma",lat:41.9028,lon:12.4964,tekst:"Allerta per vento forte."}
     ]){
-      const plaats={pad:"/?lat=48.8566&lon=2.3522&plaats="+item.stad+"&land="+item.land,
-        lat:48.8566,lon:2.3522,antwoord:{bron:"MeteoAlarm "+item.land.toLowerCase(),
+      const plaats={pad:"/?lat="+item.lat+"&lon="+item.lon+"&plaats="+item.stad+"&land="+item.land,
+        lat:item.lat,lon:item.lon,antwoord:{bron:"MeteoAlarm "+item.land.toLowerCase(),
           dekking:true,plaatsSpecifiek:true,land:item.land,
           lijst:[Object.assign({},DRENTHE_EN,{taal:item.taal,tekst:item.tekst,gebied:item.stad})]}};
       for(const taal of [null,"en"]){
