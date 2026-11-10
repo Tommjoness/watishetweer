@@ -71,6 +71,18 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
           +(meta?\`<p class="waarsch-meta">\${meta}</p>\`:"")
           +\`<details class="waarsch-details"><summary>Details van de waarschuwing</summary><p lang="en">\${esc(nwsTekst)}</p></details></div>\`;
       }
+      /* Bij ontbrekende NL-brontekst toont MeteoAlarm soms Engels of een andere taal.
+         De Nederlandse categoriekop is geen vertaling van de volledige bronmelding. */
+      const bronTaal=String(w.taal||"").trim();
+      const vreemdeMeteoTekst=/^MeteoAlarm\\b/i.test(String(d.bron||"")) && bronTaal && !/^nl(?:-|$)/i.test(bronTaal);
+      if(vreemdeMeteoTekst){
+        const bronLang=/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(bronTaal)?' lang="'+esc(bronTaal)+'"':"";
+        const label=w.titelIsVertaling===true
+          ?"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald."
+          :"Officiële brontekst (niet vertaald):";
+        return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3><p class="waarsch-bronlabel">\${esc(label)}</p><p class="waarsch-origineel"\${bronLang} translate="no">\${esc(tekst)}</p>\`
+          +(meta?\`<p class="waarsch-meta">\${meta}</p>\`:"")+\`</div>\`;
+      }
       return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3><p>\${esc(tekst)}\${meta?" "+meta:""}</p></div>\`;
     };
     const overig=lijst.slice(${ZICHTBARE_WAARSCHUWINGEN});
@@ -109,6 +121,9 @@ const CSS_PRODUCTIE=`  /* waarschuwingen */
   .waarsch{border-left:1px solid var(--rule);padding:8px 0 8px 12px;margin-top:var(--s2)}
   .waarsch h3{font-family:var(--sans);font-weight:500;font-size:14px;line-height:1.35;margin:0 0 3px;color:var(--ink)}
   .waarsch p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-70)}
+.waarsch .waarsch-bronlabel{font-size:11.5px;color:var(--ink-45);margin-bottom:4px}
+.waarsch .waarsch-origineel{white-space:pre-line}
+.waarsch .waarsch-meta{margin-top:4px}
   .waarsch[data-ui-severity="geel"]{border-left:3px solid var(--warning-yellow)}
   .waarsch[data-ui-severity="geel"] h3{color:var(--warning-yellow);font-weight:600}
   .waarsch[data-ui-severity="oranje"]{border-left:3px solid var(--warning-orange)}
