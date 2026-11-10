@@ -164,6 +164,25 @@ try {
   assert.equal(usBody.lijst.length,1);
   assert.equal(usBody.lijst[0].titel,"Heat Advisory");
   assert.equal(usBody.lijst[0].plaatsSpecifiek,true);
+  /* Met opt-in mag alleen GET DeepL aanroepen; HEAD heeft geen body en geen vertaalreden. */
+  const nwsBronFetch=globalThis.fetch;
+  let deeplAanroepen=0;
+  globalThis.fetch=async (...args)=>{
+    if(String(args[0]).startsWith("https://api-free.deepl.com/")){
+      deeplAanroepen++;
+      throw new Error("gesimuleerde DeepL-storing zonder externe netwerkrequest");
+    }
+    return nwsBronFetch(...args);
+  };
+  const testEnv={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"GEEN_ECHTE_SLEUTEL"};
+  const nwsUrl="https://watishetweer.nl/api/waarschuwingen?lat=32.783&lon=-96.807&land=US";
+  const nwsGet=await api.fetch(new Request(nwsUrl),testEnv);
+  assert.equal(nwsGet.status,200);
+  assert.equal(deeplAanroepen,1,"GET met opt-in doorloopt vertaalroute");
+  const nwsHead=await api.fetch(new Request(nwsUrl,{method:"HEAD"}),testEnv);
+  assert.equal(nwsHead.status,200);
+  assert.equal(await nwsHead.text(),"","HEAD antwoord blijft leeg");
+  assert.equal(deeplAanroepen,1,"HEAD mag geen extra DeepL-aanroep doen");
 
   console.log("API-waarschuwingsscope: lege NL-landfeed als nulwaarschuwing, niet-lege landfeed fail-closed, NWS-landgrens, GPS-landcheck en puntdekking behouden.");
 } finally {

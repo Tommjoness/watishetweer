@@ -35,7 +35,7 @@ const morgen="2026-07-23T21:59:59+02:00";
 const SAMENVATTING={land:"NL",landNaam:"Nederland",groepen:[{kleur:"oranje",type:"wind",gebieden:["Zeeland","Zierikzee"],meer:0},{kleur:"geel",type:"mist",gebieden:["IJsselmeer","Waddenzee","Zuid-Holland"],meer:2}]};
 const DRENTHE={titel:"Code geel: wind",tekst:"Er worden zware windstoten verwacht van 75-90 km/u.",kleur:"geel",type:"wind",niveau:"geel",niveauIsOfficieel:true,
   van:"2026-07-22T12:00:00+02:00",tot:morgen,gebied:"Drenthe",plaatsSpecifiek:true,landelijk:false,scope:"gebied"};
-const DRENTHE_EN=Object.assign({},DRENTHE,{tekst:"Severe gusts of 75-90 km/h are expected.",taal:"en-GB"});
+const DRENTHE_EN=Object.assign({},DRENTHE,{tekst:"Severe gusts of 75-90 km/h are expected.",taal:"en-GB",titelIsVertaling:true});
 const ASSEN="/?lat=52.993&lon=6.562&plaats=Assen&land=NL",UTRECHT="/?lat=52.091&lon=5.122&plaats=Utrecht&land=NL";
 const PLAATSEN={
   assen:{pad:ASSEN,lat:52.993,lon:6.562,antwoord:{bron:"MeteoAlarm netherlands",dekking:true,plaatsSpecifiek:true,land:"NL",lijst:[DRENTHE],elders:SAMENVATTING},
@@ -44,6 +44,25 @@ const PLAATSEN={
   onbekend:{pad:UTRECHT,lat:52.091,lon:5.122,antwoord:{bron:"MeteoAlarm netherlands",dekking:false,plaatsSpecifiek:false,land:"NL",lijst:[],reden:"geen plaats-specifieke dekking",
     elders:{land:"NL",landNaam:"Nederland",groepen:[{kleur:"geel",type:"wind",gebieden:["Drenthe","<img src=x onerror=alert(1)>"],meer:0}]}}}
 };
+
+/* Een buitenlandse locatie zonder officiële NL-tekst: de originele tekst mag niet stil worden vertaald. */
+const ZONDER_NL=Object.assign({},PLAATSEN.assen,{antwoord:PLAATSEN.assen.antwoordEn});
+const PORTUGESE_BRON="Aviso de vento forte. Rajadas intensas. <img src=x onerror=alert(1)>";
+const PORTUGAL={pad:"/?lat=38.7223&lon=-9.1393&plaats=Lisboa&land=PT",lat:38.7223,lon:-9.1393,
+  antwoord:{bron:"MeteoAlarm portugal",dekking:true,plaatsSpecifiek:true,land:"PT",lijst:[Object.assign({},DRENTHE_EN,{taal:"pt-PT",tekst:PORTUGESE_BRON,gebied:"Lisboa"})]}};
+
+const METEO_VERTALING_NL=Object.assign({},PORTUGAL,{antwoord:{...PORTUGAL.antwoord,lijst:[Object.assign({},PORTUGAL.antwoord.lijst[0],{vertaling:{tekst:"Waarschuwing voor harde wind in Lisboa.",methode:"deepl",automatisch:true}})]}});
+const NWS_BRON="* WHAT... Wind gusts of 65 mph may occur.";
+const NWS_NL="Er kunnen windstoten tot 65 mph voorkomen.";
+const NWS_VERTALING={pad:"/?lat=40.7128&lon=-74.006&plaats=New%20York&land=US",lat:40.7128,lon:-74.006,
+  antwoord:{bron:"National Weather Service",dekking:true,plaatsSpecifiek:true,land:"US",
+    lijst:[Object.assign({},DRENTHE_EN,{titel:"High Wind Warning",taal:"en-US",titelIsVertaling:false,
+      tekst:NWS_BRON,tekstIngekort:false,vertaling:{tekst:NWS_NL,methode:"deepl",automatisch:true}})]}};
+const FRANSE_TITEL="Alerte locale pour des vents violents";
+const FRANSE_MELDING={pad:"/?lat=48.8566&lon=2.3522&plaats=Paris&land=FR",lat:48.8566,lon:2.3522,
+  antwoord:{bron:"MeteoAlarm france",dekking:true,plaatsSpecifiek:true,land:"FR",
+    lijst:[Object.assign({},DRENTHE_EN,{titel:FRANSE_TITEL,titelIsVertaling:false,taal:"fr-FR",
+      tekst:"Rafales dangereuses possibles.",gebied:"Paris"})]}};
 
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png"};
 const server=http.createServer((req,res)=>{
@@ -98,7 +117,7 @@ async function scherm(page,naam){
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   try{
     for(const [w,h] of [[390,844],[1440,900]]){
       for(const thema of ["licht","donker"]){
@@ -131,6 +150,146 @@ async function scherm(page,naam){
       assert(r.kaartTekst.length===1&&/^Severe gusts of 75-90 km\/h are expected\./.test(r.kaartTekst[0]),"Engels: officiële Engelse tekst van de weerdienst");
       assert(!/Geldig|morgen|vandaag/.test(r.kaartTekst[0]),"Engels: geldigheid vertaald ("+r.kaartTekst[0]+")");
       await scherm(page,"assen-390-engels");
+      await context.close();
+    }
+    /* Geen Nederlandse CAP-tekst: één officiële bronzin, juist lang-attribuut en heldere disclaimer. */
+    {
+      const {context,page,fouten}=await open(browser,root,ZONDER_NL,390,844,{thema:"donker"});
+      const r=await lees(page);
+      const bron=await page.locator("#waarschuwingen .waarsch-origineel").evaluate(p=>({
+        tekst:p.textContent.trim(),lang:p.getAttribute("lang"),translate:p.getAttribute("translate"),
+        label:p.previousElementSibling&&p.previousElementSibling.textContent.trim()
+      }));
+      assert.deepEqual(r.kaarten,["Code geel: wind"],"NL fallback: kop blijft Nederlandse categorie");
+      assert.equal(bron.tekst,DRENTHE_EN.tekst,"Engelse officiële tekst blijft exact");
+      assert.equal(bron.lang,"en-GB","voorleessoftware krijgt de werkelijke brontaal");
+      assert.equal(bron.translate,"no","officiële tekst wordt niet door de vertaallaag gewijzigd");
+      assert.equal(bron.label,"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.");
+      assert.equal(r.tekst.split(DRENTHE_EN.tekst).length-1,1,"officiële inhoud staat één keer op de kaart");
+      assert.deepEqual(fouten,[],"geen browserfouten bij ontbreken van een NL-info-blok");
+      await context.close();
+    }
+    /* Ook Portugese CAP-brontekst blijft ongewijzigd; HTML uit de feed wordt ge-escaped. */
+    for(const taal of [null,"en"]){
+      const {context,page,fouten}=await open(browser,root,PORTUGAL,taal?1440:390,900,{taal});
+      const r=await lees(page);
+      const origineel=await page.locator("#waarschuwingen .waarsch-origineel").evaluate(p=>({
+        tekst:p.textContent.trim(),lang:p.getAttribute("lang"),translate:p.getAttribute("translate"),
+        label:p.previousElementSibling&&p.previousElementSibling.textContent.trim(),
+        img:p.querySelector("img")!==null
+      }));
+      assert.equal(origineel.tekst,PORTUGESE_BRON,"Portugese officiële tekst is onaangetast");
+      assert.equal(origineel.lang,"pt-PT","taal PT wordt expliciet aan de browser doorgegeven");
+      assert.equal(origineel.translate,"no","niet doen alsof Portugese brontekst is vertaald");
+      assert.equal(r.tekst.split(PORTUGESE_BRON).length-1,1,"geen dubbele officiële tekst");
+      assert.equal(origineel.img,false,"onvertrouwde brontekst mag nooit HTML uitvoeren");
+      assert(!/<img\s+src=/i.test(r.html)&&r.html.includes("&lt;img"),"originele HTML van de bron veilig ge-escaped");
+      assert.equal(origineel.label,taal
+        ?"Heading translated from the official warning category. Source text unchanged."
+        :"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.","label correct in pagina-taal");
+      assert.deepEqual(fouten,[],"geen browserfouten bij buitenlandse originele brontekst");
+      await context.close();
+    }
+    /* Een geaccepteerde vertaling is zichtbaar, maar officiële tekst slechts in details. */
+    {
+      const {context,page,fouten}=await open(browser,root,METEO_VERTALING_NL,390,844);
+      const samenvatting=await page.locator("#waarschuwingen .waarsch").innerText();
+      assert(samenvatting.includes("Automatisch vertaald (niet officieel):"),"Nederlandse tekst herkenbaar als automatische vertaling");
+      assert(samenvatting.includes("Waarschuwing voor harde wind in Lisboa."),"Nederlandse vertaling direct zichtbaar");
+      const bron=page.locator("#waarschuwingen .waarsch details .waarsch-origineel, #waarschuwingen .waarsch details p[translate=no]");
+      assert.equal(await bron.count(),1,"officiële brontekst éénmaal in details");
+      assert.equal(await bron.first().getAttribute("lang"),"pt-PT");
+      assert.equal(await bron.first().textContent(),PORTUGESE_BRON);
+      assert.deepEqual(fouten,[],"geen browserfouten door vertaalveld");
+      await context.close();
+    }
+    /* De finale NWS-renderer bewaart twee aparte alinea's in details:
+       officiële titel/bron en precies één officiële waarschuwingstekst. */
+    for(const taal of [null,"en"]){
+      const {context,page,fouten}=await open(browser,root,NWS_VERTALING,taal?1440:390,844,{taal});
+      const kaart=page.locator("#waarschuwingen > .waarsch");
+      assert.equal(await kaart.count(),1,"NWS: precies één waarschuwingkaart");
+      const details=kaart.locator(".waarsch-officieel-details");
+      assert.equal(await details.count(),1,"NWS: één uitklap met officiële tekst");
+      const bron=details.locator(".final-warning-official-text");
+      const bronMeta=details.locator(".final-warning-official-meta");
+      assert.equal(await bron.count(),1,"NWS: precies één officiële brontekst, los van bronvermelding");
+      assert.equal(await bronMeta.count(),1,"NWS: aparte officiële titel en bronvermelding");
+      assert.equal((await bron.textContent()).trim(),NWS_BRON,"NWS: officiële brontekst letterlijk intact");
+      assert.equal((await kaart.textContent()).split(NWS_BRON).length-1,1,"NWS: geen dubbele Engelse brontekst");
+      assert((await bronMeta.textContent()).includes("High Wind Warning"),"NWS: officiële titel behouden");
+      assert((await bronMeta.textContent()).includes("National Weather Service"),"NWS: bronnaam behouden");
+      assert.equal(await bron.getAttribute("lang"),"en","NWS: Engelse voorleestaal");
+      assert.equal(await bron.getAttribute("translate"),"no","NWS: geen automatische browservertaling van de officiële tekst");
+      assert.equal(await bronMeta.locator("span").getAttribute("translate"),"no","NWS: officiële titel niet automatisch vertalen");
+      assert.equal((await details.locator("summary").textContent()).trim(),taal==="en"?"Official text from the National Weather Service":"Officiële tekst van de National Weather Service","NWS: samenvatting volgt geselecteerde interfacetaal");
+      if(!taal){
+        assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling direct zichtbaar");
+        assert.equal((await kaart.locator(".waarsch-vertaling-label").innerText()).trim(),"Automatisch vertaald (niet officieel):");
+        assert.equal((await kaart.locator("h3").textContent()).trim(),"Waarschuwing voor zeer harde wind","NWS: bestaande betrouwbare Nederlandse gebeurteniskop behouden");
+      }else{
+        assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS: Engelse interface negeert NL-vertaling");
+        assert.equal((await kaart.locator("h3").textContent()).trim(),"High Wind Warning","NWS: Engelse kop officieel");
+      }
+      assert.deepEqual(fouten,[],"NWS: geen browserfouten");
+      await context.close();
+    }
+    const nwsZonderVertaling={...NWS_VERTALING,antwoord:{...NWS_VERTALING.antwoord,
+      lijst:[{...NWS_VERTALING.antwoord.lijst[0],vertaling:null}]}};
+    {
+      const {context,page,fouten}=await open(browser,root,nwsZonderVertaling,390,844);
+      const kaart=page.locator("#waarschuwingen > .waarsch");
+      assert.equal(await kaart.count(),1);
+      assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS zonder vertaling blijft origineel");
+      assert.equal(await kaart.locator(".final-warning-explanation").count(),1,"NWS: bestaande uitleg blijft bij afwezige vertaling");
+      assert.equal((await kaart.locator(".final-warning-official-text").textContent()).trim(),NWS_BRON);
+      assert.equal((await kaart.textContent()).split(NWS_BRON).length-1,1,"NWS: officiële tekst zonder vertaling éénmaal");
+      assert.deepEqual(fouten,[]);
+      await context.close();
+    }
+    /* Geen NL- of EN-blok beschikbaar: Frans, Spaans, Duits en Italiaans blijven origineel. */
+    for(const item of [
+      {taal:"fr-FR",land:"FR",stad:"Paris",lat:48.8566,lon:2.3522,tekst:"Alerte de vent fort."},
+      {taal:"es-ES",land:"ES",stad:"Madrid",lat:40.4168,lon:-3.7038,tekst:"Aviso por viento fuerte."},
+      {taal:"de-DE",land:"DE",stad:"Berlin",lat:52.52,lon:13.405,tekst:"Warnung vor starkem Wind."},
+      {taal:"it-IT",land:"IT",stad:"Roma",lat:41.9028,lon:12.4964,tekst:"Allerta per vento forte."}
+    ]){
+      const plaats={pad:"/?lat="+item.lat+"&lon="+item.lon+"&plaats="+item.stad+"&land="+item.land,
+        lat:item.lat,lon:item.lon,antwoord:{bron:"MeteoAlarm "+item.land.toLowerCase(),
+          dekking:true,plaatsSpecifiek:true,land:item.land,
+          lijst:[Object.assign({},DRENTHE_EN,{taal:item.taal,tekst:item.tekst,gebied:item.stad})]}};
+      for(const taal of [null,"en"]){
+        const {context,page,fouten}=await open(browser,root,plaats,taal?1440:390,900,{taal});
+        const r=await lees(page);
+        const bron=await page.locator("#waarschuwingen .waarsch-origineel").evaluate(p=>({
+          tekst:p.textContent.trim(),lang:p.getAttribute("lang"),translate:p.getAttribute("translate"),
+          label:p.previousElementSibling&&p.previousElementSibling.textContent.trim()
+        }));
+        assert.equal(bron.tekst,item.tekst,item.taal+": officiële tekst blijft letterlijk");
+        assert.equal(bron.lang,item.taal,item.taal+": juiste taal voor schermlezers");
+        assert.equal(bron.translate,"no",item.taal+": geen automatische vertaling");
+        assert.equal(r.tekst.split(item.tekst).length-1,1,item.taal+": geen dubbele officiële tekst");
+        assert.equal(bron.label,taal
+          ?"Heading translated from the official warning category. Source text unchanged."
+          :"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.",
+          item.taal+": uitleg in interfacetaal");
+        assert.deepEqual(fouten,[],item.taal+": geen browserfouten");
+        await context.close();
+      }
+    }
+    /* Zonder herkende CAP-categorie is ook de titel officieel en onvertaald. */
+    for(const taal of [null,"en"]){
+      const {context,page,fouten}=await open(browser,root,FRANSE_MELDING,taal?1440:390,900,{taal});
+      const kop=await page.locator("#waarschuwingen .waarsch h3").evaluate(el=>({
+        text:el.textContent.trim(),lang:el.getAttribute("lang"),translate:el.getAttribute("translate")
+      }));
+      const label=await page.locator("#waarschuwingen .waarsch-bronlabel").innerText();
+      assert.equal(kop.text,FRANSE_TITEL,"onbekende CAP-soort: originele Franse titel");
+      assert.equal(kop.lang,"fr-FR","voorleessoftware leest ook de originele titel in de bron-taal");
+      assert.equal(kop.translate,"no","niet-gematchte officiële titel niet automatisch vertalen");
+      assert.equal(label,taal?"Official source text (not translated):":"Officiële brontekst (niet vertaald):",
+        "geen categorievertaalclaim bij officiële Franse titel");
+      assert.deepEqual(fouten,[],"geen browserfouten voor originele CAP-titel");
       await context.close();
     }
     {

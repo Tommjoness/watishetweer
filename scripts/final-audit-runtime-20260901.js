@@ -202,16 +202,22 @@ function verrijkNwsWaarschuwingen(){
     const meta=[],ernstZin=A.nwsErnstZin(w);if(ernstZin)meta.push(ernstZin);
     if(geldig)meta.push("Geldig tot "+geldig+".");if(w.landelijk)meta.push("Geldt voor een groter gebied, niet per se voor deze plaats.");
     if(meta.length){const p=document.createElement("p");p.className="waarsch-meta";p.textContent=meta.join(" ");card.appendChild(p);}
-    const uitleg=document.createElement("p");uitleg.className="final-warning-explanation";
-    const strong=document.createElement("strong");strong.textContent="Uitleg van watishetweer.nl: ";uitleg.appendChild(strong);uitleg.appendChild(document.createTextNode(u.uitleg));card.appendChild(uitleg);
+    const vertaling=!engels&&w.tekstIngekort!==true&&w.vertaling&&w.vertaling.automatisch===true?String(w.vertaling.tekst||"").trim():"";
+    if(vertaling){
+      const label=document.createElement("p");label.className="waarsch-vertaling-label";label.textContent="Automatisch vertaald (niet officieel):";card.appendChild(label);
+      const p=document.createElement("p");p.className="waarsch-vertaling";p.textContent=vertaling;card.appendChild(p);
+    }else{
+      const uitleg=document.createElement("p");uitleg.className="final-warning-explanation";
+      const strong=document.createElement("strong");strong.textContent="Uitleg van watishetweer.nl: ";uitleg.appendChild(strong);uitleg.appendChild(document.createTextNode(u.uitleg));card.appendChild(uitleg);
+    }
     /* Behoud naast de finale class ook het al bestaande staff-auditcontract.
        Zo blijft officiële titel/bron via dezelfde semantische container vindbaar,
        terwijl de uitgebreide officiële NWS-tekst dezelfde details gebruikt. */
     const details=document.createElement("details");details.className="waarsch-details waarsch-officieel-details";
-    const summary=document.createElement("summary");summary.textContent="Officiële tekst van de National Weather Service";details.appendChild(summary);
+    const summary=document.createElement("summary");summary.textContent="Officiële tekst van de National Weather Service"+(w.tekstIngekort===true?" (ingekort)":"");details.appendChild(summary);
     const bron=document.createElement("p");bron.className="final-warning-official-meta";bron.appendChild(document.createTextNode("Officiële titel: "));
-    const officiëleTitel=document.createElement("span");officiëleTitel.lang="en";officiëleTitel.textContent=titel||"Weather alert";bron.appendChild(officiëleTitel);bron.appendChild(document.createTextNode(" · Bron: National Weather Service"));details.appendChild(bron);
-    const officieel=document.createElement("p");officieel.lang="en";officieel.className="final-warning-official-text";officieel.textContent=tekst||"Official warning text unavailable.";details.appendChild(officieel);card.appendChild(details);
+    const officiëleTitel=document.createElement("span");officiëleTitel.lang="en";officiëleTitel.setAttribute("translate","no");officiëleTitel.textContent=titel||"Weather alert";bron.appendChild(officiëleTitel);bron.appendChild(document.createTextNode(" · Bron: National Weather Service"));details.appendChild(bron);
+    const officieel=document.createElement("p");officieel.lang="en";officieel.setAttribute("translate","no");officieel.className="final-warning-official-text";officieel.textContent=tekst||"Official warning text unavailable.";details.appendChild(officieel);card.appendChild(details);
     const url=officiëleNwsUrl(w.url);if(url){const link=document.createElement("a");link.className="final-warning-source";link.href=url;link.target="_blank";link.rel="noopener";link.textContent="Bekijk deze waarschuwing bij de officiële bron";card.appendChild(link);}
   });
 }

@@ -37,21 +37,43 @@ assert.equal(lijst.length, 1, "één waarschuwing, niet één per taal");
 assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort");
 assert.equal(lijst[0].tekst, "Er wordt verspreide mist verwacht.");
 assert.equal(lijst[0].taal, "nl-BE");
+assert.equal(lijst[0].titelIsVertaling, true, "de categorie vormt een Nederlandse kop");
 lijst = uitCap(feed, 51.05, 3.72, Date.now(), "en");
 assert.equal(lijst.length, 1);
 assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort; de app toont die als \"Yellow warning for fog\"");
 assert.equal(lijst[0].tekst, "Widespread fog is expected.");
 assert.equal(lijst[0].taal, "en-GB");
+assert.equal(lijst[0].titelIsVertaling, true, "de kop vertaalt alleen de categorie, niet de originele brontekst");
 
 /* Zonder bekend niveau of bekende soort blijft de officiële titel. */
 const zonderSoort = { warnings: [{ alert: { info: [Object.assign(blok("nl-BE", "Gele waarschuwing voor iets", "x"),
   { parameter: [{ valueName: "awareness_level", value: "2; yellow; Moderate" }, { valueName: "awareness_type", value: "99; onbekend" }] })] } }] };
 assert.equal(uitCap(zonderSoort, 51.05, 3.72)[0].titel, "Gele waarschuwing voor iets", "onbekende soort: officiële titel");
+assert.equal(uitCap(zonderSoort, 51.05, 3.72)[0].titelIsVertaling, false, "geen vertaalclaim zonder officiële categorie");
 
 /* Terugval: zonder Engels het Nederlands, zonder beide het eerste blok. */
 assert.equal(kiesInfo([blok("nl-NL", "A", ""), blok("de-DE", "B", "")], "en").event, "A");
 assert.equal(kiesInfo([blok("de-DE", "B", ""), blok("en", "C", "")], "nl").event, "C");
 assert.equal(kiesInfo([blok("pl-PL", "D", ""), blok("de-DE", "E", "")], "en").event, "D");
+
+/* Als een waarschuwing uitsluitend FR/ES/DE/IT bevat, blijft de eerste officiële
+   taalvariant behouden; de classificatie vormt nog steeds alleen de kop. */
+for(const [language,event,description] of [
+  ["fr-FR","Avertissement de vent","Alerte de vent fort."],
+  ["es-ES","Aviso de viento","Aviso por viento fuerte."],
+  ["de-DE","Windwarnung","Warnung vor starkem Wind."],
+  ["it-IT","Allerta vento","Allerta per vento forte."]
+]){
+  const alleenBron={warnings:[{alert:{info:[blok(language,event,description)]}}]};
+  for(const voorkeur of ["nl","en"]){
+    const gevonden=uitCap(alleenBron,48.8566,2.3522,Date.now(),voorkeur);
+    assert.equal(gevonden.length,1,language+": één melding per CAP-alert");
+    assert.equal(gevonden[0].taal,language,language+": originele taalcode behouden");
+    assert.equal(gevonden[0].tekst,description,language+": originele tekst letterlijk behouden");
+    assert.equal(gevonden[0].titel,"Code geel: mist",language+": Nederlandstalige kop uit CAP-soort");
+    assert.equal(gevonden[0].titelIsVertaling,true,language+": kop gemarkeerd als categorievertaling");
+  }
+}
 
 /* Edge-cache: Nederlands en Engels apart; onbekende taalwaarden vallen op Nederlands. */
 const BASIS = "https://watishetweer.nl/api/waarschuwingen?lat=51.05&lon=3.72&land=BE";
