@@ -66,6 +66,14 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
       if(geldig)metaDelen.push("Geldig tot "+esc(geldig)+".");
       if(w.landelijk)metaDelen.push("Geldt voor een groter gebied, niet per se voor deze plaats.");
       const meta=metaDelen.join(" "),ernst=esc(String(w.niveau||"").toLowerCase());
+      /* NWS: accepteer vertaling, maar behoud de officiële Engelse titel en brontekst. */
+      const nwsVertaling=w.vertaling&&w.vertaling.automatisch===true?String(w.vertaling.tekst||"").trim():"";
+      if(String(d.bron||"")==="National Weather Service"&&nwsVertaling&&w.tekstIngekort!==true&&document.documentElement.getAttribute("data-taal")!=="en"){
+        return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3 lang="en" translate="no">\${esc(w.titel)}</h3>\`
+          +\`<p class="waarsch-vertaling-label">Automatisch vertaald (niet officieel):</p><p class="waarsch-vertaling">\${esc(nwsVertaling)}</p>\`
+          +\`<details class="waarsch-details"><summary>Bekijk officiële oorspronkelijke tekst</summary><p lang="en" translate="no">\${esc(tekst)}</p></details>\`
+          +(meta?\`<p class="waarsch-meta">\${meta}</p>\`:"")+\`</div>\`;
+      }
       if(/\\*\\s*(?:WHAT|WHERE|WHEN|IMPACTS)\\.\\.\\./i.test(nwsTekst)){
         return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3>\`
           +(meta?\`<p class="waarsch-meta">\${meta}</p>\`:"")

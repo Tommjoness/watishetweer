@@ -52,6 +52,12 @@ const PORTUGAL={pad:"/?lat=38.7223&lon=-9.1393&plaats=Lisboa&land=PT",lat:38.722
   antwoord:{bron:"MeteoAlarm portugal",dekking:true,plaatsSpecifiek:true,land:"PT",lijst:[Object.assign({},DRENTHE_EN,{taal:"pt-PT",tekst:PORTUGESE_BRON,gebied:"Lisboa"})]}};
 
 const METEO_VERTALING_NL=Object.assign({},PORTUGAL,{antwoord:{...PORTUGAL.antwoord,lijst:[Object.assign({},PORTUGAL.antwoord.lijst[0],{vertaling:{tekst:"Waarschuwing voor harde wind in Lisboa.",methode:"deepl",automatisch:true}})]}});
+const NWS_BRON="* WHAT... Wind gusts of 65 mph may occur.";
+const NWS_NL="Er kunnen windstoten tot 65 mph voorkomen.";
+const NWS_VERTALING={pad:"/?lat=40.7128&lon=-74.006&plaats=New%20York&land=US",lat:40.7128,lon:-74.006,
+  antwoord:{bron:"National Weather Service",dekking:true,plaatsSpecifiek:true,land:"US",
+    lijst:[Object.assign({},DRENTHE_EN,{titel:"High Wind Warning",taal:"en-US",titelIsVertaling:false,
+      tekst:NWS_BRON,tekstIngekort:false,vertaling:{tekst:NWS_NL,methode:"deepl",automatisch:true}})]}};
 const FRANSE_TITEL="Alerte locale pour des vents violents";
 const FRANSE_MELDING={pad:"/?lat=48.8566&lon=2.3522&plaats=Paris&land=FR",lat:48.8566,lon:2.3522,
   antwoord:{bron:"MeteoAlarm france",dekking:true,plaatsSpecifiek:true,land:"FR",
@@ -195,6 +201,37 @@ async function scherm(page,naam){
       assert.equal(await bron.first().getAttribute("lang"),"pt-PT");
       assert.equal(await bron.first().textContent(),PORTUGESE_BRON);
       assert.deepEqual(fouten,[],"geen browserfouten door vertaalveld");
+      await context.close();
+    }
+    /* De NWS-tekst wordt alleen bij NL met geaccepteerde vertaling voorop gezet. */
+    for(const taal of [null,"en"]){
+      const {context,page,fouten}=await open(browser,root,NWS_VERTALING,taal?1440:390,844,{taal});
+      const kaart=page.locator("#waarschuwingen .waarsch");
+      const bron=kaart.locator("details p");
+      assert.equal(await bron.count(),1,"NWS: officiële brontekst precies één keer");
+      assert.equal((await bron.first().textContent()).trim(),NWS_BRON,"NWS: officiële tekst intact");
+      if(!taal){
+        assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling zichtbaar");
+        assert.equal((await kaart.locator(".waarsch-vertaling-label").innerText()).trim(),"Automatisch vertaald (niet officieel):");
+        assert.equal(await bron.first().getAttribute("lang"),"en","NWS: Engelse voorleestaal");
+        assert.equal(await bron.first().getAttribute("translate"),"no","NWS: officiële brontekst wordt niet vertaald");
+        assert.equal(await kaart.locator("h3").getAttribute("translate"),"no","NWS: officiële Engelse titel behouden");
+        assert.equal((await kaart.locator("summary").textContent()).trim(),"Bekijk officiële oorspronkelijke tekst");
+      }else{
+        assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS: Engelse interface negeert NL-vertaling");
+        assert.equal((await kaart.locator("h3").textContent()).trim(),"High Wind Warning");
+      }
+      assert.deepEqual(fouten,[],"NWS: geen browserfouten");
+      await context.close();
+    }
+    const nwsZonderVertaling={...NWS_VERTALING,antwoord:{...NWS_VERTALING.antwoord,
+      lijst:[{...NWS_VERTALING.antwoord.lijst[0],vertaling:null}]}};
+    {
+      const {context,page,fouten}=await open(browser,root,nwsZonderVertaling,390,844);
+      const kaart=page.locator("#waarschuwingen .waarsch");
+      assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS zonder vertaling blijft origineel");
+      assert.equal((await kaart.locator("details p").textContent()).trim(),NWS_BRON);
+      assert.deepEqual(fouten,[]);
       await context.close();
     }
     /* Geen NL- of EN-blok beschikbaar: Frans, Spaans, Duits en Italiaans blijven origineel. */
