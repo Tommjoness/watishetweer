@@ -56,6 +56,25 @@ assert.equal(kiesInfo([blok("nl-NL", "A", ""), blok("de-DE", "B", "")], "en").ev
 assert.equal(kiesInfo([blok("de-DE", "B", ""), blok("en", "C", "")], "nl").event, "C");
 assert.equal(kiesInfo([blok("pl-PL", "D", ""), blok("de-DE", "E", "")], "en").event, "D");
 
+/* Als een waarschuwing uitsluitend FR/ES/DE/IT bevat, blijft de eerste officiële
+   taalvariant behouden; de classificatie vormt nog steeds alleen de kop. */
+for(const [language,event,description] of [
+  ["fr-FR","Avertissement de vent","Alerte de vent fort."],
+  ["es-ES","Aviso de viento","Aviso por viento fuerte."],
+  ["de-DE","Windwarnung","Warnung vor starkem Wind."],
+  ["it-IT","Allerta vento","Allerta per vento forte."]
+]){
+  const alleenBron={warnings:[{alert:{info:[blok(language,event,description)]}}]};
+  for(const voorkeur of ["nl","en"]){
+    const gevonden=uitCap(alleenBron,48.8566,2.3522,Date.now(),voorkeur);
+    assert.equal(gevonden.length,1,language+": één melding per CAP-alert");
+    assert.equal(gevonden[0].taal,language,language+": originele taalcode behouden");
+    assert.equal(gevonden[0].tekst,description,language+": originele tekst letterlijk behouden");
+    assert.equal(gevonden[0].titel,"Code geel: mist",language+": Nederlandstalige kop uit CAP-soort");
+    assert.equal(gevonden[0].titelIsVertaling,true,language+": kop gemarkeerd als categorievertaling");
+  }
+}
+
 /* Edge-cache: Nederlands en Engels apart; onbekende taalwaarden vallen op Nederlands. */
 const BASIS = "https://watishetweer.nl/api/waarschuwingen?lat=51.05&lon=3.72&land=BE";
 const nl = canoniekeCacheUrl(new Request(BASIS), "waarschuwingen");
