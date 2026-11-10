@@ -104,7 +104,7 @@ async function scherm(page,naam){
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   try{
     for(const [w,h] of [[390,844],[1440,900]]){
       for(const thema of ["licht","donker"]){
@@ -176,6 +176,36 @@ async function scherm(page,naam){
         :"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.","label correct in pagina-taal");
       assert.deepEqual(fouten,[],"geen browserfouten bij buitenlandse originele brontekst");
       await context.close();
+    }
+    /* Geen NL- of EN-blok beschikbaar: Frans, Spaans, Duits en Italiaans blijven origineel. */
+    for(const item of [
+      {taal:"fr-FR",land:"FR",stad:"Paris",tekst:"Alerte de vent fort."},
+      {taal:"es-ES",land:"ES",stad:"Madrid",tekst:"Aviso por viento fuerte."},
+      {taal:"de-DE",land:"DE",stad:"Berlin",tekst:"Warnung vor starkem Wind."},
+      {taal:"it-IT",land:"IT",stad:"Roma",tekst:"Allerta per vento forte."}
+    ]){
+      const plaats={pad:"/?lat=48.8566&lon=2.3522&plaats="+item.stad+"&land="+item.land,
+        lat:48.8566,lon:2.3522,antwoord:{bron:"MeteoAlarm "+item.land.toLowerCase(),
+          dekking:true,plaatsSpecifiek:true,land:item.land,
+          lijst:[Object.assign({},DRENTHE_EN,{taal:item.taal,tekst:item.tekst,gebied:item.stad})]}};
+      for(const taal of [null,"en"]){
+        const {context,page,fouten}=await open(browser,root,plaats,taal?1440:390,900,{taal});
+        const r=await lees(page);
+        const bron=await page.locator("#waarschuwingen .waarsch-origineel").evaluate(p=>({
+          tekst:p.textContent.trim(),lang:p.getAttribute("lang"),translate:p.getAttribute("translate"),
+          label:p.previousElementSibling&&p.previousElementSibling.textContent.trim()
+        }));
+        assert.equal(bron.tekst,item.tekst,item.taal+": officiële tekst blijft letterlijk");
+        assert.equal(bron.lang,item.taal,item.taal+": juiste taal voor schermlezers");
+        assert.equal(bron.translate,"no",item.taal+": geen automatische vertaling");
+        assert.equal(r.tekst.split(item.tekst).length-1,1,item.taal+": geen dubbele officiële tekst");
+        assert.equal(bron.label,taal
+          ?"Heading translated from the official warning category. Source text unchanged."
+          :"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.",
+          item.taal+": uitleg in interfacetaal");
+        assert.deepEqual(fouten,[],item.taal+": geen browserfouten");
+        await context.close();
+      }
     }
     {
       const {context,page,fouten}=await open(browser,root,PLAATSEN.onbekend,390,844);
