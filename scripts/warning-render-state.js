@@ -74,7 +74,8 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
       /* Bij ontbrekende NL-brontekst toont MeteoAlarm soms Engels of een andere taal.
          De Nederlandse categoriekop is geen vertaling van de volledige bronmelding. */
       const bronTaal=String(w.taal||"").trim();
-      const vreemdeMeteoTekst=/^MeteoAlarm\\b/i.test(String(d.bron||"")) && bronTaal && !/^nl(?:-|$)/i.test(bronTaal);
+      const vreemdeMeteoTekst=/^MeteoAlarm\\b/i.test(String(d.bron||"")) && bronTaal && !/^nl(?:-|$)/i.test(bronTaal)
+        && !(document.documentElement.getAttribute("data-taal")==="en" && /^en(?:-|$)/i.test(bronTaal));
       if(vreemdeMeteoTekst){
         const bronLang=/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(bronTaal)?' lang="'+esc(bronTaal)+'"':"";
         const label=w.titelIsVertaling===true
