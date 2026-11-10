@@ -222,7 +222,7 @@ async function scherm(page,naam){
       assert.equal(await bron.getAttribute("lang"),"en","NWS: Engelse voorleestaal");
       assert.equal(await bron.getAttribute("translate"),"no","NWS: geen automatische browservertaling van de officiële tekst");
       assert.equal(await bronMeta.locator("span").getAttribute("translate"),"no","NWS: officiële titel niet automatisch vertalen");
-      assert.equal((await details.locator("summary").textContent()).trim(),"Officiële tekst van de National Weather Service");
+      assert.equal((await details.locator("summary").textContent()).trim(),taal==="en"?"Official text from the National Weather Service":"Officiële tekst van de National Weather Service","NWS: samenvatting volgt geselecteerde interfacetaal");
       if(!taal){
         assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling direct zichtbaar");
         assert.equal((await kaart.locator(".waarsch-vertaling-label").innerText()).trim(),"Automatisch vertaald (niet officieel):");
