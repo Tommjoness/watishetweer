@@ -675,6 +675,8 @@
     "Geldt voor een groter gebied, niet per se voor deze plaats.": "Applies to a wider area, not necessarily to this place.",
     "Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.": "Heading translated from the official warning category. Source text unchanged.",
     "Officiële brontekst (niet vertaald):": "Official source text (not translated):",
+    "Officiële brontekst (ingekort en niet vertaald):": "Official source text (shortened and not translated):",
+    "Officiële tekst van de National Weather Service (ingekort)": "Official text from the National Weather Service (shortened)",
     "Automatisch vertaald (niet officieel):": "Machine translated (not official):",
     "Bekijk officiële oorspronkelijke tekst": "View original official text",
     "Bekijk deze waarschuwing bij de officiële bron": "View this warning at the official source",

@@ -75,7 +75,7 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
          De Nederlandse categoriekop is geen vertaling van de volledige bronmelding. */
       const bronTaal=String(w.taal||"").trim();
       const vertaling=w.vertaling&&w.vertaling.automatisch===true?String(w.vertaling.tekst||"").trim():"";
-      if(vertaling&&document.documentElement.getAttribute("data-taal")!=="en"&&/^MeteoAlarm\\b/i.test(String(d.bron||""))){
+      if(vertaling&&w.tekstIngekort!==true&&document.documentElement.getAttribute("data-taal")!=="en"&&/^MeteoAlarm\\b/i.test(String(d.bron||""))){
         const bronLang=/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(bronTaal)?' lang="'+esc(bronTaal)+'"':"";
         const kopLang=w.titelIsVertaling===true?"":bronLang+' translate="no"';
         return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3\${kopLang}>\${esc(w.titel)}</h3><p class="waarsch-vertaling-label">Automatisch vertaald (niet officieel):</p><p class="waarsch-vertaling">\${esc(vertaling)}</p>\`
@@ -86,8 +86,8 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
         && !(document.documentElement.getAttribute("data-taal")==="en" && /^en(?:-|$)/i.test(bronTaal));
       if(vreemdeMeteoTekst){
         const bronLang=/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(bronTaal)?' lang="'+esc(bronTaal)+'"':"";
-        const label=w.titelIsVertaling===true
-          ?"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald."
+        const label=w.tekstIngekort===true?"Officiële brontekst (ingekort en niet vertaald):"
+          :w.titelIsVertaling===true?"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald."
           :"Officiële brontekst (niet vertaald):";
         const kopLang=w.titelIsVertaling===true?"":bronLang+' translate="no"';
         return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3\${kopLang}>\${esc(w.titel)}</h3><p class="waarsch-bronlabel">\${esc(label)}</p><p class="waarsch-origineel"\${bronLang} translate="no">\${esc(tekst)}</p>\`

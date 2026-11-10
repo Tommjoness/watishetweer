@@ -44,6 +44,8 @@ const enabled={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"FAKE_KEY_NOT_FOR_NETWO
   calls=0;
   await t.vertaalWaarschuwingen(many,enabled,{fetcher:async()=>{calls++;return {ok:false}}});
   assert.equal(calls,t.MAX_PER_ANTWOORD,"nooit onbegrensd vertalen per request");
+  const ingekort={...base,lijst:[{...base.lijst[0],tekstIngekort:true}]};
+  assert.strictEqual(await t.vertaalWaarschuwingen(ingekort,enabled,{fetcher:()=>{throw Error("afgebroken officiële bron mag niet worden vertaald")}}),ingekort);
   const incomplete={...base,lijst:[{...base.lijst[0],tekst:"Waarschuwing…"}]};
   assert.strictEqual(await t.vertaalWaarschuwingen(incomplete,enabled,{fetcher:()=>{throw Error("incomplete source rejected")}}),incomplete);
   const cacheValues=new Map();

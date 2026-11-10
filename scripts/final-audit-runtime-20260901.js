@@ -202,7 +202,7 @@ function verrijkNwsWaarschuwingen(){
     const meta=[],ernstZin=A.nwsErnstZin(w);if(ernstZin)meta.push(ernstZin);
     if(geldig)meta.push("Geldig tot "+geldig+".");if(w.landelijk)meta.push("Geldt voor een groter gebied, niet per se voor deze plaats.");
     if(meta.length){const p=document.createElement("p");p.className="waarsch-meta";p.textContent=meta.join(" ");card.appendChild(p);}
-    const vertaling=!engels&&w.vertaling&&w.vertaling.automatisch===true?String(w.vertaling.tekst||"").trim():"";
+    const vertaling=!engels&&w.tekstIngekort!==true&&w.vertaling&&w.vertaling.automatisch===true?String(w.vertaling.tekst||"").trim():"";
     if(vertaling){
       const label=document.createElement("p");label.className="waarsch-vertaling-label";label.textContent="Automatisch vertaald (niet officieel):";card.appendChild(label);
       const p=document.createElement("p");p.className="waarsch-vertaling";p.textContent=vertaling;card.appendChild(p);
@@ -214,7 +214,7 @@ function verrijkNwsWaarschuwingen(){
        Zo blijft officiële titel/bron via dezelfde semantische container vindbaar,
        terwijl de uitgebreide officiële NWS-tekst dezelfde details gebruikt. */
     const details=document.createElement("details");details.className="waarsch-details waarsch-officieel-details";
-    const summary=document.createElement("summary");summary.textContent="Officiële tekst van de National Weather Service";details.appendChild(summary);
+    const summary=document.createElement("summary");summary.textContent="Officiële tekst van de National Weather Service"+(w.tekstIngekort===true?" (ingekort)":"");details.appendChild(summary);
     const bron=document.createElement("p");bron.className="final-warning-official-meta";bron.appendChild(document.createTextNode("Officiële titel: "));
     const officiëleTitel=document.createElement("span");officiëleTitel.lang="en";officiëleTitel.textContent=titel||"Weather alert";bron.appendChild(officiëleTitel);bron.appendChild(document.createTextNode(" · Bron: National Weather Service"));details.appendChild(bron);
     const officieel=document.createElement("p");officieel.lang="en";officieel.className="final-warning-official-text";officieel.textContent=tekst||"Official warning text unavailable.";details.appendChild(officieel);card.appendChild(details);
