@@ -45,6 +45,7 @@ Benodigde setuprechten:
 #### Zone: watishetweer.nl
 
 - `Config Rules Edit`
+- `Zone Read` (voor een gecontroleerde zone-opzoeking wanneer Cloudflare Pages geen `zone_tag` terugstuurt)
 
 Als `CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN` ontbreekt, stopt de setupworkflow vóór de Cloudflare-wijzigingen met een foutmelding (**fail-closed**). Het Pages-deploytoken en het read-only Analytics-token zijn uitdrukkelijk geen fallback voor deze writes. Bij een geslaagde run moet de tokenbron `dedicated-setup` zijn.
 
@@ -60,7 +61,7 @@ De workflow:
 
 1. checkt de exacte bron-SHA uit;
 2. wacht totdat exact die SHA publiek live staat;
-3. selecteert de dedicated setup-token of de deployfallback;
+3. vereist het afzonderlijke setup-token; een deployfallback is niet toegestaan;
 4. maakt/activeert de Web Analytics-site idempotent;
 5. leest de site opnieuw terug en verifieert `auto_install` en de zone;
 6. verwijdert alleen daarna de eigen historische RUM-blokkaderegel indien die nog bestaat.

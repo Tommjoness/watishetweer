@@ -69,7 +69,7 @@ De productiedeploy heeft minimaal deze twee geheime waarden nodig. Sinds SEC-02b
 
 | Variabele in de job | Doel | Waar instellen |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub-omgeving `productie`, omgevingssecret `CLOUDFLARE_PRODUCTIE_API_TOKEN` |
+| `CLOUDFLARE_API_TOKEN` | Pages deployen, custom domains controleren en de bestaande zone-rate-limit beheren. Vereist Pages Write, Zone WAF Write en Zone Read voor uitsluitend `watishetweer.nl`; Web Analytics-setup heeft een afzonderlijk token. | GitHub-omgeving `productie`, omgevingssecret `CLOUDFLARE_PRODUCTIE_API_TOKEN` |
 | `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub-omgeving `productie`, omgevingssecret `CLOUDFLARE_PRODUCTIE_ACCOUNT_ID` |
 
 Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-modelverificatie.yml`, script `scripts/knmi-modelverificatie.js`):
@@ -195,6 +195,7 @@ De workflows gaan de nieuwe omgevingssecrets gebruiken. De bestaande repository-
 - **Alleen de job die het nodig heeft.** Geen enkele workflow heeft nog secrets op workflowniveau. De job `herbouw` in `cloudflare-production.yml` krijgt er geen.
 - **`deployment: false`.** Alleen `deploy-production` (en `preview` in de previewketen) is een echte deployment en legt een GitHub-deployment vast. De vijf andere jobs gebruiken de omgeving uitsluitend voor de secrets en de branchbeperking en staan op `environment: { name: ..., deployment: false }`.
 - **Gevolg voor handmatige runs.** `workflow_dispatch` van deze workflows werkt alleen nog op `main`; op een andere branch weigert GitHub de job.
+- **Zone-ID opvragen:** de Pages API levert bij custom domains soms geen `zone_tag`. De gedeelde helper leest dan uitsluitend de officiële zoneslijst met exact `watishetweer.nl` en controleert het Cloudflare-account; zonder één eenduidige match stopt de uitvoering. Hiervoor is aanvullend `Zone Read` nodig, beperkt tot `watishetweer.nl`, op zowel het productie-deploytoken als het afzonderlijke Web Analytics-setup-token.
 - **Geen fallback voor Web Analytics-setup.** De setupworkflow stopt bij een ontbrekend afzonderlijk setup-token (fail-closed); vereist `tokensource: dedicated-setup`. Twee andere bestaande uitzonderingen blijven: het analyticsrapport kan voor zijn API-leesfunctie terugvallen op het deploytoken (`tokenBron: dedicated-analytics` of `deploy-fallback`), en de KNMI-verificatie slaat zonder sleutel de vergelijking over en meldt dat in het resultatenissue. Controleer steeds de inhoudelijke resultaten, niet alleen de statuskleur.
 - **Bewaking.** `scripts/workflow-secretgrens.test.js` (sectie 1b, stap in de vereiste `quality`-check) eist: elke job met een omgevingssecret draait in precies de bijbehorende omgeving, geen secrets op workflowniveau, de oude repository-secretnamen komen nergens meer voor, alleen de vaste lijst secretnamen en omgevingsjobs is toegestaan en pull-request-workflows gebruiken geen omgeving. Het ongebruikte recht `deployments: write` is uit `cloudflare-production.yml` verwijderd (een job in een omgeving heeft dat recht niet nodig).
 
