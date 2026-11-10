@@ -673,6 +673,8 @@
     "Voor deze locatie kunnen we geen officiële weerwaarschuwingen tonen.": "We cannot show official weather warnings for this location.",
     "Officiële weerwaarschuwingen konden tijdelijk niet worden opgehaald.": "Official weather warnings are temporarily unavailable.",
     "Geldt voor een groter gebied, niet per se voor deze plaats.": "Applies to a wider area, not necessarily to this place.",
+    "Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.": "Heading translated from the official warning category. Source text unchanged.",
+    "Officiële brontekst (niet vertaald):": "Official source text (not translated):",
     "Bekijk deze waarschuwing bij de officiële bron": "View this warning at the official source",
     "Officiële tekst van de National Weather Service": "Official text from the National Weather Service",
     "Officiële titel hierboven ongewijzigd. Bron: National Weather Service.": "Official title above unchanged. Source: National Weather Service.",
