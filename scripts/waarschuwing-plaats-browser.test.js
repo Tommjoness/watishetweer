@@ -216,9 +216,9 @@ async function scherm(page,naam){
       assert.equal(await bron.count(),1,"NWS: precies één officiële brontekst, los van bronvermelding");
       assert.equal(await bronMeta.count(),1,"NWS: aparte officiële titel en bronvermelding");
       assert.equal((await bron.textContent()).trim(),NWS_BRON,"NWS: officiële brontekst letterlijk intact");
-      assert.equal((await kaart.innerText()).split(NWS_BRON).length-1,1,"NWS: geen dubbele Engelse brontekst");
-      assert((await bronMeta.innerText()).includes("High Wind Warning"),"NWS: officiële titel behouden");
-      assert((await bronMeta.innerText()).includes("National Weather Service"),"NWS: bronnaam behouden");
+      assert.equal((await kaart.textContent()).split(NWS_BRON).length-1,1,"NWS: geen dubbele Engelse brontekst");
+      assert((await bronMeta.textContent()).includes("High Wind Warning"),"NWS: officiële titel behouden");
+      assert((await bronMeta.textContent()).includes("National Weather Service"),"NWS: bronnaam behouden");
       assert.equal(await bron.getAttribute("lang"),"en","NWS: Engelse voorleestaal");
       assert.equal(await bron.getAttribute("translate"),"no","NWS: geen automatische browservertaling van de officiële tekst");
       assert.equal(await bronMeta.locator("span").getAttribute("translate"),"no","NWS: officiële titel niet automatisch vertalen");
@@ -243,7 +243,7 @@ async function scherm(page,naam){
       assert.equal(await kaart.locator(".waarsch-vertaling").count(),0,"NWS zonder vertaling blijft origineel");
       assert.equal(await kaart.locator(".final-warning-explanation").count(),1,"NWS: bestaande uitleg blijft bij afwezige vertaling");
       assert.equal((await kaart.locator(".final-warning-official-text").textContent()).trim(),NWS_BRON);
-      assert.equal((await kaart.innerText()).split(NWS_BRON).length-1,1,"NWS: officiële tekst zonder vertaling éénmaal");
+      assert.equal((await kaart.textContent()).split(NWS_BRON).length-1,1,"NWS: officiële tekst zonder vertaling éénmaal");
       assert.deepEqual(fouten,[]);
       await context.close();
     }
