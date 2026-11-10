@@ -1,7 +1,9 @@
 import legacyHandler from "../lib/waarschuwingen.cjs";
 import scopeModule from "../lib/waarschuwing-scope.cjs";
+import vertalingModule from "../lib/waarschuwing-vertaling.cjs";
 
 const { alleenPlaatsgebonden } = scopeModule;
+const { vertaalWaarschuwingen } = vertalingModule;
 
 function methodeNietToegestaan() {
   const headers = new Headers({
@@ -38,6 +40,7 @@ export default {
       const waitUntil = ctx && typeof ctx.waitUntil === "function" ? belofte => ctx.waitUntil(belofte) : undefined;
       await legacyHandler({ query, waitUntil }, response);
       body = alleenPlaatsgebonden(body);
+      body = await vertaalWaarschuwingen(body,env,{taal:query.taal});
     } catch (error) {
       console.error("[api/waarschuwingen] onverwachte serverfout", error);
       statusCode = 503;
