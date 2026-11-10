@@ -4,7 +4,7 @@ name: KNMI modelverificatie
 # metingen van de KNMI-weerstations. Draait vier keer per jaar vanzelf (de 5e
 # van januari, april, juli en oktober, over de afgelopen 28 dagen), handmatig
 # te starten. Op pull requests draait deze workflow bewust niet (SEC-02): hij gebruikt
-# een geheim (KNMI_EDR_API_KEY) en PR-code mag geen secrets ontvangen. De
+# een geheim (omgevingssecret KNMI_CONTROLE_EDR_API_KEY) en PR-code mag geen secrets ontvangen. De
 # unittests van het script lopen wel mee in `npm test`.
 # Bij de geplande en handmatige runs komt de uitkomst als reactie in het issue
 # "KNMI modelverificatie: resultaten", zodat de eigenaar een melding krijgt en
@@ -33,11 +33,16 @@ jobs:
   verificatie:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # SEC-02b: de sleutel staat uitsluitend als omgevingssecret in `provider-controles` (alleen branch main).
+    # Controle, geen deployment: wel de omgeving (secret en branchbeperking), geen deploymentregel.
+    environment:
+      name: provider-controles
+      deployment: false
     permissions:
       contents: read
       issues: write
     env:
-      HEEFT_SLEUTEL: ${{ secrets.KNMI_EDR_API_KEY != '' }}
+      HEEFT_SLEUTEL: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -47,12 +52,12 @@ jobs:
         run: node scripts/knmi-modelverificatie.test.js
       - name: Sleutel ontbreekt nog
         if: env.HEEFT_SLEUTEL != 'true'
-        run: echo "::notice::KNMI_EDR_API_KEY is nog niet ingesteld als Actions-secret; de vergelijking met de stations is overgeslagen."
+        run: echo "::notice::KNMI_CONTROLE_EDR_API_KEY ontbreekt in de omgeving provider-controles; de vergelijking met de stations is overgeslagen."
       - name: Model tegen KNMI-stations
         id: meting
         if: env.HEEFT_SLEUTEL == 'true'
         env:
-          KNMI_EDR_API_KEY: ${{ secrets.KNMI_EDR_API_KEY }}
+          KNMI_EDR_API_KEY: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY }}
           DAGEN: ${{ inputs.dagen || '28' }}
           UITVOER: knmi-verificatie/resultaat.json
           SAMENVATTING: knmi-verificatie/samenvatting.md
@@ -83,7 +88,7 @@ jobs:
           if [ "$UITKOMST" = "success" ] && [ -s knmi-verificatie/samenvatting.md ]; then
             { cat knmi-verificatie/samenvatting.md; echo; echo "Run: $RUN_URL"; } > reactie.md
           elif [ "$UITKOMST" = "geen-sleutel" ]; then
-            printf 'De modelverificatie is overgeslagen: het Actions-secret KNMI_EDR_API_KEY ontbreekt.\n\nRun: %s\n' "$RUN_URL" > reactie.md
+            printf 'De modelverificatie is overgeslagen: het omgevingssecret KNMI_CONTROLE_EDR_API_KEY (omgeving provider-controles) ontbreekt.\n\nRun: %s\n' "$RUN_URL" > reactie.md
           else
             printf 'De modelverificatie is mislukt (%s). Zie de log voor de oorzaak.\n\nRun: %s\n' "$UITKOMST" "$RUN_URL" > reactie.md
           fi

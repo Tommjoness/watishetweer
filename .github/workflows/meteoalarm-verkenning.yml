@@ -1,6 +1,6 @@
 name: MeteoAlarm EDR-verkenning
 
-# Test de MeteoAlarm-API-sleutel (GitHub-secret METEOALARM_API_TOKEN) en legt de
+# Test de MeteoAlarm-API-sleutel (omgevingssecret METEOALARM_CONTROLE_API_TOKEN) en legt de
 # structuur van een echt antwoord vast voor de koppeling "waarschuwingen per
 # plaats". Handmatig te starten. Op pull requests draait hij bewust niet (SEC-02):
 # hij gebruikt een geheim en PR-code mag geen secrets ontvangen. De sleutel gaat
@@ -17,6 +17,10 @@ jobs:
   verken:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # SEC-02b: het token staat uitsluitend als omgevingssecret in `provider-controles` (alleen branch main).
+    environment:
+      name: provider-controles
+      deployment: false
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -24,7 +28,7 @@ jobs:
           node-version: 22
       - name: Steekproef NL, BE en DE (sleutel als header)
         env:
-          METEOALARM_API_TOKEN: ${{ secrets.METEOALARM_API_TOKEN }}
+          METEOALARM_API_TOKEN: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN }}
         run: node scripts/meteoalarm-edr-verken.js NL BE DE
       - name: Bewaar geschoonde steekproef
         if: always()

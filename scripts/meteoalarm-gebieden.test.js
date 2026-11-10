@@ -34,6 +34,6 @@ const bron = fs.readFileSync(path.join(__dirname, "meteoalarm-gebieden.js"), "ut
 assert(/authorization: "Bearer " \+ TOKEN/.test(bron), "sleutel alleen in de Authorization-header");
 assert(!/[?&](?:token|key|apikey|access_token)=/i.test(bron), "sleutel nooit als URL-parameter");
 const workflow = fs.readFileSync(path.join(__dirname, "..", ".github", "workflows", "meteoalarm-gebieden.yml"), "utf8");
-assert(/METEOALARM_API_TOKEN: \$\{\{ secrets\.METEOALARM_API_TOKEN \}\}/.test(workflow), "workflow leest de sleutel uit de GitHub-secret");
+assert(/METEOALARM_API_TOKEN: \$\{\{ secrets\.METEOALARM_CONTROLE_API_TOKEN \}\}/.test(workflow), "workflow leest de sleutel uit het omgevingssecret (omgeving provider-controles)");
 assert(!/schedule:/.test(workflow), "geen schema: de daglimiet blijft vrij voor handmatige runs");
 console.log("MeteoAlarm-gebieden: vereenvoudiging, compacte vormen en sleutel alleen als header geslaagd.");

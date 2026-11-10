@@ -10,9 +10,9 @@ Er zijn nu twee verschillende rollen. Gebruik ze niet door elkaar.
 
 ### 1. Read-only rapportage en admincockpit
 
-GitHub Actions-secret:
+Omgevingssecret in de beschermde GitHub-omgeving `productie` (alleen branch `main`; in de job beschikbaar als `CLOUDFLARE_ANALYTICS_API_TOKEN`):
 
-`CLOUDFLARE_ANALYTICS_API_TOKEN`
+`CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN`
 
 Minimale Cloudflare-permissie:
 
@@ -28,11 +28,11 @@ De workflow synchroniseert deze token uitsluitend als `secret_text` naar de **pr
 
 ### 2. Web Analytics activeren of herstellen
 
-Optionele GitHub Actions-secret:
+Verplicht omgevingssecret voor de Web Analytics-setupworkflow in GitHub-omgeving `productie` (in de job beschikbaar als `CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN`):
 
-`CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN`
+`CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN`
 
-Deze token is alleen nodig wanneer de setupworkflow zelfstandig Web Analytics moet kunnen aanmaken/activeren en de historische eigen `disable_rum`-regel moet kunnen verwijderen.
+Deze token wordt uitsluitend gebruikt wanneer de setupworkflow Web Analytics zelfstandig aanmaakt of activeert en de historische `disable_rum`-regel verwijdert. De job vereist hiervoor een afzonderlijk setup-token.
 
 Benodigde setuprechten:
 
@@ -46,7 +46,7 @@ Benodigde setuprechten:
 
 - `Config Rules Edit`
 
-Als `CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN` ontbreekt, gebruikt de setupworkflow als fallback de bestaande `CLOUDFLARE_API_TOKEN`. De read-only `CLOUDFLARE_ANALYTICS_API_TOKEN` wordt **nooit** voor setup-writes geselecteerd.
+Als `CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN` ontbreekt, stopt de setupworkflow vóór de Cloudflare-wijzigingen met een foutmelding (**fail-closed**). Het Pages-deploytoken en het read-only Analytics-token zijn uitdrukkelijk geen fallback voor deze writes. Bij een geslaagde run moet de tokenbron `dedicated-setup` zijn.
 
 Beperk tokens waar mogelijk tot het juiste Cloudflare-account en de zone `watishetweer.nl`.
 

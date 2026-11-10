@@ -19,10 +19,15 @@
       daarvoor eerst fail-closed dat dat project geen domeinen, geen bindings en alleen toegestane variabelen heeft,
       kent geen Analytics-/GA4-/Access-admin-/Google-secrets en bewijst na de deploy dat de preview achter Access staat.
    8. De isolatiecontrole zelf wijst elk afwijkend project af (zie sectie 5).
+   10. Omgevingssecrets (SEC-02b, sectie 1b): productie- en providercredentials staan uitsluitend als omgevingssecret in
+       een beschermde GitHub-omgeving (`productie`, `provider-controles`; alleen branch main). Elke job die zo'n secret
+       gebruikt draait in precies die omgeving, geen enkele workflow heeft secrets op workflowniveau, de oude
+       repository-secretnamen komen nergens meer voor en alleen een vaste lijst secretnamen is toegestaan.
 
    Beperking, bewust vastgelegd: een gebruiker met schrijfrechten op de repository kan
-   altijd een branch pushen en een workflow_dispatch starten; dat sluit alleen een
-   GitHub-omgeving met branchbeperking (accountinstelling) af. Zie het runbook. */
+   altijd een branch pushen en een workflow starten. Voor de credentials hierboven sluit de
+   GitHub-omgeving met branchbeperking (accountinstelling) dat af: die instelling zelf kan deze
+   test niet zien. Zie het runbook. */
 
 const assert = require("assert");
 const fs = require("fs");
@@ -35,11 +40,29 @@ const { controleer: controleerAccess, beoordeel: beoordeelAccess } = require("./
 const root = path.join(__dirname, "..");
 const workflowDir = path.join(root, ".github", "workflows");
 
-const HOOGWAARDIGE_SECRETS = /^(CLOUDFLARE_|METEOALARM_|KNMI_)/;
+const HOOGWAARDIGE_SECRETS = /^(CLOUDFLARE_|CF_ACCESS_PRODUCTIE_|METEOALARM_|KNMI_)/;
 const TOEGESTAAN_VOOR_PR_CODE = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PREVIEW_CLIENT_SECRET"]);
 /* Previewcredentials horen uitsluitend in de previewdeployworkflow; productiecredentials daar nooit. */
 const PREVIEWSECRETS = /^(CLOUDFLARE_PREVIEW_|CF_ACCESS_PREVIEW_)/;
-const PRODUCTIESECRETS_IN_PREVIEW = /secrets\.(CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_ANALYTICS_API_TOKEN|CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN|CF_ACCESS_CLIENT_ID|CF_ACCESS_CLIENT_SECRET|KNMI_EDR_API_KEY|METEOALARM_API_TOKEN)\b/;
+const PRODUCTIESECRETS_IN_PREVIEW = /secrets\.(CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_ANALYTICS_API_TOKEN|CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN|CF_ACCESS_CLIENT_ID|CF_ACCESS_CLIENT_SECRET|KNMI_EDR_API_KEY|METEOALARM_API_TOKEN|CLOUDFLARE_PRODUCTIE_[A-Z0-9_]+|CF_ACCESS_PRODUCTIE_[A-Z0-9_]+|KNMI_CONTROLE_[A-Z0-9_]+|METEOALARM_CONTROLE_[A-Z0-9_]+)\b/;
+
+/* SEC-02b: omgevingssecrets. Per beschermde GitHub-omgeving de exacte secretnamen die daar (en nergens anders) staan.
+   De namen bestaan bewust niet als repository-secret: GitHub valt per naam terug op een repository-secret, dus met een
+   eigen naam is een ontbrekend omgevingssecret leeg (de credentialcontroles stoppen dan) in plaats van stil vervangen. */
+const OMGEVINGSSECRETS = {
+  "productie": ["CLOUDFLARE_PRODUCTIE_API_TOKEN", "CLOUDFLARE_PRODUCTIE_ACCOUNT_ID", "CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN", "CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN", "CF_ACCESS_PRODUCTIE_CLIENT_ID", "CF_ACCESS_PRODUCTIE_CLIENT_SECRET"],
+  "provider-controles": ["KNMI_CONTROLE_EDR_API_KEY", "METEOALARM_CONTROLE_API_TOKEN"],
+  "pr-preview": ["CLOUDFLARE_PREVIEW_API_TOKEN", "CLOUDFLARE_PREVIEW_ACCOUNT_ID"]
+};
+const OMGEVING_VAN_SECRET = new Map(Object.entries(OMGEVINGSSECRETS).flatMap(([omgeving, namen]) => namen.map(n => [n, omgeving])));
+/* Het Access-servicetoken van het previewaccount is het enige repository-secret (PR-code moet het kunnen gebruiken; zie het runbook). */
+const REPOSITORYSECRETS = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PREVIEW_CLIENT_SECRET"]);
+/* De namen van vóór SEC-02b: als repository-secret voor elke branch leesbaar, dus nergens meer toegestaan. */
+const OUDE_REPOSITORYSECRETS = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ANALYTICS_API_TOKEN", "CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET", "KNMI_EDR_API_KEY", "METEOALARM_API_TOKEN"]);
+/* Jobs die de omgeving alleen voor secrets en de branchbeperking gebruiken en niets uitrollen: `deployment: false`.
+   De echte deployjobs (productie en PR-preview) leggen wel een deployment vast. */
+const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken"]);
+const MET_DEPLOYMENT = new Set(["cloudflare-production.yml/deploy-production", "cloudflare-preview-deploy.yml/preview"]);
 
 function ontleed(tekst) {
   const on = /^on:\s*\n((?:[ \t]+.*\n|[ \t]*\n)+)/m.exec(tekst);
@@ -57,6 +80,58 @@ function ontleed(tekst) {
 }
 
 const secretsIn = tekst => [...new Set([...tekst.matchAll(/secrets\.([A-Za-z0-9_]+)/g)].map(m => m[1]))];
+
+/* Leest `environment:` van één jobblok: korte vorm (`environment: naam`) of mapping met `name:` en optioneel `deployment:`.
+   Geeft null zonder omgeving; een niet-letterlijke naam (expressie) of een onleesbare vorm geeft naam null terug, en dat keurt de controle af. */
+function omgevingVan(blok) {
+  const regels = blok.split("\n");
+  const i = regels.findIndex(r => /^ {4}environment:/.test(r));
+  if (i < 0) return null;
+  const kort = /^ {4}environment:[ \t]*([A-Za-z0-9_-]+)[ \t]*$/.exec(regels[i]);
+  if (kort) return { naam: kort[1], deployment: true };
+  if (!/^ {4}environment:[ \t]*$/.test(regels[i])) return { naam: null, deployment: true };
+  let naam = null, deployment = true;
+  for (let j = i + 1; j < regels.length && /^( {6,}|[ \t]*$)/.test(regels[j]); j++) {
+    const n = /^ {6}name:[ \t]*([A-Za-z0-9_-]+)[ \t]*$/.exec(regels[j]);
+    if (n) naam = n[1];
+    const d = /^ {6}deployment:[ \t]*(\S+)[ \t]*$/.exec(regels[j]);
+    if (d) deployment = d[1] !== "false";
+  }
+  return { naam, deployment };
+}
+
+/* SEC-02b (regel 10): schendingen van de omgevingsgrens voor één workflowtekst. */
+function controleerOmgevingen(naam, tekst) {
+  const f = [];
+  const { triggers, jobs, kop } = ontleed(tekst);
+  if (secretsIn(kop).length) f.push(`${naam}: secrets op workflowniveau (${secretsIn(kop).join(", ")}); die horen op jobniveau, in de job met de omgeving`);
+  if (/secrets:\s*inherit/.test(tekst)) f.push(`${naam}: secrets: inherit geeft alle secrets door`);
+  if (naam === "cloudflare-web-analytics.yml") {
+    if (/CLOUDFLARE_DEPLOY_API_TOKEN|deploy-fallback/.test(tekst)) f.push(`${naam}: Web Analytics-setup mag geen Pages-deploytoken als fallback gebruiken`);
+    if (!/CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN/.test(tekst)) f.push(`${naam}: afzonderlijk setup-secret ontbreekt`);
+  }
+  for (const [jobNaam, blok] of Object.entries(jobs)) {
+    const omgeving = omgevingVan(blok);
+    const waar = `${naam}/${jobNaam}`;
+    if (omgeving && !omgeving.naam) f.push(`${waar}: environment zonder letterlijke naam`);
+    if (omgeving && omgeving.naam && !(omgeving.naam in OMGEVINGSSECRETS)) f.push(`${waar}: onbekende omgeving ${omgeving.naam}`);
+    if (omgeving && triggers.has("pull_request")) f.push(`${waar}: een pull_request-workflow mag geen omgeving gebruiken`);
+    for (const s of secretsIn(blok)) {
+      if (s === "GITHUB_TOKEN" || REPOSITORYSECRETS.has(s)) continue;
+      if (OUDE_REPOSITORYSECRETS.has(s)) { f.push(`${waar}: ${s} is een oude repository-secretnaam; gebruik het omgevingssecret`); continue; }
+      const hoort = OMGEVING_VAN_SECRET.get(s);
+      if (!hoort) { f.push(`${waar}: onbekend secret ${s} (niet in de vaste lijst)`); continue; }
+      if (!omgeving || omgeving.naam !== hoort) f.push(`${waar}: ${s} hoort bij omgeving ${hoort}, maar de job draait in ${omgeving && omgeving.naam ? omgeving.naam : "geen omgeving"}`);
+    }
+    if (omgeving && omgeving.naam) {
+      const zonder = ZONDER_DEPLOYMENT.has(waar), met = MET_DEPLOYMENT.has(waar);
+      if (!zonder && !met) f.push(`${waar}: job met een omgeving staat niet in de vaste lijst van omgevingsjobs`);
+      if (zonder && omgeving.deployment) f.push(`${waar}: rolt niets uit en hoort deployment: false te hebben`);
+      if (met && !omgeving.deployment) f.push(`${waar}: echte deployjob mag geen deployment: false hebben`);
+    }
+  }
+  return f;
+}
 
 /* Geeft een lijst met schendingen voor één workflowtekst. */
 function controleer(naam, tekst) {
@@ -105,6 +180,52 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   const alle = [];
   for (const n of bestanden) alle.push(...controleer(n, fs.readFileSync(path.join(workflowDir, n), "utf8")));
   assert.deepStrictEqual(alle, [], `secretgrens geschonden:\n${alle.join("\n")}`);
+}
+
+/* ---- 1b. omgevingssecrets (SEC-02b): echte workflows en regressieproeven ---- */
+{
+  const alle = [];
+  const gezien = new Set();
+  for (const n of bestanden) {
+    const tekst = fs.readFileSync(path.join(workflowDir, n), "utf8");
+    alle.push(...controleerOmgevingen(n, tekst));
+    for (const [jobNaam, blok] of Object.entries(ontleed(tekst).jobs)) if (omgevingVan(blok)) gezien.add(`${n}/${jobNaam}`);
+  }
+  assert.deepStrictEqual(alle, [], `omgevingsgrens geschonden:\n${alle.join("\n")}`);
+  assert.deepStrictEqual([...gezien].sort(), [...ZONDER_DEPLOYMENT, ...MET_DEPLOYMENT].sort(), "precies de vaste lijst jobs draait in een omgeving");
+
+  /* De herbouwjob beslist alleen of er gedeployed wordt en krijgt geen enkel secret meer. */
+  const productie = ontleed(fs.readFileSync(path.join(workflowDir, "cloudflare-production.yml"), "utf8"));
+  assert.deepStrictEqual(secretsIn(productie.jobs.herbouw), [], "de job herbouw mag geen secrets kennen");
+  assert.strictEqual(omgevingVan(productie.jobs.herbouw), null, "de job herbouw draait niet in een omgeving");
+  assert.deepStrictEqual(omgevingVan(productie.jobs["deploy-production"]), { naam: "productie", deployment: true }, "de productiedeploy draait in de omgeving productie en legt een deployment vast");
+
+  /* Regressieproeven: elke schending wordt herkend. */
+  const wf = (...regels) => regels.join("\n") + "\n";
+  const proef = (naam, tekst, verwacht) => {
+    const f = controleerOmgevingen(naam, tekst);
+    assert(f.some(x => verwacht.test(x)), `${naam}: verwachtte ${verwacht}, kreeg ${JSON.stringify(f)}`);
+  };
+  const kop = ["name: x", "on:", "  push:", "    branches: [main]"];
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}"), /hoort bij omgeving productie, maar de job draait in geen omgeving/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: provider-controles", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}"), /hoort bij omgeving productie, maar de job draait in provider-controles/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.CLOUDFLARE_API_TOKEN }}"), /oude repository-secretnaam/);
+  proef("cloudflare-production.yml", wf(...kop, "env:", "  T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}", "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie"), /secrets op workflowniveau/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.NIEUW_GEHEIM }}"), /onbekend secret NIEUW_GEHEIM/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment:", "      name: productie", "      deployment: false"), /echte deployjob mag geen deployment: false/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: Production"), /onbekende omgeving Production/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: ${{ inputs.omgeving }}"), /environment zonder letterlijke naam/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment:", "      url: https://example.org"), /environment zonder letterlijke naam/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  extra:", "    runs-on: ubuntu-latest", "    environment: productie"), /staat niet in de vaste lijst van omgevingsjobs/);
+  proef("meteoalarm-verkenning.yml", wf("name: x", "on:", "  workflow_dispatch:", "jobs:", "  verken:", "    runs-on: ubuntu-latest", "    environment: provider-controles"), /hoort deployment: false te hebben/);
+  proef("meteoalarm-verkenning.yml", wf("name: x", "on:", "  workflow_dispatch:", "jobs:", "  verken:", "    runs-on: ubuntu-latest", "    steps:", "      - env:", "          T: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN }}", "        run: echo"), /hoort bij omgeving provider-controles, maar de job draait in geen omgeving/);
+  proef("ci.yml", wf("name: x", "on:", "  pull_request:", "    branches: [main]", "jobs:", "  test:", "    runs-on: ubuntu-latest", "    environment:", "      name: productie", "      deployment: false"), /pull_request-workflow mag geen omgeving gebruiken/);
+  proef("x.yml", wf(...kop, "jobs:", "  a:", "    uses: ./.github/workflows/y.yml", "    secrets: inherit"), /secrets: inherit/);
+  proef("cloudflare-web-analytics.yml", wf(...kop, "jobs:", "  setup:", "    runs-on: ubuntu-latest", "    environment:", "      name: productie", "      deployment: false", "    env:", "      CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN }}", "      CLOUDFLARE_DEPLOY_API_TOKEN: pretend-fallback"), /mag geen Pages-deploytoken als fallback/);
+  /* De goede vormen geven geen schending. */
+  assert.deepStrictEqual(controleerOmgevingen("meteoalarm-verkenning.yml", wf("name: x", "on:", "  workflow_dispatch:", "jobs:", "  verken:", "    runs-on: ubuntu-latest", "    environment:", "      name: provider-controles", "      deployment: false", "    steps:", "      - env:", "          T: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN }}", "        run: echo")), [], "de bedoelde vorm met deployment: false voldoet");
+  assert.deepStrictEqual(controleerOmgevingen("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}")), [], "de bedoelde vorm van de productiedeploy voldoet");
+  process.stdout.write("workflow-secretgrens: omgevingssecrets (SEC-02b) geslaagd\n");
 }
 
 /* ---- 2. het contract herkent de oorspronkelijke fout (regressieproef) ---- */
