@@ -82,7 +82,7 @@ const EIND_PRODUCTIE=`    const kaartHtml=w=>{
           ?"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald."
           :"Officiële brontekst (niet vertaald):";
         const kopLang=w.titelIsVertaling===true?"":bronLang+' translate="no"';
-        return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3\${kopLang}>\${esc(w.titel)}</h3><p class="waarsch-bronlabel"\${esc(label)}</p><p class="waarsch-origineel"\${bronLang} translate="no">\${esc(tekst)}</p>\`
+        return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3\${kopLang}>\${esc(w.titel)}</h3><p class="waarsch-bronlabel">\${esc(label)}</p><p class="waarsch-origineel"\${bronLang} translate="no">\${esc(tekst)}</p>\`
           +(meta?\`<p class="waarsch-meta">\${meta}</p>\`:"")+\`</div>\`;
       }
       return \`<div class="waarsch" data-ui-severity="\${ernst}"><h3>\${esc(w.titel)}</h3><p>\${esc(tekst)}\${meta?" "+meta:""}</p></div>\`;
