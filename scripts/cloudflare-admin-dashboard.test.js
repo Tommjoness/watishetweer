@@ -52,17 +52,18 @@ assert(!api.includes("CLOUDFLARE_ANALYTICS_API_TOKEN:"),"Cloudflare admin API ma
 assert(api.includes('["24h",1]')&&api.includes('["14",14]'),"Cloudflare admin API mist 24 uur/14 dagen scopes.");
 assert(api.includes('requestedWindows(requestUrl.searchParams.get("scope"))'),"Cloudflare admin API gebruikt de cockpitperiode niet.");
 
-assert(reportWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"),"Rapportworkflow moet de read-only analytics-secret gebruiken.");
+assert(reportWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}"),"Rapportworkflow moet de read-only analytics-secret (omgeving productie) gebruiken.");
 assert(reportWorkflow.includes("if: github.ref == 'refs/heads/main'"),"Production runtime-sync mag alleen op main draaien.");
 assert(reportWorkflow.includes("cancel-in-progress: true"),"Een nieuw analyticsrapport moet oudere branchruns vervangen.");
-assert(setupWorkflow.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN }}"),"Setupworkflow mist aparte setup/write-secret.");
-assert(!setupWorkflow.includes("secrets.CLOUDFLARE_ANALYTICS_API_TOKEN"),"Setupworkflow mag de read-only rapportagetoken niet gebruiken voor writes.");
-assert(productionWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}"),"Production deploy mist read-only analytics-secret voor runtime-sync.");
+assert(setupWorkflow.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN }}"),"Setupworkflow mist aparte setup/write-secret (omgeving productie).");
+assert(!setupWorkflow.includes("CLOUDFLARE_DEPLOY_API_TOKEN")&&!setupWorkflow.includes("deploy-fallback"),"Setupworkflow mag nooit het Pages-deploytoken als fallback gebruiken.");
+assert(!setupWorkflow.includes("secrets.CLOUDFLARE_ANALYTICS_API_TOKEN")&&!setupWorkflow.includes("secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN"),"Setupworkflow mag de read-only rapportagetoken niet gebruiken voor writes.");
+assert(productionWorkflow.includes("CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}"),"Production deploy mist read-only analytics-secret (omgeving productie) voor runtime-sync.");
 assert(productionWorkflow.includes("Sync Cloudflare admin analytics-bindings"),"Production deploy moet analytics-bindings vóór deploy synchroniseren.");
 assert(productionWorkflow.indexOf("Sync Cloudflare admin analytics-bindings")<productionWorkflow.indexOf("Deploy exact naar Cloudflare Pages production"),"Analytics-bindings moeten vóór de Pages-deploy worden gesynchroniseerd.");
 assert(productionWorkflow.includes("Verifieer Analytics-bindings na deploy"),"Production deploy moet bindings na Wrangler-deploy verifiëren.");
 assert(productionWorkflow.includes('CLOUDFLARE_ACCOUNT_ID.type == "secret_text"'),"Production guard moet account-id als secret_text bewaken.");
 assert(docs.includes("Account Analytics → Read"),"Documentatie mist read-only analytics-permissie.");
-assert(docs.includes("CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN"),"Documentatie mist gescheiden setup-tokenrol.");
+assert(docs.includes("CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN"),"Documentatie mist gescheiden setup-tokenrol.");
 
 console.log("cloudflare-admin-dashboard.test.js: ok");

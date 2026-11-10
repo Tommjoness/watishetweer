@@ -55,7 +55,7 @@ Belangrijkste onderdelen:
 | plaats zoeken | Open-Meteo Geocoding | geen |
 | reverse geocoding | BigDataCloud, daarna Nominatim-compatible fallback | geen; optionele basis-URL |
 | korte neerslag NL/BE | KNMI-dataplatform (WMS/WCS) via de serverlaag | optioneel `KNMI_WMS_API_KEY` als Cloudflare Pages-secret; zonder sleutel de anonieme, wereldwijd gedeelde KNMI-pot (1.000 verzoeken per uur voor iedereen samen) |
-| modelverificatie tegen weerstations (alleen de handmatige workflow) | KNMI EDR API (10-minutenwaarnemingen) en Open-Meteo Historical Forecast API | `KNMI_EDR_API_KEY` alleen als GitHub Actions-secret |
+| modelverificatie tegen weerstations (alleen de handmatige workflow) | KNMI EDR API (10-minutenwaarnemingen) en Open-Meteo Historical Forecast API | `KNMI_EDR_API_KEY`, alleen als omgevingssecret `KNMI_CONTROLE_EDR_API_KEY` in de GitHub-omgeving `provider-controles` |
 | waarschuwingen Europa | MeteoAlarm, openbare feed per land | geen voor de site; de beschermde MeteoAlarm-API (`METEOALARM_API_TOKEN`) heeft een vaste limiet van 100 aanvragen per dag en wordt niet per bezoeker aangeroepen |
 | waarschuwingen VS en ondersteunde gebieden | National Weather Service | geen |
 | bezoek- en prestatietrends | Cloudflare Web Analytics | geen clientsecret; setup via Cloudflare-accounttoken |
@@ -65,18 +65,18 @@ Zon- en maanstanden worden lokaal berekend. Behoud alle zichtbare bronvermelding
 
 ## Configuratie en secrets
 
-GitHub Actions heeft exact deze twee geheime waarden nodig:
+De productiedeploy heeft minimaal deze twee geheime waarden nodig. Sinds SEC-02b staan ze niet meer als repository-secret maar als omgevingssecret, onder een eigen naam, in de beschermde GitHub-omgeving `productie` (alleen branch `main`, geen administrator-bypass); de workflows geven ze onder de vertrouwde variabelenaam aan de scripts door. De volledige lijst per omgeving staat onder *Omgevingssecrets (SEC-02b)*.
 
-| Naam | Doel | Waar instellen |
+| Variabele in de job | Doel | Waar instellen |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub repository Actions secrets |
-| `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub repository Actions secrets |
+| `CLOUDFLARE_API_TOKEN` | Pages deployen, projectinstellingen lezen, custom domains controleren, de bedoelde zone-rate-limit beheren en de aparte Web Analytics-setup uitvoeren | GitHub-omgeving `productie`, omgevingssecret `CLOUDFLARE_PRODUCTIE_API_TOKEN` |
+| `CLOUDFLARE_ACCOUNT_ID` | het juiste Cloudflare-account selecteren | GitHub-omgeving `productie`, omgevingssecret `CLOUDFLARE_PRODUCTIE_ACCOUNT_ID` |
 
 Optioneel, alleen voor de handmatige modelverificatie (`.github/workflows/knmi-modelverificatie.yml`, script `scripts/knmi-modelverificatie.js`):
 
 | Naam | Doel | Waar instellen |
 |---|---|---|
-| `KNMI_EDR_API_KEY` | geregistreerde sleutel voor de KNMI EDR API; vergelijkt de modelverwachting per heel uur met de metingen van de KNMI-weerstations | GitHub repository Actions secrets |
+| `KNMI_EDR_API_KEY` | geregistreerde sleutel voor de KNMI EDR API; vergelijkt de modelverwachting per heel uur met de metingen van de KNMI-weerstations | GitHub-omgeving `provider-controles`, omgevingssecret `KNMI_CONTROLE_EDR_API_KEY` |
 
 Zonder deze sleutel slaat de workflow de vergelijking over; de site zelf gebruikt hem niet.
 
@@ -84,7 +84,7 @@ Optioneel, voor de MeteoAlarm-verkenning (`.github/workflows/meteoalarm-verkenni
 
 | Naam | Doel | Waar instellen |
 |---|---|---|
-| `METEOALARM_API_TOKEN` | token voor de beschermde MeteoAlarm EDR- en Metadata-API; alleen als `Authorization: Bearer`-header, nooit in een URL of log. Vaste limiet: 100 aanvragen per dag per token (changelog v0.9, 14 mei 2025); hogere limieten alleen via meteoalarm@geosphere.at | GitHub repository Actions secrets, en als Cloudflare Pages-secret in Preview en Production | De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
+| `METEOALARM_API_TOKEN` | token voor de beschermde MeteoAlarm EDR- en Metadata-API; alleen als `Authorization: Bearer`-header, nooit in een URL of log. Vaste limiet: 100 aanvragen per dag per token (changelog v0.9, 14 mei 2025); hogere limieten alleen via meteoalarm@geosphere.at | GitHub-omgeving `provider-controles`, omgevingssecret `METEOALARM_CONTROLE_API_TOKEN`, en als Cloudflare Pages-secret in Preview en Production | De workflow draait vier keer per jaar vanzelf (de 5e van januari, april, juli en oktober, over de afgelopen 28 dagen) en zet de uitkomst als reactie in het issue "KNMI modelverificatie: resultaten". GitHub schakelt geplande workflows in een openbare repository uit na 60 dagen zonder activiteit; zet hem dan weer aan onder Actions > KNMI modelverificatie.
 
 De runtime gebruikt daarnaast deze providersecrets:
 
@@ -141,8 +141,8 @@ PR-code is onbetrouwbaar: een pull request mag scripts, tests, `package.json` é
 | `cloudflare-preview-deploy.yml`, job `preview` | `workflow_run`, vanuit `main`, omgeving `pr-preview` (alleen branch `main`) | uitsluitend previewcredentials van het afzonderlijke Cloudflare-account: Pages-deploytoken (omgevingssecret `CLOUDFLARE_PREVIEW_API_TOKEN`), `CLOUDFLARE_PREVIEW_ACCOUNT_ID` en het Access-servicetoken `CF_ACCESS_PREVIEW_CLIENT_ID/SECRET`; voert alleen scripts, `wrangler` en `wrangler.jsonc` uit `main` uit; rolt uitsluitend uit naar het project `watishetweer-preview` in dat account |
 | `cloudflare-preview-deploy.yml`, jobs `preview-worldwide`, `preview-release-navigation`, `preview-cwv` | `workflow_run`, checkt PR-code uit | uitsluitend het Access-servicetoken van het previewaccount (`CF_ACCESS_PREVIEW_CLIENT_ID/SECRET`) en een alleen-lezen token; geen omgeving, nooit het Pages-deploytoken |
 | `cloudflare-preview-deploy.yml`, job `status` | `workflow_run` | alleen `statuses: write`, voert geen PR-code uit |
-| `cloudflare-production.yml`, `cloudflare-web-analytics.yml`, `cloudflare-human-analytics-report.yml` | `push` op `main`, planning, handmatig | productiecredentials (`CLOUDFLARE_API_TOKEN`, `CF_ACCESS_CLIENT_ID/SECRET`, enzovoort); `push` alleen voor `main`; previewcredentials komen hier nooit voor (door de contracttest bewaakt) |
-| `knmi-modelverificatie.yml`, `meteoalarm-gebieden.yml`, `meteoalarm-verkenning.yml` | planning en handmatig | eigen API-sleutel; draaien niet meer op pull requests |
+| `cloudflare-production.yml` (job `deploy-production`), `cloudflare-web-analytics.yml`, `cloudflare-human-analytics-report.yml` | `push` op `main`, planning, handmatig; omgeving `productie` (alleen branch `main`) | productiecredentials, uitsluitend als omgevingssecret (`CLOUDFLARE_PRODUCTIE_*`, `CF_ACCESS_PRODUCTIE_CLIENT_ID/SECRET`); de job `herbouw` krijgt geen enkel secret; previewcredentials komen hier nooit voor (door de contracttest bewaakt) |
+| `knmi-modelverificatie.yml`, `meteoalarm-gebieden.yml`, `meteoalarm-verkenning.yml` | planning en handmatig; omgeving `provider-controles` (alleen branch `main`) | eigen API-sleutel als omgevingssecret (`KNMI_CONTROLE_EDR_API_KEY`, `METEOALARM_CONTROLE_API_TOKEN`); draaien niet op pull requests |
 
 **Wat er in Cloudflare stond (vóór deze wijziging).** De oude previewworkflow synchroniseerde bij iedere run `CLOUDFLARE_ANALYTICS_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` en `GA4_PROPERTY_ID` naar de **preview-omgeving van het productieproject** en eiste daar ook `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` en `SEO_ADMIN_EMAILS`; de providersleutels (`VISUAL_CROSSING_API_KEY`, `WEATHERAPI_KEY`) staan volgens de README ook in preview. De code leest bovendien `GOOGLE_SERVICE_ACCOUNT_*`, `GSC_SITE_URL` en `KNMI_WMS_API_KEY`. De werkelijke inhoud is vanuit de repository niet uit te lezen (en is bewust niet uitgelezen). Alles wat daar stond, kon door gedeployde PR-code worden gelezen.
 
@@ -151,7 +151,7 @@ PR-code is onbetrouwbaar: een pull request mag scripts, tests, `package.json` é
 Pull requests uit forks worden niet uitgerold; PR-nummer en SHA komen uit de GitHub-gebeurtenis, nooit uit de bundel. Een overgeslagen of geannuleerde previewjob wordt als `error` gemeld, nooit als geslaagd. De admin-analyticsbindings en hun controles blijven bestaan voor de vertrouwde releasekandidaat in `cloudflare-production.yml` (gebouwd uit `main`, in het productieproject).
 
 **Bewust niet afgedekt door de code:**
-- Iemand met schrijfrechten op de repository kan altijd een branch pushen en een workflow handmatig starten, ook met een aangepaste workflow. Dat sluit alleen een GitHub-omgeving met branchbeperking af (zie "Los van de previewketen, nog open binnen SEC-02": productiecredentials naar een beschermde omgeving; voor de previewcredentials is dat de omgeving `pr-preview`).
+- Iemand met schrijfrechten op de repository kan altijd een branch pushen en een workflow starten, ook met een aangepaste workflow. Dat sluit alleen een GitHub-omgeving met branchbeperking af: `pr-preview` voor het Pages-deploytoken van het previewaccount, `productie` en `provider-controles` voor de overige credentials (zie *Omgevingssecrets (SEC-02b)*). De code kan die accountinstelling niet afdwingen of uitlezen; wie beheerrechten op de repository heeft, kan de omgevingsregels aanpassen.
 - De drie testjobs die PR-code uitchecken houden het Access-servicetoken van het previewaccount in hun omgeving, dus PR-code kan het gebruiken. GitHub raadt aan in `workflow_run`-workflows geen onbetrouwbare code uit te checken; dit is een bewuste afweging omdat anders de gedeployde preview niet met de testsuite van de PR kan worden getest. Een omgeving of een andere secretnaam is voor dit token **geen** beveiligingsgrens: de grens zit in de rechten. Het token hoort tot een andere Zero Trust-organisatie dan de productie en geeft daar uitsluitend toegang tot de previewapplicatie; het is in de productie-Access-organisatie niet geldig. Strengere variant als je dat restrisico niet accepteert: de deployed-preview-tests niet meer op PR-code draaien (alleen de secretloze tests).
 - Elke providersleutel in `watishetweer-preview` is voor PR-auteurs leesbaar. Zet daar daarom **nooit de productiesleutel**. Standaard staat er helemaal geen providersleutel (zie *Providermodus van de PR-preview* hieronder); alleen een afzonderlijke, quotabegrensde previewsleutel is toegestaan.
 
@@ -172,10 +172,38 @@ Pull requests uit forks worden niet uitgerold; PR-nummer en SHA komen uit de Git
 7. **Eerste uitrol:** de deployworkflow draait pas vanaf `main`. Valideer na de merge en na 1 t/m 6 de keten eenmalig met een kleine testPR (isolatiecontrole, Access vooraf en achteraf, previewstatussen op de PR-head). Toon ook aan dat een testbranch de secrets van `pr-preview` niet kan lezen.
 
 **Los van de previewketen, nog open binnen SEC-02:**
-- **Productiecredentials naar een beschermde GitHub-omgeving** (`Production`, deploy-branch `main`, administrator-bypass uit): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ANALYTICS_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_ACCESS_CLIENT_ID/SECRET`, `KNMI_EDR_API_KEY` en `METEOALARM_API_TOKEN` staan nu als repository-secret en zijn dus voor elke workflow op een branch leesbaar. Eerst onderzoeken welke jobs per workflow een `environment:` nodig hebben, welke trigger-/branchregels dat raakt en welke regressierisico's de releasepijplijn loopt; migreren in één PR, met de secrets eerst in de omgeving en pas na een geslaagde run uit de repository-secrets verwijderen. Het ongebruikte recht `deployments: write` in `cloudflare-production.yml` hoort daar ook bij.
+- **Productiecredentials naar beschermde GitHub-omgevingen:** deze codepatch bereidt de migratie voor, zie *Omgevingssecrets (SEC-02b)* hieronder. SEC-02b is pas afgerond nadat de nieuwe workflows bewezen zijn en de oude repository-secrets afzonderlijk zijn verwijderd en opnieuw geverifieerd.
 - **Voorzorgsrotatie** (vóór #594 stonden de bindings in de preview-omgeving van het productieproject en draaide PR-code met het deploytoken; geen aanwijzing voor misbruik, maar niet geverifieerd): `CLOUDFLARE_ANALYTICS_API_TOKEN`, het productie-Access-servicetoken (Cloudflare biedt rotatie met een overgangsperiode waarin het oude secret nog werkt, dus zonder uitval van de productiepijplijn), de KNMI- en MeteoAlarm-sleutels, een eventuele Google-serviceaccountsleutel en als laatste `CLOUDFLARE_API_TOKEN` (na vervanging). Controleer het Audit Log op onbekend tokengebruik. Beide huidige tokens (deploytoken en servicetoken) hebben geen vervaldatum.
 - **Controleer Actions-instellingen:** goedkeuring vereisen voor alle externe bijdragers en "secrets naar fork-PR-workflows sturen" uit. De repository is publiek.
 - **Ongebruikte GitHub-omgevingen:** de zes oudere omgevingen zijn onbeschermd; ze verwijderen of beveiligen (alleen na akkoord).
+
+#### Omgevingssecrets (SEC-02b)
+
+De workflows gaan de nieuwe omgevingssecrets gebruiken. De bestaande repository-secrets blijven tot na de positieve productiecontrole aanwezig en worden pas daarna verwijderd; tot dat moment blijft het oude branchrisico bestaan. Beide omgevingen: *Deployment branches and tags* op *Selected branches and tags* met uitsluitend de branch `main`, *Allow administrators to bypass configured protection rules* uit, geen verplichte reviewers en geen wachttijd (de geplande productiedeploys moeten zonder handmatige goedkeuring blijven lopen).
+
+| Omgeving | Omgevingssecret | Variabele in de job | Workflow en job |
+|---|---|---|---|
+| `productie` | `CLOUDFLARE_PRODUCTIE_API_TOKEN` | `CLOUDFLARE_API_TOKEN` (alleen in het analyticsrapport tevens `CLOUDFLARE_DEPLOY_API_TOKEN`) | `cloudflare-production.yml` / `deploy-production`; `cloudflare-human-analytics-report.yml` / `report` |
+| `productie` | `CLOUDFLARE_PRODUCTIE_ACCOUNT_ID` | `CLOUDFLARE_ACCOUNT_ID` | dezelfde drie jobs |
+| `productie` | `CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN` | `CLOUDFLARE_ANALYTICS_API_TOKEN` | `deploy-production` (runtime-sync) en `report` |
+| `productie` | `CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN` | `CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN` | `setup` |
+| `productie` | `CF_ACCESS_PRODUCTIE_CLIENT_ID`, `CF_ACCESS_PRODUCTIE_CLIENT_SECRET` | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | `deploy-production` |
+| `provider-controles` | `KNMI_CONTROLE_EDR_API_KEY` | `KNMI_EDR_API_KEY` | `knmi-modelverificatie.yml` / `verificatie` |
+| `provider-controles` | `METEOALARM_CONTROLE_API_TOKEN` | `METEOALARM_API_TOKEN` | `meteoalarm-gebieden.yml` / `bouw`; `meteoalarm-verkenning.yml` / `verken` |
+
+- **Eigen namen, geen stille terugval.** GitHub valt per secretnaam terug op een repository-secret met dezelfde naam. De omgevingssecrets hebben daarom nieuwe namen die als repository-secret niet mogen bestaan. Ontbreekt een waarde, dan is deze leeg in plaats van stil vervangen. Tot na het verwijderen van de oude namen bestaan er tijdelijk wel oude repository-secrets; het resterende risico moet expliciet worden gevolgd. Ná de definitieve migratie horen alleen `CF_ACCESS_PREVIEW_CLIENT_ID/SECRET` nog op repositoryniveau te staan.
+- **Alleen de job die het nodig heeft.** Geen enkele workflow heeft nog secrets op workflowniveau. De job `herbouw` in `cloudflare-production.yml` krijgt er geen.
+- **`deployment: false`.** Alleen `deploy-production` (en `preview` in de previewketen) is een echte deployment en legt een GitHub-deployment vast. De vijf andere jobs gebruiken de omgeving uitsluitend voor de secrets en de branchbeperking en staan op `environment: { name: ..., deployment: false }`.
+- **Gevolg voor handmatige runs.** `workflow_dispatch` van deze workflows werkt alleen nog op `main`; op een andere branch weigert GitHub de job.
+- **Geen fallback voor Web Analytics-setup.** De setupworkflow stopt bij een ontbrekend afzonderlijk setup-token (fail-closed); vereist `tokensource: dedicated-setup`. Twee andere bestaande uitzonderingen blijven: het analyticsrapport kan voor zijn API-leesfunctie terugvallen op het deploytoken (`tokenBron: dedicated-analytics` of `deploy-fallback`), en de KNMI-verificatie slaat zonder sleutel de vergelijking over en meldt dat in het resultatenissue. Controleer steeds de inhoudelijke resultaten, niet alleen de statuskleur.
+- **Bewaking.** `scripts/workflow-secretgrens.test.js` (sectie 1b, stap in de vereiste `quality`-check) eist: elke job met een omgevingssecret draait in precies de bijbehorende omgeving, geen secrets op workflowniveau, de oude repository-secretnamen komen nergens meer voor, alleen de vaste lijst secretnamen en omgevingsjobs is toegestaan en pull-request-workflows gebruiken geen omgeving. Het ongebruikte recht `deployments: write` is uit `cloudflare-production.yml` verwijderd (een job in een omgeving heeft dat recht niet nodig).
+
+**SEC-02b is pas afgerond als alle volgende punten zijn bewezen** (leg datum en runs hier vast zodra dat zo is):
+
+1. de oude repository-secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_API_TOKEN`, `CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN`, `CF_ACCESS_CLIENT_ID/SECRET`, `KNMI_EDR_API_KEY`, `METEOALARM_API_TOKEN`) zijn verwijderd;
+2. daarna toont een workflow vanaf een niet-toegestane branch (zowel via `push` als via een pull request) geen enkele van de oude of nieuwe secretnamen als beschikbaar, en weigert GitHub een handmatige start van een omgevingsworkflow op die branch;
+3. daarna slaagt een volledige productiedeploy op `main` (inclusief releasekandidaat, smokes en domeincontroles), met `WeatherNow production smoke` en `Release recovery production smoke` groen op dezelfde SHA;
+4. daarna slagen op `main` het analyticsrapport en de Web Analytics-setup met hun eigen token als bron, en de KNMI- en MeteoAlarm-controle met een echte uitkomst.
 
 #### Providermodus van de PR-preview
 

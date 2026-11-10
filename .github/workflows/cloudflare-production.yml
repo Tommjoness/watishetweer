@@ -19,20 +19,18 @@ on:
 permissions:
   actions: read
   contents: read
-  deployments: write
 
 concurrency:
   group: weathernow-cloudflare-production
   cancel-in-progress: false
 
+# SEC-02b: geen secrets op workflowniveau. De productiecredentials staan uitsluitend als omgevingssecret in de beschermde
+# GitHub-omgeving `productie` (alleen branch main, geen administrator-bypass) en alleen de job `deploy-production` krijgt ze.
+# De namen bestaan bewust niet als repository-secret: ontbreekt er een in de omgeving, dan is de waarde leeg en stopt
+# "Controleer Cloudflare credentials" vóór de deploy. Bewaakt door scripts/workflow-secretgrens.test.js.
 env:
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_PROJECT: watishetweer
   SOURCE_SHA: ${{ github.sha }}
-  CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-  CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
 jobs:
   # Bij een geplande run: alleen deployen als er vandaag (Nederlandse datum) nog
@@ -67,6 +65,14 @@ jobs:
     needs: herbouw
     if: needs.herbouw.outputs.nodig == 'true'
     runs-on: ubuntu-latest
+    # Echte deployment: gewone omgevingsverwijzing (GitHub legt hiervoor een deployment vast).
+    environment: productie
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+      CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
     outputs:
       production_url: ${{ steps.production_url.outputs.url }}
     steps:
