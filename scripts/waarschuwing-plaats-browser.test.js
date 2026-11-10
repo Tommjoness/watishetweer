@@ -208,7 +208,9 @@ async function scherm(page,naam){
       const {context,page,fouten}=await open(browser,root,NWS_VERTALING,taal?1440:390,844,{taal});
       const kaart=page.locator("#waarschuwingen .waarsch");
       const bron=kaart.locator("details p");
-      assert.equal(await bron.count(),1,"NWS: officiële brontekst precies één keer");
+      const bronAantal=await bron.count();
+      if(bronAantal!==1) console.error("NWS-DOM-diagnose",JSON.stringify({taal:taal||"nl",kaarten:await kaart.count(),aantalBronnen:bronAantal,html:await page.locator("#waarschuwingen").innerHTML()}));
+      assert.equal(bronAantal,1,"NWS: officiële brontekst precies één keer");
       assert.equal((await bron.first().textContent()).trim(),NWS_BRON,"NWS: officiële tekst intact");
       if(!taal){
         assert.equal((await kaart.locator(".waarsch-vertaling").innerText()).trim(),NWS_NL,"NWS: Nederlandse vertaling zichtbaar");
