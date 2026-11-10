@@ -12,6 +12,9 @@ const enabled={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"FAKE_KEY_NOT_FOR_NETWO
   assert(t.veilig(source,value),"zelfde cijfers en eenheden");
   assert(!t.veilig("75-90 km/h","76-90 km/h"),"gewijzigde getallen geweigerd");
   assert(!t.veilig("75-90 km/h","75-90 mph"),"gewijzigde eenheid geweigerd");
+  assert(!t.veilig("−5 °C","5 °C"),"verdwenen minteken is een veiligheidsfout");
+  assert(!t.veilig("+5 °C","5 °C"),"verdwenen plusteken is een veiligheidsfout");
+  assert(t.veilig("Van 75–90 km/h","Van 75-90 km/u"),"typografisch streepje is geen gewijzigd bereik");
   assert(!t.veilig("10 mm","<b>10 mm</b>"),"HTML is niet toegestaan");
   let calls=0,payload=null,target=null,authorization=null;
   const fetcher=async(url,request)=>{
