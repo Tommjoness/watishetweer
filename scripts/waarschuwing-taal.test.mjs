@@ -37,16 +37,19 @@ assert.equal(lijst.length, 1, "één waarschuwing, niet één per taal");
 assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort");
 assert.equal(lijst[0].tekst, "Er wordt verspreide mist verwacht.");
 assert.equal(lijst[0].taal, "nl-BE");
+assert.equal(lijst[0].titelIsVertaling, true, "de categorie vormt een Nederlandse kop");
 lijst = uitCap(feed, 51.05, 3.72, Date.now(), "en");
 assert.equal(lijst.length, 1);
 assert.equal(lijst[0].titel, "Code geel: mist", "kop uit niveau en soort; de app toont die als \"Yellow warning for fog\"");
 assert.equal(lijst[0].tekst, "Widespread fog is expected.");
 assert.equal(lijst[0].taal, "en-GB");
+assert.equal(lijst[0].titelIsVertaling, true, "de kop vertaalt alleen de categorie, niet de originele brontekst");
 
 /* Zonder bekend niveau of bekende soort blijft de officiële titel. */
 const zonderSoort = { warnings: [{ alert: { info: [Object.assign(blok("nl-BE", "Gele waarschuwing voor iets", "x"),
   { parameter: [{ valueName: "awareness_level", value: "2; yellow; Moderate" }, { valueName: "awareness_type", value: "99; onbekend" }] })] } }] };
 assert.equal(uitCap(zonderSoort, 51.05, 3.72)[0].titel, "Gele waarschuwing voor iets", "onbekende soort: officiële titel");
+assert.equal(uitCap(zonderSoort, 51.05, 3.72)[0].titelIsVertaling, false, "geen vertaalclaim zonder officiële categorie");
 
 /* Terugval: zonder Engels het Nederlands, zonder beide het eerste blok. */
 assert.equal(kiesInfo([blok("nl-NL", "A", ""), blok("de-DE", "B", "")], "en").event, "A");
