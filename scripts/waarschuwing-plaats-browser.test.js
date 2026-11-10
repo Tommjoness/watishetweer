@@ -51,6 +51,7 @@ const PORTUGESE_BRON="Aviso de vento forte. Rajadas intensas. <img src=x onerror
 const PORTUGAL={pad:"/?lat=38.7223&lon=-9.1393&plaats=Lisboa&land=PT",lat:38.7223,lon:-9.1393,
   antwoord:{bron:"MeteoAlarm portugal",dekking:true,plaatsSpecifiek:true,land:"PT",lijst:[Object.assign({},DRENTHE_EN,{taal:"pt-PT",tekst:PORTUGESE_BRON,gebied:"Lisboa"})]}};
 
+const METEO_VERTALING_NL=Object.assign({},PORTUGAL,{antwoord:{...PORTUGAL.antwoord,lijst:[Object.assign({},PORTUGAL.antwoord.lijst[0],{vertaling:{tekst:"Waarschuwing voor harde wind in Lisboa.",methode:"deepl",automatisch:true}})]}});
 const FRANSE_TITEL="Alerte locale pour des vents violents";
 const FRANSE_MELDING={pad:"/?lat=48.8566&lon=2.3522&plaats=Paris&land=FR",lat:48.8566,lon:2.3522,
   antwoord:{bron:"MeteoAlarm france",dekking:true,plaatsSpecifiek:true,land:"FR",
@@ -181,6 +182,19 @@ async function scherm(page,naam){
         ?"Heading translated from the official warning category. Source text unchanged."
         :"Nederlandse kop: vertaling van de officiële categorie. Brontekst onvertaald.","label correct in pagina-taal");
       assert.deepEqual(fouten,[],"geen browserfouten bij buitenlandse originele brontekst");
+      await context.close();
+    }
+    /* Een geaccepteerde vertaling is zichtbaar, maar officiële tekst slechts in details. */
+    {
+      const {context,page,fouten}=await open(browser,root,METEO_VERTALING_NL,390,844);
+      const samenvatting=await page.locator("#waarschuwingen .waarsch").innerText();
+      assert(samenvatting.includes("Automatisch vertaald (niet officieel):"),"Nederlandse tekst herkenbaar als automatische vertaling");
+      assert(samenvatting.includes("Waarschuwing voor harde wind in Lisboa."),"Nederlandse vertaling direct zichtbaar");
+      const bron=page.locator("#waarschuwingen .waarsch details .waarsch-origineel, #waarschuwingen .waarsch details p[translate=no]");
+      assert.equal(await bron.count(),1,"officiële brontekst éénmaal in details");
+      assert.equal(await bron.first().getAttribute("lang"),"pt-PT");
+      assert.equal(await bron.first().textContent(),PORTUGESE_BRON);
+      assert.deepEqual(fouten,[],"geen browserfouten door vertaalveld");
       await context.close();
     }
     /* Geen NL- of EN-blok beschikbaar: Frans, Spaans, Duits en Italiaans blijven origineel. */

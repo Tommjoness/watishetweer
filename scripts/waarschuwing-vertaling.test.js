@@ -1,0 +1,54 @@
+"use strict";
+const assert=require("node:assert/strict");
+const t=require("../lib/waarschuwing-vertaling.cjs");
+const source="Aviso por viento fuerte. Rachas de 75-90 km/h.";
+const value="Waarschuwing voor harde wind. Windstoten van 75-90 km/u.";
+const base={bron:"MeteoAlarm spain",dekking:true,lijst:[{titel:"Code geel: wind",taal:"es-ES",tekst:source,plaatsSpecifiek:true}]};
+const enabled={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"FAKE_KEY_NOT_FOR_NETWORK"};
+(async()=>{
+  assert.equal(t.brontaal({taal:"fr-FR"},base.bron),"FR");
+  assert.equal(t.brontaal({taal:"<script>"},base.bron),null);
+  assert.equal(t.brontaal({},"National Weather Service"),"EN");
+  assert(t.veilig(source,value),"zelfde cijfers en eenheden");
+  assert(!t.veilig("75-90 km/h","76-90 km/h"),"gewijzigde getallen geweigerd");
+  assert(!t.veilig("75-90 km/h","75-90 mph"),"gewijzigde eenheid geweigerd");
+  assert(!t.veilig("10 mm","<b>10 mm</b>"),"HTML is niet toegestaan");
+  let calls=0,payload=null,target=null,authorization=null;
+  const fetcher=async(url,request)=>{
+    calls++;target=url;payload=JSON.parse(request.body);authorization=request.headers.Authorization;
+    return {ok:true,json:async()=>({translations:[{text:value,detected_source_language:"ES"}]})};
+  };
+  const translated=await t.vertaalWaarschuwingen(base,enabled,{fetcher,cache:null});
+  assert.equal(calls,1);assert.equal(target,t.ENDPOINT);
+  assert.equal(payload.source_lang,"ES");assert.equal(payload.target_lang,"NL");
+  assert.equal(authorization,"DeepL-Auth-Key FAKE_KEY_NOT_FOR_NETWORK");
+  assert.equal(translated.lijst[0].tekst,source,"officiële brontekst intact");
+  assert.equal(translated.lijst[0].vertaling.tekst,value);
+  assert.equal(translated.lijst[0].vertaling.automatisch,true);
+  assert(!base.lijst[0].vertaling,"geen mutatie van officiële gegevens");
+  for(const env of [null,{}, {DEEPL_TRANSLATE_ENABLED:"0",DEEPL_API_KEY:"x"},{DEEPL_TRANSLATE_ENABLED:"1"}]){
+    assert.strictEqual(await t.vertaalWaarschuwingen(base,env,{fetcher:()=>{throw Error("geen API-call toegestaan")}}),base);
+  }
+  assert.strictEqual(await t.vertaalWaarschuwingen(base,enabled,{taal:"en",fetcher:()=>{throw Error("Engelse UI heeft geen NL-vertaling nodig")}}),base);
+  const nl={...base,lijst:[{...base.lijst[0],taal:"nl-BE"}]};
+  assert.strictEqual(await t.vertaalWaarschuwingen(nl,enabled,{fetcher:()=>{throw Error("officieel Nederlands mag geen vertaalkosten veroorzaken")}}),nl);
+  const wrong=await t.vertaalWaarschuwingen(base,enabled,{fetcher:async()=>({ok:true,json:async()=>({translations:[{text:"Windstoten van 85-90 km/u.",detected_source_language:"ES"}]})})});
+  assert.strictEqual(wrong,base,"afwijkend getal fail closed");
+  assert.strictEqual(await t.vertaalWaarschuwingen(base,enabled,{fetcher:async()=>({ok:false,status:429})}),base);
+  assert.strictEqual(await t.vertaalWaarschuwingen(base,enabled,{fetcher:async()=>{throw Error("network failure")}}),base);
+  assert.strictEqual(await t.vertaalWaarschuwingen(base,enabled,{fetcher:async()=>({ok:true,json:async()=>({translations:[{text:value,detected_source_language:"FR"}]})})}),base);
+  const many={...base,lijst:Array.from({length:8},(_,i)=>({...base.lijst[0],tekst:"Aviso "+i+" por viento 75-90 km/h."}))};
+  calls=0;
+  await t.vertaalWaarschuwingen(many,enabled,{fetcher:async()=>{calls++;return {ok:false}}});
+  assert.equal(calls,t.MAX_PER_ANTWOORD,"nooit onbegrensd vertalen per request");
+  const incomplete={...base,lijst:[{...base.lijst[0],tekst:"Waarschuwing…"}]};
+  assert.strictEqual(await t.vertaalWaarschuwingen(incomplete,enabled,{fetcher:()=>{throw Error("incomplete source rejected")}}),incomplete);
+  const cacheValues=new Map();
+  const cache={match:async k=>cacheValues.get(k.url)||null,put:async(k,v)=>cacheValues.set(k.url,v.clone())};
+  const cryptoApi=require("node:crypto").webcrypto;
+  calls=0;
+  await t.vertaalWaarschuwingen(base,enabled,{fetcher,cache,cryptoApi});
+  await t.vertaalWaarschuwingen(base,enabled,{fetcher,cache,cryptoApi});
+  assert.equal(calls,1,"dezelfde officiële brontekst in de edgecache: geen extra API-call");
+  console.log("Optionele waarschuwingvertaling: officiële NL-tekst, cijfer/eeneenheidbewaking, cache, foutafhandeling en requestbudget geslaagd.");
+})().catch(e=>{console.error(e);process.exitCode=1});
