@@ -49,7 +49,7 @@ async function roep(moduleNaam,query,fetchImpl){const oud=global.fetch,p=require
   const ny=await roep("./lib/waarschuwingen.cjs",{lat:"40.7128",lon:"-74.0060",land:"US"},async url=>({ok:true,json:async()=>({features:[{properties:{event:"Heat Advisory",description:lang,severity:"Moderate",onset:"2026-08-09T10:00:00-04:00",expires:"2026-08-09T11:00:00-04:00",ends:"2026-08-09T19:00:00-04:00",areaDesc:"New York"}}]})}));
   ok(ny.body.lijst[0].tot==="2026-08-09T19:00:00-04:00","live NWS-adapter bewaart ends als geldigheid");
   ok(ny.body.lijst[0].plaatsSpecifiek===true,"NWS-puntroute wordt als plaats-specifiek gemarkeerd");
-  ok((ny.body.lijst[0].tekst.length<=701&&!/\w$/.test(ny.body.lijst[0].tekst.slice(-1)))||ny.body.lijst[0].tekst.endsWith("."),"lange waarschuwing wordt op nette grens ingekort");
+  ok(ny.body.lijst[0].tekst===lang&&ny.body.lijst[0].tekstIngekort===false,"lange officiële waarschuwing blijft volledig en krijgt geen inkortingsmarkering");
   let asUrl="";const as=await roep("./lib/waarschuwingen.cjs",{lat:"-14.2756",lon:"-170.7020",land:"AS"},async url=>{asUrl=String(url);return{ok:true,json:async()=>({features:[]})};});
   ok(as.body.bron==="National Weather Service"&&as.body.dekking===true&&asUrl.includes("api.weather.gov/alerts/active?point="),"American Samoa gebruikt de NWS-puntroute");
   const urls=[];const pl=await roep("./lib/plaatsnaam.cjs",{lat:"52.35",lon:"5.26"},async url=>{urls.push(String(url));return{ok:true,json:async()=>({address:{city:"Almere",country_code:"nl"}})};});

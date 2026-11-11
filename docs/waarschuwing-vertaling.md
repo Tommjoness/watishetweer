@@ -1,6 +1,6 @@
 # Officiële waarschuwingen: optionele Nederlandse vertaalroute
 
-Status: concept-PR, standaard **uitgeschakeld**. Er is geen API-sleutel aangemaakt, geen betaalde dienst ingeschakeld en geen productiewijziging gedaan.
+Status: de basisroute is live. De DeepL-integratie is standaard **uitgeschakeld** en vereist aparte expliciete activering.
 
 ## Eerst officiële gegevens, daarna alleen waar nodig vertalen
 
@@ -20,4 +20,4 @@ Het JSON-antwoord bewaart de officiële `tekst` en `taal` ongewijzigd. Alleen bi
 
 ## Grenzen vóór activering
 
-De huidige bronadapter kort sommige bronteksten tot 700 tekens in. Het wegnemen van deze limiet en testen van lange, complexe waarschuwingsinstructies is nog nodig. Controleer daarnaast providerretentie, voorwaarden en privacy, kostengrens, terminologiewoordenlijst en quota vóór het activeren van een echte sleutel. Bewaar de sleutel uitsluitend als Cloudflare Pages runtime-secret en nooit in repository-, preview- of browsercode.
+De bronadapter bewaart volledige officiële beschrijvingen en afzonderlijke veiligheidsinstructies, ook in de compacte MeteoAlarm-feed. De cacheversie is verhoogd zodat ingekorte oude feedgegevens niet worden hergebruikt. Bronnen van meer dan 1.200 tekens worden niet automatisch vertaald; de officiële tekst blijft volledig zichtbaar. Inhoudelijke acceptatie van lange veiligheidsinstructies vóór opt-in blijft nodig. Controleer daarnaast providerretentie, voorwaarden en privacy, kostengrens, terminologiewoordenlijst en quota vóór het activeren van een echte sleutel. Bewaar de sleutel uitsluitend als Cloudflare Pages runtime-secret en nooit in repository-, preview- of browsercode.

@@ -69,7 +69,7 @@ async function metOmgeving(fetchImpl,cache,fn){
   try{return await fn();}
   finally{globalThis.fetch=oudFetch;if(oudCaches===undefined)delete globalThis.caches;else globalThis.caches=oudCaches;}
 }
-const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"?__wiw_feed_cache=v2"));
+const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"?__wiw_feed_cache=v3"));
 
 (async()=>{
   /* 1. Compacte feed: kleiner, zelfde uitkomst voor ieder punt en beide talen. */
@@ -77,13 +77,27 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
     const {compacteFeed,uitCap}=laad()._intern;
     const compact=compacteFeed(JSON.parse(feedTekst));
     assert.equal(compact.warnings.length,2,"verlopen en groene berichten vallen weg");
-    assert.ok(JSON.stringify(compact).length<feedTekst.length/2,"compacte feed is veel kleiner");
+    const zonderTekst=o=>JSON.stringify(o,(k,v)=>k==="description"||k==="instruction"?undefined:v);
+    assert.ok(zonderTekst(compact).length<zonderTekst(feed).length/2,"metadata blijven compact, zonder officiële tekst weg te laten");
+    assert.ok(JSON.stringify(compact).length<feedTekst.length,"compacte feed blijft kleiner dan het origineel");
     const madrid=compact.warnings[0].alert.info;
     assert.deepEqual(madrid.map(i=>i.language),["en-GB"],"alleen de taalblokken die kiesInfo kiest (Spaans valt weg)");
     assert.equal(madrid[0].web,undefined,"ongebruikte velden vallen weg");
     assert.deepEqual(madrid[0].area[0].geocode,[{valueName:"EMMA_ID",value:"ES219"}],"alleen de EMMA_ID-code blijft");
     assert.deepEqual(madrid[0].parameter.map(p=>p.valueName),["awareness_level","awareness_type"]);
     assert.deepEqual(compact.warnings[1].alert.info.map(i=>i.language),["nl-NL","en-GB"],"het Franse blok kiest kiesInfo nooit");
+    /* Beschrijving en apart veiligheidsadvies >1.200 tekens: geen verlies in de cache. */
+    const langeBeschrijving="Gevaarlijke weersomstandigheden. "+"Blijf alert op waarschuwingen vanuit de weerdienst. ".repeat(80);
+    const apartAdvies="Zoek beschutting, vermijd reizen en volg instructies van hulpdiensten.";
+    const langeFeed={warnings:[{alert:{info:[info("nl-NL",{description:langeBeschrijving,instruction:apartAdvies})]}}]};
+    const langeCompact=compacteFeed(langeFeed);
+    assert.equal(langeCompact.warnings[0].alert.info[0].description,langeBeschrijving);
+    assert.equal(langeCompact.warnings[0].alert.info[0].instruction,apartAdvies);
+    for(const bron of [langeFeed,langeCompact]){
+      const w=uitCap(bron,MADRID.lat,MADRID.lon,Date.now(),"nl")[0];
+      assert.equal(w.tekst,langeBeschrijving.trim()+"\n"+apartAdvies,"volledige waarschuwing inclusief aparte instructie");
+      assert.equal(w.tekstIngekort,false,"geen eigen tekstafbreking");
+    }
     for(const [lat,lon] of [[MADRID.lat,MADRID.lon],[38.5,1.5],[38.6,1.6],[41.98,2.82],[37,-6]])
       for(const taal of ["nl","en"])
         assert.deepEqual(uitCap(compact,lat,lon,Date.now(),taal),uitCap(JSON.parse(feedTekst),lat,lon,Date.now(),taal),
@@ -128,7 +142,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
     const handler=laad(),cache=new MemoryCache(),log=[],achtergrond=[];
     const {compacteFeed}=handler._intern;
     const zet=(leeftijdS)=>{
-      const sleutel=COMPAT+"?__wiw_feed_cache=v2";
+      const sleutel=COMPAT+"?__wiw_feed_cache=v3";
       cache.map.set(sleutel,new Response(JSON.stringify(compacteFeed(JSON.parse(feedTekst))),{headers:{
         "Content-Type":"application/json","X-WIW-Feed-Opgeslagen":String(Date.now()-leeftijdS*1000)}}));
     };
@@ -141,7 +155,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
       assert.equal(achtergrond.length,1,"wel één verversing op de achtergrond");
       await Promise.all(achtergrond);
       assert.equal(log.filter(u=>u===COMPAT).length,1);
-      const opgeslagen=Number((await cache.match(new Request(COMPAT+"?__wiw_feed_cache=v2"))).headers.get("x-wiw-feed-opgeslagen"));
+      const opgeslagen=Number((await cache.match(new Request(COMPAT+"?__wiw_feed_cache=v3"))).headers.get("x-wiw-feed-opgeslagen"));
       assert.ok(Date.now()-opgeslagen<5000,"verversing bewaart een nieuwe kopie");
 
       /* zonder waitUntil telt een kopie van 10 minuten niet: gewone download */
@@ -158,7 +172,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
 
       /* een kopie zonder opslagmoment telt nooit */
       log.length=0;
-      cache.map.set(COMPAT+"?__wiw_feed_cache=v2",new Response(feedTekst,{headers:{"Content-Type":"application/json"}}));
+      cache.map.set(COMPAT+"?__wiw_feed_cache=v3",new Response(feedTekst,{headers:{"Content-Type":"application/json"}}));
       await vraag(handler,{waitUntil:()=>{}});
       assert.equal(log.filter(u=>u===COMPAT).length,1,"kopie zonder opslagmoment wordt niet gebruikt");
     });
@@ -168,7 +182,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
   {
     const handler=laad(),cache=new MemoryCache(),log=[],achtergrond=[];
     const {compacteFeed}=handler._intern;
-    cache.map.set(COMPAT+"?__wiw_feed_cache=v2",new Response(JSON.stringify(compacteFeed(JSON.parse(feedTekst))),{headers:{
+    cache.map.set(COMPAT+"?__wiw_feed_cache=v3",new Response(JSON.stringify(compacteFeed(JSON.parse(feedTekst))),{headers:{
       "Content-Type":"application/json","X-WIW-Feed-Opgeslagen":String(Date.now()-600000)}}));
     await metOmgeving(nepFetch(log,{bodyMs:300}),cache,async()=>{
       const waitUntil=p=>{achtergrond.push(p);};
@@ -186,7 +200,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
     const log=[],achtergrond=[],cache=new MemoryCache();
     await metOmgeving(nepFetch(log,{bodyMs:10}),cache,async()=>{
       delete require.cache[PAD];
-      cache.map.set(COMPAT+"?__wiw_feed_cache=v2",new Response(feedTekst,{headers:{
+      cache.map.set(COMPAT+"?__wiw_feed_cache=v3",new Response(feedTekst,{headers:{
         "Content-Type":"application/json","X-WIW-Feed-Opgeslagen":String(Date.now()-600000)}}));
       const worker=(await import(path.join(__dirname,"..","api","waarschuwingen.mjs"))).default;
       const r=await worker.fetch(new Request("https://watishetweer.nl/api/waarschuwingen?lat=40.4168&lon=-3.7038&land=ES"),{},{waitUntil:p=>{achtergrond.push(p);}});
