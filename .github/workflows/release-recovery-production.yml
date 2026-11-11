@@ -43,8 +43,18 @@ jobs:
           node-version: 24
       - name: Installeer Chromium-driver
         run: npm ci --ignore-scripts
-      - name: Installeer native browserreload-driver
-        run: apt-get update && apt-get install -y --no-install-recommends xdotool
+      - name: Installeer native browserreload-driver (vastgepind, zonder pakketserver)
+        # Twee officiële Ubuntu 24.04-pakketten uit de repository in plaats van apt-get (scripts/ci/native-reload-driver/README.md).
+        # De SHA-256 staat in deze workflow en wordt vóór de installatie gecontroleerd; alleen deze twee bestanden worden geïnstalleerd.
+        working-directory: scripts/ci/native-reload-driver
+        run: |
+          set -eu
+          sha256sum --check --strict - <<'SHA256'
+          3506c2824a74255439813f824a1629387452d52c6efd6d7916b8b54e458175e8  libxdo3_3.20160805.1-5build1_amd64.deb
+          58a202c74bce31ca2d72d4d514942a5ab6191932696adc5d21d909c9216b13cb  xdotool_3.20160805.1-5build1_amd64.deb
+          SHA256
+          dpkg --install libxdo3_3.20160805.1-5build1_amd64.deb xdotool_3.20160805.1-5build1_amd64.deb
+          command -v xdotool
       - name: Test actieve productie no-JS, failed-JS, refresh en BFCache
         env:
           EXPECTED_SHA: ${{ github.sha }}
