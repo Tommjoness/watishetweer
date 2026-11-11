@@ -1,0 +1,40 @@
+name: Native X11 host preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/native-x11-host-preflight.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  x11-host-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Controleer Xvfb op de vaste Ubuntu-runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v xvfb-run
+          command -v Xvfb
+          cat /etc/os-release | grep -E '^(ID|VERSION_ID)='
+          printf 'xdotool vooraf aanwezig: '
+          if command -v xdotool >/dev/null 2>&1; then echo ja; else echo nee; fi
+      - name: Bewijs bereikbaarheid pakketbron op de host
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v xdotool >/dev/null 2>&1; then
+            sudo apt-get update -o APT::Update::Error-Mode=any
+            sudo apt-get install -y --no-install-recommends xdotool
+          fi
+          command -v xdotool
+          xdotool version
+      - name: Bewijs native X11-driver onder Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum sh -ec 'xdotool getdisplaygeometry'
