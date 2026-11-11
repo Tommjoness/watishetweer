@@ -184,6 +184,28 @@ try {
   assert.equal(await nwsHead.text(),"","HEAD antwoord blijft leeg");
   assert.equal(deeplAanroepen,1,"HEAD mag geen extra DeepL-aanroep doen");
 
+  /* Lange NWS-description én aparte instruction; DeepL blijft op 1.200 beperkt. */
+  const langeNwsBeschrijving="Dangerous heat expected. "+"Heat index values could be dangerously high. ".repeat(60);
+  const langeNwsInstructie="Stay indoors, drink water and check on vulnerable neighbours.";
+  globalThis.fetch=async url=>{
+    const u=String(url);
+    if(u.includes("api.weather.gov/alerts/active?point="))return {
+      ok:true,status:200,json:async()=>({features:[{properties:{
+        event:"Heat Advisory",severity:"Severe",description:langeNwsBeschrijving,instruction:langeNwsInstructie,
+        effective:"2026-08-12T18:00:00Z",expires:"2026-08-13T02:00:00Z",areaDesc:"Dallas County"
+      }}]})
+    };
+    if(u.startsWith("https://api-free.deepl.com/"))throw Error("geen vertaling voor lange bron");
+    throw Error("onverwachte fetch: "+u);
+  };
+  const langeNws=await api.fetch(new Request(nwsUrl),testEnv);
+  assert.equal(langeNws.status,200);
+  const langeNwsBody=await langeNws.json();
+  assert.equal(langeNwsBody.lijst.length,1);
+  assert.equal(langeNwsBody.lijst[0].tekst,langeNwsBeschrijving.trim()+"\n"+langeNwsInstructie);
+  assert.equal(langeNwsBody.lijst[0].tekstIngekort,false);
+  assert.equal(langeNwsBody.lijst[0].vertaling,undefined,"geen gedeeltelijke machinevertaling");
+
   console.log("API-waarschuwingsscope: lege NL-landfeed als nulwaarschuwing, niet-lege landfeed fail-closed, NWS-landgrens, GPS-landcheck en puntdekking behouden.");
 } finally {
   globalThis.fetch=origineelFetch;
