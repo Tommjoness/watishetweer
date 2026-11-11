@@ -13,10 +13,10 @@ Het JSON-antwoord bewaart de officiële `tekst` en `taal` ongewijzigd. Alleen bi
 ## Fail-closed, budget en privacy
 
 - Zonder opt-in of sleutel wordt de vertaaldienst nooit aangeroepen.
-- De server controleert bron-taal, niet-lege uitvoer, cijfers en herkenbare meeteenheden; een providerfout of gewijzigde waarden betekent dat de originele tekst zichtbaar blijft.
-- Maximaal 3 waarschuwingen per antwoord, maximaal 1.200 tekens per tekst, timeout 1,6 seconde. Geen vertaling als de aangeleverde tekst op een afbreek-ellips eindigt.
-- Succesvolle vertalingen worden 24 uur in de Cloudflare-edgecache hergebruikt op een SHA-256-sleutel van exacte brontaal plus brontekst; de brontekst staat niet in de cache-URL.
-- **Niet gegarandeerd foutloos**: automatische vertaling kan bijvoorbeeld een ontkenning of instructie verkeerd overbrengen zonder een getal te veranderen. De officiële tekst blijft daarom leidend. Publicatie van automatische veiligheidsvertalingen vereist aanvullende inhoudelijke acceptatie.
+- De server controleert bron-taal, niet-lege uitvoer, cijfers, herkenbare meeteenheden inclusief m/s, Beaufort en procenten, tijdzones en het aantal afzonderlijke instructieregels. Voor EN, FR, DE, ES en IT wordt ook conservatief het aantal expliciete ontkenningen/verboden vergeleken met de Nederlandse tekst. Afwijkingen geven uitsluitend de officiële brontekst terug.
+- Maximaal 3 waarschuwingen per antwoord, maximaal 1.200 tekens per tekst, timeout 1,6 seconde. Geen vertaling als de brontekst op een afbreek-ellips eindigt; ook een afgebroken vertaalantwoord of sterk ingekorte uitvoer wordt geweigerd. Voorlopig komen alleen EN/FR/DE/ES/IT in aanmerking; overige talen blijven in de brontaal.
+- Succesvolle vertalingen worden 24 uur in de Cloudflare-edgecache hergebruikt op een SHA-256-sleutel van exacte brontaal plus brontekst. De cacheversie is verhoogd om eerder geaccepteerde vertalingen opnieuw te laten controleren; de brontekst staat niet in de cache-URL.
+- **Niet gegarandeerd foutloos**: een verkeerd vertaald verbod, onjuiste instructie of weggelaten betekenis kan nog steeds door deze woord- en structuurcontroles glippen. De testset bevat uitsluitend zelfgemaakte, synthetische voorbeeldteksten; géén echte provideruitvoer of gevalideerde DeepL-vertalingen. De officiële tekst blijft leidend. Publicatie vereist aanvullende handmatige, inhoudelijke acceptatie met echte providerteksten.
 
 ## Grenzen vóór activering
 
