@@ -66,5 +66,73 @@ assert(!production.includes("cloudflare-disable-rum.js"),"productiedeploy mag ge
 assert(packageJson.scripts["test:prebuild"].includes("cloudflare-web-analytics-setup.test.js"),"prebuild mist analytics-setupregressietest");
 assert(packageJson.scripts.postbuild.includes("apply-cloudflare-web-analytics-csp.js"),"postbuild mist analytics-CSP-artifactstap");
 
+/* Native browserreload-driver: xdotool komt uit twee vastgepinde, officiële Ubuntu-pakketten in de repository en
+   niet meer van een pakketserver tijdens de job (11 november 2026: ubuntu.com was vanaf de runners niet vindbaar).
+   De drie workflows hebben exact dezelfde stap; hashes, bestanden en README moeten gelijk blijven. */
+{
+  const crypto=require("crypto");
+  const driverMap="scripts/ci/native-reload-driver";
+  const pakketten=[
+    {bestand:"libxdo3_3.20160805.1-5build1_amd64.deb",sha256:"3506c2824a74255439813f824a1629387452d52c6efd6d7916b8b54e458175e8",bytes:22202},
+    {bestand:"xdotool_3.20160805.1-5build1_amd64.deb",sha256:"58a202c74bce31ca2d72d4d514942a5ab6191932696adc5d21d909c9216b13cb",bytes:42556}
+  ];
+  const debs=fs.readdirSync(path.join(root,driverMap)).filter(naam=>naam.endsWith(".deb")).sort();
+  assert.deepEqual(debs,pakketten.map(p=>p.bestand).sort(),"de drivermap mag alleen de twee vastgepinde pakketten bevatten");
+  const driverReadme=lees(driverMap+"/README.md");
+  for(const p of pakketten){
+    const inhoud=fs.readFileSync(path.join(root,driverMap,p.bestand));
+    assert.equal(inhoud.length,p.bytes,`${p.bestand}: grootte wijkt af van het officiële pakket`);
+    assert.equal(inhoud.subarray(0,8).toString("latin1"),"!<arch>\n",`${p.bestand}: geen Debian-pakket`);
+    assert.equal(crypto.createHash("sha256").update(inhoud).digest("hex"),p.sha256,`${p.bestand}: SHA-256 wijkt af van het vastgepinde officiële pakket`);
+    assert(driverReadme.includes(p.bestand)&&driverReadme.includes(p.sha256),`README van de driver mist ${p.bestand} of de hash`);
+  }
+  assert(lees(driverMap+"/verifieer-herkomst.sh").includes("ubuntu-archive-keyring.gpg"),"de herkomstcontrole moet de handtekening van de Ubuntu-archiefsleutel controleren");
 
-console.log("Transfer-readiness: runbook, auditbewijs, geen commerciële baseline in de publieke repo, generieke Cloudflare-preview en fail-safe Web Analytics-setup zijn geborgd.");
+  const stapNaam="Installeer native browserreload-driver (vastgepind, zonder pakketserver)";
+  const installatiestap=(tekst,naam)=>{
+    const regels=tekst.split(/\r?\n/),start=regels.findIndex(regel=>regel.trim()==="- name: "+stapNaam);
+    assert(start>=0,`${naam}: mist de vastgepinde installatiestap`);
+    assert.equal(regels.filter(regel=>regel.trim()==="- name: "+stapNaam).length,1,`${naam}: de installatiestap mag er precies één keer staan`);
+    const inspring=regels[start].indexOf("- ");
+    let einde=start+1;
+    while(einde<regels.length&&(regels[einde].trim()===""||regels[einde].search(/\S/)>inspring))einde++;
+    return {start,blok:regels.slice(start,einde).map(regel=>regel.trimEnd()).filter(Boolean).join("\n"),regels};
+  };
+  const workflows={
+    "cloudflare-preview-deploy.yml":preview,
+    "release-recovery-production.yml":lees(".github/workflows/release-recovery-production.yml"),
+    "release-recovery-verification.yml":lees(".github/workflows/release-recovery-verification.yml")
+  };
+  const blokken=Object.entries(workflows).map(([naam,tekst])=>({naam,tekst,...installatiestap(tekst,naam)}));
+  for(const {naam,tekst,blok,start,regels} of blokken){
+    assert.equal(blok,blokken[0].blok,`${naam}: de installatiestap wijkt af van ${blokken[0].naam}`);
+    const uitvoerend=blok.split("\n").filter(regel=>!regel.trim().startsWith("#"));
+    assert(uitvoerend.some(regel=>regel.trim()==="working-directory: "+driverMap),`${naam}: de stap moet in ${driverMap} draaien`);
+    assert(uitvoerend.some(regel=>regel.trim()==="set -eu"),`${naam}: de stap moet bij de eerste fout stoppen`);
+    const controle=uitvoerend.findIndex(regel=>regel.trim()==="sha256sum --check --strict - <<'SHA256'");
+    const installatie=uitvoerend.findIndex(regel=>regel.trim()==="dpkg --install "+pakketten.map(p=>p.bestand).join(" "));
+    assert(controle>=0&&installatie>controle,`${naam}: eerst verplichte SHA-256-controle, daarna dpkg met precies de twee vastgepinde bestanden`);
+    for(const p of pakketten)assert(uitvoerend.slice(controle,installatie).some(regel=>regel.trim()===`${p.sha256}  ${p.bestand}`),`${naam}: hashregel voor ${p.bestand} ontbreekt of wijkt af`);
+    assert(!/\b(apt|apt-get|curl|wget|snap|pip|npm)\b|https?:/.test(uitvoerend.join("\n")),`${naam}: de installatiestap mag niets van het netwerk halen`);
+    assert(!tekst.split(/\r?\n/).some(regel=>!regel.trim().startsWith("#")&&/\bapt(-get)?\s+(update|install)\b/.test(regel)),`${naam}: geen pakketserver meer tijdens de job`);
+    assert(/image: mcr\.microsoft\.com\/playwright:v[0-9.]+-noble\b/.test(tekst)&&!/image: mcr\.microsoft\.com\/playwright:(?!v[0-9.]+-noble\b)/.test(tekst),`${naam}: de pakketten horen bij Ubuntu 24.04 (noble); bij een andere image eerst ${driverMap}/README.md volgen`);
+    /* De driver staat er vóór de controle die hem gebruikt, en die controle blijft de echte, zichtbare browser met native reload. */
+    const gebruik=naam==="release-recovery-verification.yml"
+      ?"xvfb-run --auto-servernum node scripts/native-reload-driver-browser.js"
+      :"xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js";
+    const gebruikRegel=regels.findIndex(regel=>regel.trim()==="run: "+gebruik);
+    assert(gebruikRegel>start,`${naam}: ${gebruik} moet na de installatiestap draaien`);
+    if(naam!=="release-recovery-verification.yml"){
+      const omgeving=regels.slice(start,gebruikRegel).join("\n");
+      assert(omgeving.includes('HEADLESS: "false"')&&omgeving.includes('NATIVE_BROWSER_RELOAD: "true"'),`${naam}: de releasenavigatie moet zichtbaar en met native browserreload blijven draaien`);
+    }
+  }
+  const navigatie=lees("scripts/production-release-recovery-navigation.js");
+  for(const fragment of ['["windowfocus","--sync",venster]','["key","--clearmodifiers","ctrl+r"]','Chromium kreeg geen native focus','hoofdStart.navigationType!=="reload"','documentResponse.response.fromServiceWorker','deployed offline-reloadbewijs vereist zichtbare Chromium + native browserreload']){
+    assert(navigatie.includes(fragment),`releasenavigatie mist bestaande native reload- of CDP-controle: ${fragment}`);
+  }
+  assert(runbook.includes(driverMap+"/README.md"),"runbook mist de onderhoudsinstructie van de native browserreload-driver");
+}
+
+
+console.log("Transfer-readiness: runbook, auditbewijs, geen commerciële baseline in de publieke repo, generieke Cloudflare-preview, vastgepinde native browserreload-driver en fail-safe Web Analytics-setup zijn geborgd.");
