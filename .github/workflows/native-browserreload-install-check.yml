@@ -1,0 +1,40 @@
+name: Native browserreload installatiecontract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-preview-deploy.yml"
+      - ".github/workflows/native-browserreload-install-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-install:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Installeer native browserreload-driver
+        run: |
+          set -eu
+          sources=/etc/apt/sources.list.d/ubuntu.sources
+          test -f "$sources"
+          grep -q 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' "$sources"
+          sed -i \
+            -e 's#http://azure.archive.ubuntu.com/ubuntu/#https://archive.ubuntu.com/ubuntu/#g' \
+            -e 's#http://security.ubuntu.com/ubuntu/#https://archive.ubuntu.com/ubuntu/#g' \
+            "$sources"
+          grep -q 'https://archive.ubuntu.com/ubuntu/' "$sources"
+          apt-get update -o APT::Update::Error-Mode=any
+          apt-get install -y --no-install-recommends xdotool
+          command -v xdotool
+      - name: Bewijs echte X11-driver beschikbaar
+        run: xvfb-run --auto-servernum sh -ec 'xdotool getdisplaygeometry >/dev/null'
