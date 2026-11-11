@@ -50,6 +50,9 @@ for(const geval of voorbeelden){
     geval.taal+": HTML wordt geweigerd");
 }
 
+assert(!t.veilig("Do not travel tonight.\nStay indoors.",
+  "Reis vanavond.\nBlijf niet binnen.","EN"),
+  "dezelfde ontkenning mag niet naar een andere veiligheidsinstructie verschuiven");
 assert(!t.veilig("Travel between 18:00 and 21:00 UTC.",
   "Reis niet tussen 18:00 en 21:00 UTC.","EN"),"extra ontkenning wordt conservatief geweigerd");
 assert(!t.veilig("Winds could be dangerous. ".repeat(35),"Alles is veilig.","EN"),
