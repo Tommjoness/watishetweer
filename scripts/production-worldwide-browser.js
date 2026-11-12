@@ -52,6 +52,7 @@ const begrensdeMs=(naam,standaard,min,max)=>{
 const BRON_PACING_MS=begrensdeMs("WORLDWIDE_SOURCE_PACING_MS",5000,1000,30000);
 const BRON_RETRY_BACKOFF_MS=begrensdeMs("WORLDWIDE_SOURCE_RETRY_BACKOFF_MS",5000,1000,30000);
 const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
+const {verzamelLiveBronnen}=require("./worldwide-bronvolgorde.js");
 
 async function ontdekVolledigeForecastUrl(browser,locatie){
   const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
@@ -148,18 +149,30 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
     /* Laat de productiepagina de exacte provider-URL bepalen. Haal die URL daarna
        live op met begrensde retry en gebruik exact die response voor beide
        viewports. Daarmee blijft bronwaarheid live, terwijl een ontbrekend
-       browser-response-event de bewijsrun niet meer kan laten flappen. */
-    const liveBronnen=new Map();
-    for(const [index,locatie] of locaties.entries()){
-      if(index>0)await slaap(BRON_PACING_MS);
-      const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
-      verifieerGeenPressureQuery(sourceUrl,locatie.naam);
-      const live=await haalLiveForecast(sourceUrl,locatie.naam,locatie);
-      liveBronnen.set(locatie.naam,live.bron);
-      console.log(live.via==="Open-Meteo"
-        ?`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`
-        :`BRON LIVE ${locatie.naam}: via ${live.via} (poging ${live.poging}).`);
-    }
+       browser-response-event de bewijsrun niet meer kan laten flappen.
+       Volgorde (scripts/worldwide-bronvolgorde.js): eerst alle URL's ontdekken
+       met de bestaande pauze ertussen, daarna alle live antwoorden direct
+       achter elkaar ophalen, zodat de open verbinding hergebruikt kan worden. */
+    const bronTijd=new Map();
+    let ophalenStart=null;
+    const liveBronnen=await verzamelLiveBronnen({
+      locaties,
+      ontdek:locatie=>ontdekVolledigeForecastUrl(browser,locatie),
+      controleerUrl:(sourceUrl,locatie)=>verifieerGeenPressureQuery(sourceUrl,locatie.naam),
+      haal:(sourceUrl,locatie)=>{
+        if(ophalenStart===null)ophalenStart=Date.now();
+        return haalLiveForecast(sourceUrl,locatie.naam,locatie);
+      },
+      pauzeMs:BRON_PACING_MS,
+      slaap,
+      meld:(locatie,live)=>{
+        bronTijd.set(locatie.naam,Date.now());
+        console.log(live.via==="Open-Meteo"
+          ?`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`
+          :`BRON LIVE ${locatie.naam}: via ${live.via} (poging ${live.poging}).`);
+      }
+    });
+    const ophalenMs=Date.now()-ophalenStart,oudsteBron=Math.min(...bronTijd.values()),controleStart=Date.now();
 
     for(const scherm of schermen){
       const context=await browser.newContext({viewport:{width:scherm.width,height:scherm.height},serviceWorkers:"block",locale:"nl-NL"});
@@ -268,6 +281,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       }
       await context.close();
     }
+    console.log(`BRONLEEFTIJD: ${liveBronnen.size} bronnen opgehaald in ${Math.round(ophalenMs/100)/10} s; oudste bron ${Math.round((controleStart-oudsteBron)/1000)} s oud bij de eerste browsercontrole en ${Math.round((Date.now()-oudsteBron)/1000)} s bij de laatste.`);
     console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met live bronvergelijking en pressure-retirement.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});

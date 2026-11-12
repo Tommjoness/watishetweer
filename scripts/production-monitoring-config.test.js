@@ -122,6 +122,8 @@ assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horiz
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
 assert(wereldwijd.includes("if(!klaar&&isVolledigeForecast(url))")&&wereldwijd.includes("haalLiveForecast(sourceUrl"),"wereldwijde browsermonitor moet de volledige forecastrespons via de exacte productie-URL live vergelijken en niet de current-only preview");
+/* Volgorde van bronverzameling (eerst ontdekken, dan achter elkaar ophalen): gedragstest met alle 11 locaties. */
+require("./worldwide-bronvolgorde.test.js");
 assert(wereldwijd.includes('assert.equal(uit.timezone,bron.timezone'),"wereldwijde browsermonitor moet de UI-tijdzone tegen dezelfde providerresponse verifiëren");
 assert(wereldwijd.includes('retired pressure_msl')&&wereldwijd.includes('pressureRest'),"wereldwijde browsermonitor moet pressure-retirement in providerquery én DOM bewaken");
 assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");
