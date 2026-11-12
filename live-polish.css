@@ -401,8 +401,7 @@ html[data-thema="donker"] .tip-strook{--tip-lijn:var(--rule)}
 .tip-strook .tip-roos{display:inline-block;width:12px;height:12px;margin-left:4px;vertical-align:-1.5px;flex:none}
 #chart #scrub [data-tip-verberg]{visibility:hidden;pointer-events:none}
 @media (max-width:339px){
-  .tip-strook{padding-left:6px;padding-right:6px;--tip-gat:8px}
-  .tip-strook dd{font-size:12px}
+  .tip-strook{margin-inline:-4px;padding-left:6px;padding-right:6px;--tip-gat:8px}
 }
 /* Vanaf 430 px past de strook zich aan haar eigen breedte aan (container queries; de strook is zelf de container, ze stijlt dus
    alleen haar nakomelingen). Stripbreedte per viewport (gemeten): 430→380, 700→634, 768→702, 1024→882, 1100→564, 1280→706,
