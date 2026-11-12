@@ -250,7 +250,7 @@ let h=hv("2026-09-20");
 assert.equal(h.t.jaar,2026);assert.equal(h.t.fase,"ver");
 assert.equal(h.a,"Nog 20 dagen tot de herfstvakantie in regio noord.");
 assert.deepEqual(h.g,{n:20,tekst:"dagen tot de herfstvakantie in regio noord"});
-assert.equal(h.m,"Vanaf zondag 4 oktober staat hier de verwachting voor de eerste vakantiedag.");
+assert.equal(h.m,"De herfstvakantie begint landelijk als eerste op zaterdag 10 oktober 2026. Vanaf zondag 4 oktober is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.");
 h=hv("2026-10-04");
 assert.equal(h.t.fase,"verwachting");assert.deepEqual(h.zicht,["2026-10-10"],"4 oktober: alleen de eerste vakantiedag valt in het venster");
 assert.equal(h.m,"");
@@ -297,7 +297,7 @@ const htmlHerfst=pagina(herfst,"2026-10-12");
 assert(htmlHerfst.includes("<title>Weer herfstvakantie 2026: regen, zon en temperatuur per dag | watishetweer.nl</title>"));
 assert(htmlHerfst.includes('<link rel="canonical" href="https://watishetweer.nl/herfstvakantie/">'));
 assert(htmlHerfst.includes('<tr><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
-assert(!pagina(herfst,"2026-10-26").includes('data-jaar="2026"'),"na de vakantie verdwijnt het voorbije jaar uit de tabel");
+assert(pagina(herfst,"2026-10-26").includes('data-jaar="2026" hidden'),"na de vakantie is het voorbije jaar verborgen");
 assert(pagina(herfst,"2027-11-01").includes("<h1 id=\"seizoen-kop\">Herfstvakantie 2028</h1>"),"onbekend jaar bouwt zonder fout");
 assert.equal(R.regioKop({regios:["noord","midden","zuid"]},3),"alle regio's");
 assert.equal(R.regioKop({regios:["midden","zuid"]},3),"regio midden en zuid");
@@ -311,7 +311,7 @@ assert.deepEqual([...new Set(kerstVak.perioden[2027].map(p=>p.van+"/"+p.tot))],[
 const kv=(d)=>{const t=R.toestand(d,kerstVak);return {t,a:R.aftelTekst(t,kerstVak),m:R.meldingTekst(t,kerstVak),zicht:t.dagen.filter(x=>x.zichtbaar).map(x=>x.iso)};};
 let k=kv("2026-10-12");
 assert.equal(k.a,"Nog 68 dagen tot de kerstvakantie.","overal tegelijk: geen regio in het aftellen");
-assert.equal(k.m,"Vanaf zondag 13 december staat hier de verwachting voor de eerste vakantiedag.");
+assert.equal(k.m,"De kerstvakantie begint op zaterdag 19 december 2026. Vanaf zondag 13 december is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.");
 assert.equal(kv("2026-12-18").a,"Morgen begint de kerstvakantie.");
 assert.equal(kv("2026-12-19").a,"Vandaag begint de kerstvakantie.");
 assert.equal(kv("2026-12-27").a,"Het is kerstvakantie.");
@@ -341,6 +341,11 @@ assert.deepEqual([...new Set(mei.perioden[2027].map(p=>p.van+"/"+p.tot))],["2027
 assert.deepEqual([...new Set(mei.perioden[2028].map(p=>p.van+"/"+p.tot))],["2028-04-29/2028-05-07"]);
 assert.deepEqual(zomer.perioden[2027].map(p=>[p.regio,p.van,p.tot]),[["noord","2027-07-10","2027-08-22"],["midden","2027-07-17","2027-08-29"],["zuid","2027-07-24","2027-09-05"]]);
 assert.deepEqual(zomer.perioden[2028].map(p=>[p.regio,p.van,p.tot]),[["noord","2028-07-15","2028-08-27"],["midden","2028-07-08","2028-08-20"],["zuid","2028-07-22","2028-09-03"]]);
+for(const [cfg,jaar] of [[kerstVak,2026],[mei,2027],[voorjaar,2027],[zomer,2027],[herfst,2027]]){
+  const zichtbaar=[...pagina(cfg,"2026-11-12").matchAll(/class="seizoen-dag seizoen-perioden" data-jaar="(\d+)"( hidden)?>/g)].filter(m=>!m[2]).map(m=>Number(m[1]));
+  assert.deepEqual(zichtbaar,[jaar],cfg.slug+": slechts één actuele tabel");
+}
+assert.match(R.meldingTekst(R.toestand("2026-11-12",mei),mei),/begint op zaterdag 24 april 2027\. Vanaf zondag 18 april/);
 const at=(d,c)=>R.aftelTekst(R.toestand(d,c),c);
 assert.equal(at("2026-10-12",voorjaar),"Nog 124 dagen tot de voorjaarsvakantie in regio zuid.","zuid begint in 2027 een week eerder");
 assert.equal(at("2027-02-13",voorjaar),"Vandaag begint de voorjaarsvakantie in regio zuid. In regio noord en midden begint de vakantie op zaterdag 20 februari.");

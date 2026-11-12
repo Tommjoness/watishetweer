@@ -83,6 +83,15 @@ function aftelGetal(t,cfg){
 }
 function meldingTekst(t,cfg){
   if(t.fase==="onbekend")return vul(cfg.teksten.onbekend,{jaar:t.jaar});
+  if(t.fase==="ver"&&cfg.soort==="vakantie"){
+    const eerste=t.dagen[0].iso;
+    return vul(cfg.teksten.ver,{
+      vakantie:klein(cfg.naam),
+      landelijk:t.perioden.every(p=>p.van===eerste)?"":"landelijk als eerste ",
+      start:datumTekst(eerste,true)+" "+eerste.slice(0,4),
+      datum:datumTekst(t.vanaf,true)
+    });
+  }
   /* {datum} is de dag waarop de eerste evenementdag verschijnt, {datum2} die
      van de tweede (tweede kerstdag komt een dag later in beeld dan eerste). */
   if(t.fase==="ver")return vul(cfg.teksten.ver,{datum:datumTekst(t.vanaf,true),datum2:t.dagen[1]?datumTekst(t.dagen[1].vanaf,true):"",dagen:cfg.vensterDagen});
@@ -566,6 +575,7 @@ async function start(opt){
   const kop=document.getElementById("seizoen-kop");
   if(kop)kop.textContent=`${cfg.naam} ${t.jaar}`;
   document.title=vul(cfg.titel,{jaar:t.jaar})+" | watishetweer.nl";
+  if(cfg.soort==="vakantie")document.querySelectorAll(".seizoen-perioden").forEach(tabel=>{tabel.hidden=Number(tabel.dataset.jaar)!==t.jaar;});
   const aftellen=document.getElementById("seizoen-aftellen");
   if(aftellen){
     const groot=aftelGetal(t,cfg);
