@@ -227,8 +227,7 @@ ${urenTabel(n.uren)}`;
 
   /* ---------- overzicht van alle parken ---------- */
   /* ---------- direct antwoord boven het overzicht ---------- */
-  /* Alleen wat al berekend is: de afgeronde score (7/10 of hoger heet in de hele site "Goed") en de
-     redenen van de score. Een relatief beste park telt nooit als gunstig als alle parken slecht scoren. */
+  /* Een gunstig advies vereist zowel een goede score als een zichtbaar kijkvenster. */
   const FACTOREN = ["neerslag", "bewolking", "maanlicht", "mist of zeer slecht zicht", "tijdelijk slechter zicht", "beperkt zicht"];
   const opsomming = lijst => lijst.length < 2 ? lijst.join("") : lijst.slice(0, -1).join(", ") + " en " + lijst[lijst.length - 1];
   function parkLinks(rijen, totaal) {
@@ -240,8 +239,10 @@ ${urenTabel(n.uren)}`;
     const geldig = rijen.filter(r => r.n && r.n.score != null && /^\d+\/10$/.test(r.n.scoreTekst));
     if (!geldig.length) return "";
     const punt = r => Number(r.n.scoreTekst.split("/")[0]);
-    const top = Math.max(...geldig.map(punt)), besten = geldig.filter(r => punt(r) === top);
-    const gunstig = geldig.filter(r => punt(r) >= 7), rest = geldig.filter(r => punt(r) < 7);
+    const geschikt = r => punt(r) >= 7 && !!r.n.venster;
+    const gunstig = geldig.filter(geschikt), rest = geldig.filter(r => !geschikt(r));
+    const kandidaten = gunstig.length ? gunstig : geldig;
+    const top = Math.max(...kandidaten.map(punt)), besten = kandidaten.filter(r => punt(r) === top);
     const factoren = groep => {
       const aantal = {};
       groep.forEach(r => (r.n.redenen || []).forEach(f => { aantal[f] = (aantal[f] || 0) + 1; }));
@@ -250,12 +251,12 @@ ${urenTabel(n.uren)}`;
     };
     const zinnen = [];
     if (gunstig.length) {
-      zinnen.push(`Vannacht zijn de omstandigheden in ${gunstig.length} van de ${geldig.length} parken gunstig (7/10 of hoger).`);
+      zinnen.push(`Vannacht is er in ${gunstig.length} van de ${geldig.length} parken een gunstig kijkvenster.`);
       zinnen.push(`Het best (${top}/10): ${parkLinks(besten, geldig.length)}.`);
       const f = rest.length ? factoren(rest) : [];
       if (f.length) zinnen.push(`Elders beperkend: ${opsomming(f)}.`);
     } else {
-      zinnen.push("Vannacht is er geen park met gunstige omstandigheden.");
+      zinnen.push("Vannacht is er geen gunstig kijkvenster gevonden.");
       zinnen.push(`Hoogste indicatie: ${top}/10 (${esc(besten[0].n.oordeel)}) in ${parkLinks(besten, geldig.length)}.`);
       const f = factoren(geldig);
       if (f.length) zinnen.push(`Beperkend in de meeste parken: ${opsomming(f)}.`);
