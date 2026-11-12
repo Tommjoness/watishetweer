@@ -253,6 +253,8 @@ assert.equal(r.payloads[1].distinct_id,r.payloads[0].distinct_id,"tijdelijke ID 
 r=draai("https://watishetweer.nl/?analytics=uit",idOpslag,{opslagFout:true});
 assert.deepEqual(r.verzonden,[],"expliciete afmelding geldt op deze pagina ook als opslag geblokkeerd is");
 assert(r.status.textContent.includes("De afmelding kon niet worden bewaard."),"een geblokkeerde opslag krijgt geen bevestiging van permanente afmelding");
+const vertaal=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.equal(vertaal.vertaal(r.status.textContent.trim()),"PostHog and Google Analytics are off on this page. Your opt-out could not be saved.","de opslagfout is ook in het Engels begrijpelijk");
 r=draai("https://watishetweer.nl/privacy",idOpslag,{opslagFout:true});
 r.knop.onclick();
 r.installeerApp();
