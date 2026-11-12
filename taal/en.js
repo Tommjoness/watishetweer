@@ -1389,10 +1389,10 @@
     /* Ophaalmoment van de verwachting op de Nachtzicht-pagina's (verversingsbeleid in nachtzicht-runtime.js). */
     [/^Verwachting van (\d{2}:\d{2})\.( Verversen lukt nu niet\.)?$/, (m) => `Forecast from ${m[1]}.${m[2] ? " Refreshing is not working right now." : ""}`],
     /* Direct antwoord boven het Nachtzicht-overzicht (antwoordHtml in scripts/nachtzicht-runtime.js); parkennamen blijven staan. */
-    [/^Vannacht zijn de omstandigheden in (\d+) van de (\d+) parken gunstig \(7\/10 of hoger\)\.$/, (m) => `Tonight conditions are favourable in ${m[1]} of ${m[2]} parks (7/10 or higher).`],
+    [/^Vannacht is er in (\d+) van de (\d+) parken een gunstig kijkvenster\.$/, (m) => `Tonight there is a favourable viewing window in ${m[1]} of ${m[2]} parks.`],
     [/^Het best \((\d+)\/10\): (.+)\.$/, (m) => `Best (${m[1]}/10): ${parkenEn(m[2])}.`],
     [/^Elders beperkend: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting elsewhere: ${r}.`; }],
-    [/^Vannacht is er geen park met gunstige omstandigheden\.$/, () => "Tonight no park has favourable conditions."],
+    [/^Vannacht is er geen gunstig kijkvenster gevonden\.$/, () => "Tonight no favourable viewing window was found."],
     [/^Hoogste indicatie: (\d+)\/10 \(([^)]+)\) in (.+)\.$/, (m) => { const o = ZICHTSCORE[m[2].toLowerCase()]; return o && `Highest rating: ${m[1]}/10 (${o}) in ${parkenEn(m[3])}.`; }],
     [/^Beperkend in de meeste parken: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting in most parks: ${r}.`; }],
     [/^Voor (\d+) (park|parken) ontbreken gegevens\.$/, (m) => `No data for ${m[1]} ${m[1] === "1" ? "park" : "parks"}.`],
