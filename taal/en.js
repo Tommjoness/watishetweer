@@ -604,6 +604,7 @@
     "De neerslagverwachting voor de komende twee uur is onzeker.": "The precipitation forecast for the next two hours is uncertain.",
     "In de komende twee uur is neerslag mogelijk.": "Precipitation is possible in the next two hours.",
     "In de komende twee uur kunnen enkele druppels vallen.": "A few drops may fall in the next two hours.",
+    "Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.": "According to the KNMI radar forecast, a few drops may fall in the next two hours.",
     "Het is nu droog. In de komende twee uur kunnen enkele druppels vallen.": "It is dry now. A few drops may fall in the next two hours.",
     "Het is nu droog. In de komende twee uur wordt neerslag verwacht.": "It is dry now. Precipitation is expected in the next two hours.",
     "Er valt nu neerslag en dat blijft de komende twee uur zo.": "There is precipitation now and it will continue for the next two hours.",
