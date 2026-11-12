@@ -17,7 +17,20 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const OUT=path.join(__dirname,"..","public");
 const RUNTIME_BRON=fs.readFileSync(path.join(__dirname,"seizoenspagina-runtime.js"),"utf8");
 const REGIO_BRON=fs.readFileSync(path.join(__dirname,"vakantieregio-data.json"),"utf8");
-const REGIO_ASSET="vakantieregio-"+createHash("sha256").update(REGIO_BRON).digest("hex").slice(0,12)+".js";
+const REGIO_SCRIPT=`/*!
+ * Geometrie bewerkt en gerasterd door watishetweer.nl (2026).
+ * Kadaster, BRK Bestuurlijke Gebieden 2026: https://data.overheid.nl/dataset/81774-bestuurlijke-gebieden
+ * CBS en Kadaster, Wijk- en Buurtkaarten:
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2004
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2010
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2018
+ * BRK en CBS 2018: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+ * Onno Boonstra, NLGis 1997 v2.2 (CC0): https://doi.org/10.17026/DANS-XB9-T677
+ * Kadaster, BAG-woonplaatsen (PDM 1.0): https://api.pdok.nl/kadaster/bag/ogc/v2
+ */
+globalThis.WeatherNowVakantieregioData=${REGIO_BRON};
+`;
+const REGIO_ASSET="vakantieregio-"+createHash("sha256").update(REGIO_SCRIPT).digest("hex").slice(0,12)+".js";
 
 function esc(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function jsonInHtml(v){return JSON.stringify(v).replace(/</g,"\\u003c");}
@@ -226,7 +239,7 @@ function voegToeAanSitemap(){
 function main(){
   if(!fs.existsSync(path.join(OUT,"sitemap.xml")))throw new Error("public/sitemap.xml ontbreekt; draai eerst de plaatsgenerator.");
   const buildDag=runtime.vandaagIn("Europe/Amsterdam",new Date());
-  fs.writeFileSync(path.join(OUT,REGIO_ASSET),"globalThis.WeatherNowVakantieregioData="+REGIO_BRON+";\n","utf8");
+  fs.writeFileSync(path.join(OUT,REGIO_ASSET),REGIO_SCRIPT,"utf8");
   for(const cfg of SEIZOENSPAGINAS){
     const dir=path.join(OUT,cfg.slug);
     if(fs.existsSync(dir))throw new Error(`public/${cfg.slug} bestaat al; seizoenspagina botst met een bestaande route.`);

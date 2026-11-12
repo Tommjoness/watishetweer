@@ -2,7 +2,7 @@
 
 De kalender gebruikt de vestigingsplaats als uitgangspunt. De gekozen weerplaats geeft alleen een regio-indicatie. De wettelijke indeling volgt artikel 3 van de [Regeling vaststelling schoolvakanties 2025–2030](https://wetten.overheid.nl/BWBR0049811/2025-08-01). Het [publieksoverzicht van Rijksoverheid](https://www.rijksoverheid.nl/themas/onderwijs/schoolvakanties/regios-schoolvakantie) helpt bij huidige gemeentenamen. De regeling is leidend bij Altena en de voormalige gemeenten. Zeewolde, Hattem en Eemnes hebben een afwijkende regio binnen hun provincie.
 
-De dataset is een lokale momentopname voor de 342 gemeenten in Europees Nederland. De site vraagt geen locatie aan en gebruikt de afgeronde coördinaten en landcode van de bestaande plaatskeuze. De JavaScript-asset wordt alleen voor de schoolvakantiepagina's opgebouwd. Er is geen geodienst nodig tijdens een bezoek of in CI.
+De dataset is een lokale momentopname voor de 342 gemeenten in Europees Nederland. De site vraagt geen locatie aan en gebruikt de afgeronde coördinaten en landcode van de bestaande plaatskeuze. De JavaScript-asset voor de schoolvakantiepagina's bevat de bronvermeldingen, licentie en bewerking van de geometrie. Er is geen geodienst nodig tijdens een bezoek of in CI.
 
 ## Brongegevens voor de offline generator
 
@@ -15,7 +15,7 @@ Gebruik GDAL 3.10 met GEOS, Python GDAL en NumPy. Zet de volgende zes invoerbest
 | `cbs-didam-2004.geojson` | [CBS/Topografische Dienst Kadaster Wijk- en Buurtkaart 2004](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2004). Exporteer `gem_2004_gen.shp`, `GM_NAAM = 'Didam'`, velden `GM_CODE,GM_NAAM`, naar EPSG:4326. Hergebruik met bronvermelding. | `bc2d7c218ff383d71796966936ea19b7deec3df9d2e9ad5b8289a8e126554a41` |
 | `nlgis-dodewaard-1997.geojson` | [Onno Boonstra, NLGis shapefiles, DANS v2.2](https://doi.org/10.17026/DANS-XB9-T677), CC0. Neem de bijgewerkte 1997-shape, -index en -tabel, Dataverse IDs 275079, 273804 en 274453. Exporteer `CBSCODE = 220`, velden `GM_1997,GM_NAAM,CBSCODE`, van EPSG:28992 naar EPSG:4326. [CBS](https://vocabs.cbs.nl/cbs_ned/nl/page/?uri=https%3A%2F%2Fvocabs.cbs.nl%2Fgeo%2Fdef%2Fgemeenten%2FGM0220) meldt sinds 1955 geen grenswijziging vóór de opheffing in 2002. | `686a0f82c25525b6ce72e1cab53a5e8333e11c616821b4bf2a3f41c1bfa4cb17` |
 | `cbs-aalburg-2018.geojson` | [CBS/Kadaster Wijk- en Buurtkaart 2018 v3](https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2018), CC BY 4.0. Exporteer laag `gemeenten2018`, `gemeentecode = 'GM0738'`, velden `gemeentecode,gemeentenaam`, naar EPSG:4326. | `b201eb16343166f3a8570c70d693f8d2e9ab37db36bc24bfc6058b9adfe2e7c8` |
-| `bag-hank-dussen.json` | [Kadaster BAG-woonplaatsen](https://api.pdok.nl/kadaster/bag/ogc/v2/collections/woonplaats/items?f=json&bbox=4.86,51.69,5.03,51.77&limit=40). De generator gebruikt identificaties 2214 en 2215. De gemeente Altena vermeldt Hank en Dussen als kernen. | `3b4258b3539d6b459d28f85e3d4656229320b42c53fc4252b9d9177af8016510` |
+| `bag-hank-dussen.json` | [Kadaster BAG-woonplaatsen](https://api.pdok.nl/kadaster/bag/ogc/v2/collections/woonplaats/items?f=json&bbox=4.86,51.69,5.03,51.77&limit=40), Public Domain Mark 1.0. De generator gebruikt identificaties 2214 en 2215. De gemeente Altena vermeldt Hank en Dussen als kernen. | `3b4258b3539d6b459d28f85e3d4656229320b42c53fc4252b9d9177af8016510` |
 
 Genereer en controleer de compacte kaart.
 
