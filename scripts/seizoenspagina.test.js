@@ -296,7 +296,7 @@ assert.equal(R.vakantieSamenvatting(R.toestand("2026-10-25",herfst),vakRes([2,2,
 const htmlHerfst=pagina(herfst,"2026-10-12");
 assert(htmlHerfst.includes("<title>Weer herfstvakantie 2026: regen, zon en temperatuur per dag | watishetweer.nl</title>"));
 assert(htmlHerfst.includes('<link rel="canonical" href="https://watishetweer.nl/herfstvakantie/">'));
-assert(htmlHerfst.includes('<tr><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
+assert(htmlHerfst.includes('<tr data-regio="noord"><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr data-regio="zuid"><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
 assert(pagina(herfst,"2026-10-26").includes('data-jaar="2026" hidden'),"na de vakantie is het voorbije jaar verborgen");
 assert(pagina(herfst,"2027-11-01").includes("<h1 id=\"seizoen-kop\">Herfstvakantie 2028</h1>"),"onbekend jaar bouwt zonder fout");
 assert.equal(R.regioKop({regios:["noord","midden","zuid"]},3),"alle regio's");
@@ -326,7 +326,7 @@ const kerstRes=(mm)=>mm.map((n,i)=>({plaats:kerstVak.plaatsen[i],dagen:{"2027-01
 assert.equal(R.vakantieSamenvatting(R.toestand("2027-01-03",kerstVak),kerstRes([2,2,2,2,0,0,0]),kerstVak),"Volgens de huidige verwachting valt er op zondag 3 januari in een groot deel van het land neerslag.");
 const htmlKerst=pagina(kerstVak,"2026-10-12");
 assert(htmlKerst.includes("<title>Weer kerstvakantie 2026: regen, sneeuw en temperatuur per dag | watishetweer.nl</title>"));
-assert(htmlKerst.includes('<tr><th scope="row">Alle regio\'s</th><td class="jaargrens">19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
+assert(htmlKerst.includes('<tr data-regio="alle"><th scope="row">Alle regio\'s</th><td class="jaargrens">19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
 assert(!htmlKerst.includes('<th scope="row">Regio noord</th>'),"geen drie gelijke regels");
 assert(htmlHerfst.includes('<th scope="row">Regio noord</th>'),"verschillende data blijven per regio");
 console.log("Seizoenspagina kerstvakantie: overal tegelijk, aftellen zonder regio, jaargrens, sneeuw en vakantiedata kloppen.");
@@ -347,10 +347,58 @@ for(const [cfg,jaar] of [[kerstVak,2026],[mei,2027],[voorjaar,2027],[zomer,2027]
 }
 assert.match(R.meldingTekst(R.toestand("2026-11-12",mei),mei),/begint op zaterdag 24 april 2027\. Vanaf zondag 18 april/);
 const at=(d,c)=>R.aftelTekst(R.toestand(d,c),c);
+{
+  const data=require("./vakantieregio-data.json");
+  const test=(lat,lon,land="NL")=>R.vakantieregioVoorPlaats(data,{lat,lon,land});
+  for(const [naam,lat,lon,regio] of [
+    ["Almere",52.3508,5.2647,"noord"],["Groningen",53.2194,6.5665,"noord"],
+    ["Zeewolde",52.3308,5.5431,"midden"],["Utrecht",52.0907,5.1214,"midden"],
+    ["Eindhoven",51.4416,5.4697,"zuid"],["Maastricht",50.8514,5.6910,"zuid"],
+    ["Abcoude",52.2725,4.9726,"noord"],["Mijdrecht",52.2065,4.8637,"midden"],
+    ["Didam",51.9394,6.1319,"zuid"],["'s-Heerenberg",51.8772,6.2583,"midden"],
+    ["Dodewaard",51.9118,5.6564,"zuid"],["Kesteren",51.9331,5.5704,"midden"],
+    ["Hank",51.7343,4.9028,"zuid"],["Dussen",51.7316,4.9649,"zuid"],
+    ["Wijk en Aalburg",51.7536,5.1291,"zuid"],["Werkendam",51.8097,4.8936,"midden"],
+    ["Woudrichem",51.8154,5.0010,"midden"],["Baarle-Hertog",51.44009,4.92708,null],
+    ["Baarle-Nassau, gemeentehuis",51.44339019,4.93058728,null],
+    ["Baarle-Nassau, Oordeelsestraat",51.44641579,4.93830117,"zuid"]
+  ]){
+    assert.equal(test(lat,lon),regio,naam);
+    assert.equal(test(Number(lat.toFixed(3)),Number(lon.toFixed(3))),regio,naam+" afgerond");
+  }
+  assert.deepEqual([5.359,5.361,5.364].map(lon=>test(52.330,lon)),["noord",null,"midden"],"onzekere cel rond de Flevolandse regiogrens");
+  assert.equal(test(51.911,5.620),null,"onzekere historische rand bij Dodewaard");
+  assert.equal(test(52.351,5.265,"BE"),null,"landcode buiten NL krijgt landelijke uitwijk");
+  assert.equal(test(52.351,5.265,null),null,"onbekend land krijgt landelijke uitwijk");
+  assert.equal(R.vakantieregioVoorPlaats(data,null),null);
+  assert.equal(test(12.15,-68.27),null,"buiten Europees-Nederlandse kaartdekking");
+}
 assert.equal(at("2026-10-12",voorjaar),"Nog 124 dagen tot de voorjaarsvakantie in regio zuid.","zuid begint in 2027 een week eerder");
 assert.equal(at("2027-02-13",voorjaar),"Vandaag begint de voorjaarsvakantie in regio zuid. In regio noord en midden begint de vakantie op zaterdag 20 februari.");
 assert.equal(at("2027-02-20",voorjaar),"Het is overal voorjaarsvakantie.");
 assert.equal(at("2027-02-22",voorjaar),"Het is voorjaarsvakantie in regio noord en midden.");
+{
+  const noord=R.toestandVakantie("2026-11-12",voorjaar,"noord");
+  const zuid=R.toestandVakantie("2026-11-12",voorjaar,"zuid");
+  assert.deepEqual([R.aftelGetal(noord,voorjaar).n,R.aftelGetal(zuid,voorjaar).n],[100,93]);
+  assert.deepEqual([noord.perioden[0].van,noord.tot,noord.vanaf],["2027-02-20","2027-02-28","2027-02-14"]);
+  assert.deepEqual([zuid.perioden[0].van,zuid.tot,zuid.vanaf],["2027-02-13","2027-02-21","2027-02-07"]);
+  assert.match(R.aftelTekst(noord,voorjaar),/in regio noord\.$/);
+  const tijdens=R.toestandVakantie("2027-02-17",voorjaar,"noord");
+  assert.deepEqual(tijdens.dagen.filter(d=>d.zichtbaar).map(d=>d.iso),["2027-02-20","2027-02-21","2027-02-22","2027-02-23"]);
+  assert.equal(R.toestandVakantie("2027-02-22",voorjaar,"zuid").jaar,2028,"Zuid schuift door zodra de eigen vakantie voorbij is");
+  assert.equal(R.toestandVakantie("2027-02-22",voorjaar,"noord").jaar,2027,"Noord blijft in dezelfde vakantie");
+  assert.equal(R.toestandVakantie("2027-01-03",kerstVak,"midden").jaar,2026);
+  assert.equal(R.toestandVakantie("2027-01-04",kerstVak,"midden").jaar,2027);
+  assert.deepEqual(R.toestandVakantie("2026-11-12",voorjaar,"onzeker"),R.toestand("2026-11-12",voorjaar));
+  for(const [voor,na,dagVoor,dagNa] of [
+    ["2027-03-27T22:59:00Z","2027-03-27T23:00:00Z","2027-03-27","2027-03-28"],
+    ["2027-10-30T21:59:00Z","2027-10-30T22:00:00Z","2027-10-30","2027-10-31"]
+  ]){
+    const dag=iso=>R.vandaagIn("Europe/Amsterdam",new Date(iso));
+    assert.deepEqual([dag(voor),dag(na)],[dagVoor,dagNa],"vakantiedag blijft in Nederlandse tijd bij klokwissels");
+  }
+}
 assert.equal(at("2026-10-12",mei),"Nog 194 dagen tot de meivakantie.","overal tegelijk: geen regio");
 assert.equal(at("2027-04-27",mei),"Het is meivakantie.");
 assert.equal(at("2027-07-10",zomer),"Vandaag begint de zomervakantie in regio noord. In regio midden begint de vakantie op zaterdag 17 juli.");
