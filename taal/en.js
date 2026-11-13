@@ -834,7 +834,9 @@
     "Zie ook": "See also",
     "Naar dag": "Go to day",
     "Alle regio's": "All regions",
-    "Landelijk overzicht van alle schoolvakantieregio’s.": "National overview of all school holiday regions.",
+    "Landelijk overzicht van alle schoolvakantieregio's.": "National overview of all school holiday regions.",
+    "Schoolvakantieregio bij je plaats: gemeentegrenzen uit BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) en de Wijk- en buurtkaart (CBS en Kadaster), bewerkt door watishetweer.nl.":
+      "School holiday region for your location: municipal boundaries from BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) and the Wijk- en buurtkaart (CBS and Kadaster), adapted by watishetweer.nl.",
     "alle regio's": "all regions",
     "Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Mostly dry: 1 mm of precipitation or more falls in fewer than half of the places. Snow is the expected amount of fresh snow on that day. Sunshine is the expected number of hours of sunshine. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",

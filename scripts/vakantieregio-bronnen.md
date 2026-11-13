@@ -2,7 +2,7 @@
 
 De kalender gebruikt de vestigingsplaats als uitgangspunt. De gekozen weerplaats geeft alleen een regio-indicatie. De wettelijke indeling volgt artikel 3 van de [Regeling vaststelling schoolvakanties 2025–2030](https://wetten.overheid.nl/BWBR0049811/2025-08-01). Het [publieksoverzicht van Rijksoverheid](https://www.rijksoverheid.nl/themas/onderwijs/schoolvakanties/regios-schoolvakantie) helpt bij huidige gemeentenamen. De regeling is leidend bij Altena en de voormalige gemeenten. Zeewolde, Hattem en Eemnes hebben een afwijkende regio binnen hun provincie.
 
-De dataset is een lokale momentopname voor de 342 gemeenten in Europees Nederland. De site vraagt geen locatie aan en gebruikt de afgeronde coördinaten en landcode van de bestaande plaatskeuze. De JavaScript-asset voor de schoolvakantiepagina's bevat de bronvermeldingen, licentie en bewerking van de geometrie. Er is geen geodienst nodig tijdens een bezoek of in CI.
+De dataset is een lokale momentopname voor de 342 gemeenten in Europees Nederland. De site vraagt geen locatie aan en gebruikt de afgeronde coördinaten en landcode van de bestaande plaatskeuze. De JavaScript-asset voor de schoolvakantiepagina's bevat de bronvermeldingen, licentie en bewerking van de geometrie. Iedere vakantiepagina toont daarnaast onder de bronregel een zichtbare vermelding van Kadaster (BRK Bestuurlijke Gebieden, CC BY 4.0) en CBS en Kadaster (Wijk- en buurtkaart), met de vermelding dat watishetweer.nl de grenzen heeft bewerkt. Er is geen geodienst nodig tijdens een bezoek of in CI.
 
 ## Brongegevens voor de offline generator
 

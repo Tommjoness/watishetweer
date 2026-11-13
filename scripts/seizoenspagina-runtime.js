@@ -603,7 +603,7 @@ async function start(opt){
   document.title=vul(cfg.titel,{jaar:t.jaar})+" | watishetweer.nl";
   if(cfg.soort==="vakantie"){
     const context=document.getElementById("seizoen-regio");
-    if(context)context.textContent=t.regio?`Schoolvakantie voor je gekozen plaats in regio ${t.regio}.`:"Landelijk overzicht van alle schoolvakantieregio’s.";
+    if(context)context.textContent=t.regio?`Schoolvakantie voor je gekozen plaats in regio ${t.regio}.`:"Landelijk overzicht van alle schoolvakantieregio's.";
     document.querySelectorAll(".seizoen-perioden").forEach(tabel=>{
       tabel.hidden=Number(tabel.dataset.jaar)!==t.jaar;
       if(tabel.hidden)return;

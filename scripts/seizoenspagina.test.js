@@ -298,6 +298,13 @@ assert(htmlHerfst.includes("<title>Weer herfstvakantie 2026: regen, zon en tempe
 assert(htmlHerfst.includes('<link rel="canonical" href="https://watishetweer.nl/herfstvakantie/">'));
 assert(htmlHerfst.includes('<tr data-regio="noord"><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr data-regio="zuid"><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
 assert(pagina(herfst,"2026-10-26").includes('data-jaar="2026" hidden'),"na de vakantie is het voorbije jaar verborgen");
+{
+  /* Bronvermelding regiokaart: zichtbaar op iedere vakantiepagina, met bron, licentie en bewerking; niet op andere seizoenspagina's. */
+  const bron=htmlHerfst.match(/<p class="klein" id="seizoen-regio-bron">([\s\S]*?)<\/p>/);
+  assert(bron,"vakantiepagina toont de bronvermelding van de regiokaart");
+  for(const deel of ['href="https://api.pdok.nl/kadaster/brk-bestuurlijke-gebieden/ogc/v1"','href="https://creativecommons.org/licenses/by/4.0/deed.nl"','href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart"',"(Kadaster, ","(CBS en Kadaster)","bewerkt door watishetweer.nl."])assert(bron[1].includes(deel),"bronvermelding regiokaart mist: "+deel);
+  for(const p of SEIZOENSPAGINAS)assert.equal(pagina(p,"2026-10-12").includes('id="seizoen-regio-bron"'),p.soort==="vakantie",p.slug+": bronvermelding regiokaart hoort alleen op vakantiepagina's");
+}
 assert(pagina(herfst,"2027-11-01").includes("<h1 id=\"seizoen-kop\">Herfstvakantie 2028</h1>"),"onbekend jaar bouwt zonder fout");
 assert.equal(R.regioKop({regios:["noord","midden","zuid"]},3),"alle regio's");
 assert.equal(R.regioKop({regios:["midden","zuid"]},3),"regio midden en zuid");

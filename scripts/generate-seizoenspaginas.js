@@ -31,6 +31,10 @@ const REGIO_SCRIPT=`/*!
 globalThis.WeatherNowVakantieregioData=${REGIO_BRON};
 `;
 const REGIO_ASSET="vakantieregio-"+createHash("sha256").update(REGIO_SCRIPT).digest("hex").slice(0,12)+".js";
+/* Zichtbare bronvermelding bij de regio-indicatie: Kadaster (BRK Bestuurlijke Gebieden, CC BY 4.0) en CBS/Kadaster
+   (Wijk- en buurtkaart) vragen om naamsvermelding, licentie en vermelding van bewerking. De volledige herkomst, ook van de
+   CC0- en PDM-bronnen, staat in de kop van REGIO_ASSET en in scripts/vakantieregio-bronnen.md. */
+const REGIO_BRONVERMELDING='<p class="klein" id="seizoen-regio-bron">Schoolvakantieregio bij je plaats: gemeentegrenzen uit <a href="https://api.pdok.nl/kadaster/brk-bestuurlijke-gebieden/ogc/v1" rel="noopener" translate="no">BRK Bestuurlijke Gebieden</a> (Kadaster, <a href="https://creativecommons.org/licenses/by/4.0/deed.nl" rel="noopener" translate="no">CC BY 4.0</a>) en de <a href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart" rel="noopener" translate="no">Wijk- en buurtkaart</a> (CBS en Kadaster), bewerkt door watishetweer.nl.</p>\n';
 
 function esc(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function jsonInHtml(v){return JSON.stringify(v).replace(/</g,"\\u003c");}
@@ -204,14 +208,14 @@ ${STIJL}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 <p>${esc(cfg.intro)}</p>
 <section class="seizoen-status" aria-labelledby="seizoen-kop" aria-live="polite">
-${cfg.soort==="vakantie"?'<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio’s.</p>':""}
+${cfg.soort==="vakantie"?`<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio's.</p>`:""}
 <p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
 <p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>
 <div id="seizoen-verwachting"></div>
 </section>
 <h2>${esc(cfg.uitleg.kop)}</h2>
 ${uitleg}
-${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
+${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 </main>
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>

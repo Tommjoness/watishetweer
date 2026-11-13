@@ -123,13 +123,16 @@ server.listen(0, async () => {
         await plaats({lat:51.442,lon:5.470,land:"NL",label:"Eindhoven"});
         await controleer(["zuid"],[17,18,19,20,21],meld("Schoolvakantie voor je gekozen plaats in regio zuid.","School holiday for your selected location in the southern region."));
         await plaats({lat:51.440,lon:4.927,land:"BE",label:"Baarle-Hertog"});
-        const landelijk=meld("Landelijk overzicht van alle schoolvakantieregio’s.","National overview of all school holiday regions.");
+        const landelijk=meld("Landelijk overzicht van alle schoolvakantieregio's.","National overview of all school holiday regions.");
         await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
         await plaats({lat:52.330,lon:5.361,land:"NL",label:"Grenspunt"});
         await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
         await plaats(null);
         await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
         assert.deepEqual(fouten, [], taal + ": regiowissels zonder scriptfouten");
+        const bron = await page.evaluate(() => { const p = document.getElementById("seizoen-regio-bron"); return p && { tekst: p.textContent.replace(/\s+/g, " ").trim(), links: [...p.querySelectorAll("a")].map(a => [a.textContent, a.getAttribute("href")]) }; });
+        assert.equal(bron && bron.tekst, meld("Schoolvakantieregio bij je plaats: gemeentegrenzen uit BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) en de Wijk- en buurtkaart (CBS en Kadaster), bewerkt door watishetweer.nl.", "School holiday region for your location: municipal boundaries from BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) and the Wijk- en buurtkaart (CBS and Kadaster), adapted by watishetweer.nl."), taal + ": bronvermelding regiokaart");
+        assert.deepEqual(bron.links.map(l => l[0]), ["BRK Bestuurlijke Gebieden", "CC BY 4.0", "Wijk- en buurtkaart"], taal + ": links in de bronvermelding blijven staan");
         if (taal === "en") assert.deepEqual(await page.evaluate(() => [...window.__WIW_TAAL_ONTBREEKT__]),[]);
       } finally { await context.close(); }
     }
