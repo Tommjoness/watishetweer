@@ -124,11 +124,11 @@ function rijen(lijst){
      scherm over twee regels. */
   return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td${p.van.slice(0,4)!==p.tot.slice(0,4)?' class="jaargrens"':""}>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
 }
-function periodenHtml(cfg,buildDag){
+function periodenHtml(cfg,jaar){
   if(!cfg.perioden)return "";
-  const jaren=Object.keys(cfg.perioden).map(Number).sort((a,b)=>a-b).filter(j=>cfg.perioden[j].some(p=>p.tot>=buildDag));
+  const jaren=Object.keys(cfg.perioden).map(Number).sort((a,b)=>a-b);
   return jaren.map(j=>`
-<div class="seizoen-dag seizoen-perioden" data-jaar="${j}">
+<div class="seizoen-dag seizoen-perioden" data-jaar="${j}"${j===jaar?"":" hidden"}>
 <h3>${esc(cfg.naam)} ${j}</h3>
 <table><thead><tr><th scope="col">Regio</th><th scope="col">Vakantie</th></tr></thead><tbody>
 ${rijen(cfg.perioden[j])}
@@ -157,7 +157,7 @@ function pagina(cfg,buildDag){
     {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical}}
   ];
   const {slug,beschrijving,intro,uitleg:_uitleg,...runtimeCfg}=cfg;
-  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+periodenHtml(cfg,buildDag);
+  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+periodenHtml(cfg,t.jaar);
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>
