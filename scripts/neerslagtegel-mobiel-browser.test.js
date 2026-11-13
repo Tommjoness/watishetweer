@@ -88,7 +88,9 @@ const LAADGEVALLEN=[
   {naam:"kans 60% met 1,5 mm (nu nat volgens model)",pp:60,pr:1.5,waarde:"60% · 1,5 mm",zin:/^Er valt nu neerslag\./},
   {naam:"geen gegevens",pp:null,pr:null,waarde:"–",zin:GEEN},
   {naam:"KNMI verwacht",pp:5,pr:0,knmi:"verwacht",waarde:/^1,5 mm$/,zin:/^Vanaf ongeveer 17:4\d wordt neerslag verwacht\.$/},
-  {naam:"KNMI enkele druppels",pp:0,pr:0,knmi:"druppels",waarde:"<0,1 mm",zin:"Het komende uur zijn enkele druppels mogelijk."},
+  {naam:"KNMI enkele druppels",pp:5,pr:0,knmi:"druppels",waarde:"<0,1 mm",zin:"Het komende uur zijn enkele druppels mogelijk."},
+  /* Zelfde KNMI-payload bij droge modeluren: de briefing noemt dan de radar als bron. */
+  {naam:"KNMI enkele druppels, droge modeluren",pp:0,pr:0,knmi:"druppels",radarBriefing:true,waarde:"<0,1 mm",zin:"Het komende uur zijn enkele druppels mogelijk."},
   {naam:"KNMI regent nu",pp:40,pr:0,knmi:"nu",waarde:/^(Neerslag|<?\d+(?:,\d)? mm)$/,zin:/^Er valt nu neerslag\./},
   {naam:"KNMI droog, modelkans 80%",pp:80,pr:0,knmi:"droog",waarde:"80%",zin:ZIN.GROOT},
   {naam:"KNMI droog, modelkans 0%",pp:0,pr:0,knmi:"droog",waarde:"Droog",zin:ZIN.DROOG}];
@@ -249,7 +251,7 @@ async function testLaden(browser,root){
       }
       if(r.ls>maxLs){maxLs=r.ls;maxLsWaar=L;}ok(r.ls<CLS_BUDGET,`${L}: layout-shift ${r.ls} overschrijdt het CLS-budget ${CLS_BUDGET}`);
       controleer(await meetTegel(page),g,taal,L);
-      if(g.knmi==="druppels"){
+      if(g.radarBriefing){
         const briefing=await page.locator("#brief").innerText();
         const radarZin=taal==="en"?"According to the KNMI radar forecast, a few drops may fall in the next two hours.":"Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
         ok(briefing.includes(radarZin),`${L}: de briefing vermeldt de radarbron bij droge modeluren: ${briefing}`);
