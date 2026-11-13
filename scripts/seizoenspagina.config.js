@@ -13,6 +13,8 @@ function plaatsroute(slug){
   return {naam:loc.naam,lat:loc.lat,lon:loc.lon,href:`/weer/${loc.slug}/`};
 }
 
+const VAKANTIE_VOORAF="De {vakantie} begint {landelijk}op {start}. Vanaf {datum} is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.";
+
 const SEIZOENSPAGINAS=Object.freeze([
   Object.freeze({
     slug:"witte-kerst",
@@ -130,7 +132,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de herfstvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de herfstvakantie{regio}.",
       aftellenGetal:"dagen tot de herfstvakantie{regio}",
@@ -183,7 +185,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de kerstvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de kerstvakantie{regio}.",
       aftellenGetal:"dagen tot de kerstvakantie{regio}",
@@ -233,7 +235,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de voorjaarsvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de voorjaarsvakantie{regio}.",
       aftellenGetal:"dagen tot de voorjaarsvakantie{regio}",
@@ -283,7 +285,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de meivakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de meivakantie{regio}.",
       aftellenGetal:"dagen tot de meivakantie{regio}",
@@ -333,7 +335,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de zomervakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de zomervakantie{regio}.",
       aftellenGetal:"dagen tot de zomervakantie{regio}",
