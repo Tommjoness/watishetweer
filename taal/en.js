@@ -741,6 +741,7 @@
     "Google Analytics is uitgeschakeld.": "Google Analytics is turned off.",
     "Google Analytics staat op dit apparaat uit, omdat je PostHog en Google Analytics hebt uitgezet.": "Google Analytics is off on this device because you have turned off PostHog and Google Analytics.",
     "PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.": "PostHog and Google Analytics are off. Cloudflare continues to measure visits and loading performance without cookies.",
+    "PostHog en Google Analytics staan uit op deze pagina. De afmelding kon niet worden bewaard.": "PostHog and Google Analytics are off on this page. Your opt-out could not be saved.",
     "Op dit apparaat staan de statistieken aan.": "Analytics are enabled on this device.",
     "Er is nog geen keuze opgeslagen.": "No choice has been saved yet.",
     "Lokale gegevens gewist.": "Local data cleared.",
