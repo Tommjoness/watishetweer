@@ -25,6 +25,12 @@ assert((privacy.match(/href="mailto:[^"@]+@watishetweer\.nl"/g)||[]).length>=2,"
 for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Google Analytics 4"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
+const posthogAlinea=privacy.match(/<p>Daarnaast gebruikt de site <b>PostHog Cloud EU<\/b>(.*?)<\/p>/)?.[0].replace(/<[^>]+>/g,"");
+assert(posthogAlinea?.includes("standaard een termijn van één jaar voor statistiekgebeurtenissen."),"privacytekst onderscheidt de standaardtermijn voor PostHog-events");
+assert(posthogAlinea.includes("PostHog kan verlopen gebeurtenissen langer opslaan voordat ze worden verwijderd."),"privacytekst vermeldt dat feitelijke opslag langer kan duren");
+assert.doesNotMatch(privacy,/PostHog bewaart (?:deze statistieken|de gegevens) één jaar\./,"privacytekst mag geen vaste verwijdertermijn beloven");
+const vertaler=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.match(vertaler.vertaal(posthogAlinea),/default one-year retention period for analytics events\. Events expire after that period\. PostHog may store expired events for longer before deleting them\./,"Engelse privacytekst maakt hetzelfde onderscheid");
 
 function voerAnalyticsUit(opt={}){
   const requests=[];

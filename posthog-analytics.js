@@ -19,12 +19,28 @@
      gehaald, zodat een gedeelde link niemand anders afmeldt. */
   const AFMELD_KEY="weerbriefing.analytics.uit.v1";
   const BEZOEKER_KEY="weerbriefing.analytics.id.v1";
+  let afmeldingOpPagina=false;
+  let afmeldingNietBewaard=false;
   function afgemeld(){
+    if(afmeldingOpPagina)return true;
     try{return localStorage.getItem(AFMELD_KEY)==="1";}catch(e){return false;}
   }
   function zetAfmelding(uit){
-    /* Afmelden wist ook de anonieme bezoekers-ID (zie BEZOEKERS-ID hieronder). */
-    try{if(uit){localStorage.setItem(AFMELD_KEY,"1");localStorage.removeItem(BEZOEKER_KEY);}else localStorage.removeItem(AFMELD_KEY);}catch(e){}
+    if(uit){
+      afmeldingOpPagina=true;
+      let opgeslagen=false;
+      try{localStorage.setItem(AFMELD_KEY,"1");opgeslagen=true;}catch(e){}
+      try{localStorage.removeItem(BEZOEKER_KEY);}catch(e){}
+      afmeldingNietBewaard=!opgeslagen;
+      return opgeslagen;
+    }
+    try{
+      if(afgemeld())localStorage.removeItem(BEZOEKER_KEY);
+      localStorage.removeItem(AFMELD_KEY);
+      afmeldingOpPagina=false;
+      afmeldingNietBewaard=false;
+      return true;
+    }catch(e){return false;}
   }
   try{
     const adres=new URL(location.href);
@@ -41,12 +57,18 @@
     const uit=afgemeld();
     if(knop){
       knop.textContent=uit?"PostHog en Google Analytics weer toestaan":"PostHog en Google Analytics uitzetten";
-      knop.onclick=()=>{zetAfmelding(!afgemeld());location.reload();};
+      knop.onclick=()=>{
+        if(zetAfmelding(!afgemeld()))location.reload();
+        else{
+          stopGa4();
+          zetApparaatBediening();
+        }
+      };
     }
     /* De afmelding geldt voor PostHog en Google Analytics. Cloudflare Web
        Analytics staat daar los van en blijft cookieloos meten; de status
        belooft dus niet "alle statistieken uit" (hercontrole 2 oktober). */
-    if(status)status.textContent=uit?" PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.":" Op dit apparaat staan de statistieken aan.";
+    if(status)status.textContent=afmeldingNietBewaard?" PostHog en Google Analytics staan uit op deze pagina. De afmelding kon niet worden bewaard.":uit?" PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.":" Op dit apparaat staan de statistieken aan.";
     if(uit){
       const ga4Knop=document.querySelector("[data-ga4-consent-toggle]");
       const ga4Status=document.querySelector("[data-ga4-consent-status]");
@@ -81,7 +103,7 @@
     return "anon_"+Date.now().toString(36)+Math.random().toString(36).slice(2);
   }
 
-  /* BEZOEKERS-ID OP DIT APPARAAT. Eén willekeurige, anonieme identifier in
+  /* BEZOEKERS-ID OP DIT APPARAAT. Eén willekeurige identifier in
      localStorage, zodat te tellen is hoeveel bezoekers terugkomen (eigenaar,
      2 oktober). Hij zegt niets over de persoon, het apparaat of de plaats, er
      wordt nog steeds geen PostHog-personenprofiel aangemaakt, en hij wordt na
@@ -89,16 +111,28 @@
      privacypagina wissen hem. Zonder bruikbare opslag (privévenster, geblokkeerde
      opslag) valt de meting terug op een tijdelijke identifier per pagina. */
   const BEZOEKER_GELDIG_MS=90*24*60*60*1000;
+  let paginaId;
+  function geldigeBezoeker(bewaard,nu){
+    return bewaard&&typeof bewaard.id==="string"&&/^anon_[0-9a-z-]{8,64}$/i.test(bewaard.id)&&Number.isFinite(bewaard.sinds)&&nu>=bewaard.sinds&&nu-bewaard.sinds<BEZOEKER_GELDIG_MS;
+  }
   function bezoekersId(){
+    const nu=Date.now();
     try{
-      const nu=Date.now();
-      let bewaard=null;
-      try{bewaard=JSON.parse(localStorage.getItem(BEZOEKER_KEY)||"null");}catch(e){bewaard=null;}
-      if(bewaard&&typeof bewaard.id==="string"&&/^anon_[0-9a-z-]{8,64}$/i.test(bewaard.id)&&Number.isFinite(bewaard.sinds)&&nu>=bewaard.sinds&&nu-bewaard.sinds<BEZOEKER_GELDIG_MS)return bewaard.id;
+      let bewaard;
+      const waarde=localStorage.getItem(BEZOEKER_KEY);
+      try{bewaard=JSON.parse(waarde||"null");}catch(e){}
+      if(geldigeBezoeker(bewaard,nu)){
+        paginaId=undefined;
+        return bewaard.id;
+      }
       const id=tijdelijkId();
       localStorage.setItem(BEZOEKER_KEY,JSON.stringify({id,sinds:nu}));
+      paginaId=undefined;
       return id;
-    }catch(e){return tijdelijkId();}
+    }catch(e){
+      if(!geldigeBezoeker(paginaId,nu))paginaId={id:tijdelijkId(),sinds:nu};
+      return paginaId.id;
+    }
   }
   /* EINDE BEZOEKERS-ID */
 
@@ -145,7 +179,6 @@
     return navigator.standalone===true?"app":"browser";
   }
 
-  const distinctId=bezoekersId();
   /* Taal van de weergave (nl of en). De taallader zet lang="en-GB" vóórdat dit
      script draait; zo is ook de eerste paginaweergave juist ingedeeld. */
   const taalNu=()=>/^en\b/i.test(String(document.documentElement&&document.documentElement.lang||""))?"en":"nl";
@@ -169,7 +202,7 @@
       "taal":taalNu(),
       "analytics_contract":"privacy-safe-v1"
     },extra||{});
-    const payload={api_key:PROJECT_TOKEN,event,distinct_id:distinctId,properties};
+    const payload={api_key:PROJECT_TOKEN,event,distinct_id:bezoekersId(),properties};
 
     /* Geen credentials en geen Referer-header naar PostHog. Een geblokkeerde of
        mislukte analyticscall mag nooit invloed hebben op de weerervaring. */
