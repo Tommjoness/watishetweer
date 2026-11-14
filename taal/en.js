@@ -872,10 +872,10 @@
     "Maanfoto: NASA's Scientific Visualization Studio.": "Moon photo: NASA's Scientific Visualization Studio.",
     "Sterren kijken": "Stargazing",
     "Sterren kijken in Nederland": "Stargazing in the Netherlands",
-    "Sterren kijken in Nederland: de donkerste plekken | watishetweer.nl": "Stargazing in the Netherlands: the darkest places | watishetweer.nl",
+    "Sterren kijken in Nederland: nationale parken | watishetweer.nl": "Stargazing in the Netherlands: national parks | watishetweer.nl",
     "Waar het donker is en hoe de komende nachten worden, staat op Sterren kijken in Nederland.": "Where it is dark and what the coming nights will be like is on Stargazing in the Netherlands.",
-    "De Nationale Parken behoren tot de donkerste plekken van Nederland.": "The National Parks are among the darkest places in the Netherlands.",
-    "Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht.": "They are listed below, darkest first, with the indication for tonight.",
+    "De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog.": "Parks are grouped by estimated light pollution, from low to high.",
+    "Binnen iedere categorie staan ze op alfabetische volgorde.": "Within each category, parks are listed in alphabetical order.",
     "Kies een park voor de komende nachten en de bewolking per uur.": "Choose a park for the coming nights and the hourly cloud cover.",
     "De verwachting voor vannacht wordt geladen.": "Loading tonight's forecast.",
     "De verwachting voor vannacht kon niet worden geladen.": "Tonight's forecast could not be loaded.",
@@ -1052,6 +1052,7 @@
   const D = "(ma|di|wo|do|vr|za|zo)";       // dag kort
 
   const patronen = [
+    [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
        achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
        zonder achtervoegsel wordt vertaald en het Engelse achtervoegsel komt weer achter de tijd. */
