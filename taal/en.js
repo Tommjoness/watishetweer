@@ -759,6 +759,11 @@
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
+    /* Witte kerst: KNMI-definitie en historische metingen (2026). */
+    "Waarom is sneeuw met kerst niet altijd een officiële witte kerst?": "Why does snow at Christmas not always count as an official white Christmas?",
+    "Een paar sneeuwvlokken tijdens kerst zijn niet genoeg. Voor een officiële witte kerst moet in De Bilt op zowel 25 als 26 december om 09:00 uur een gesloten sneeuwdek liggen. Elders in Nederland kan het wit zijn terwijl aan die landelijke definitie niet wordt voldaan.": "A few snowflakes at Christmas are not enough. For an official white Christmas in the Netherlands, there must be continuous snow cover in De Bilt at 09:00 on both 25 and 26 December. Other parts of the country can be snowy without meeting this national definition.",
+    "Wanneer hadden we voor het laatst een witte kerst?": "When was the last official white Christmas?",
+    "Volgens het KNMI waren er sinds 1901 acht officiële witte kersten: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010. De laatste twee volgden dus direct op elkaar. In De Bilt lag er in 2009 op eerste kerstdag 9 centimeter sneeuw en op tweede kerstdag 4 centimeter; in 2010 op beide dagen 5 centimeter.": "According to KNMI, there have been eight official white Christmases since 1901: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 and 2010. The most recent two happened in consecutive years. In De Bilt, snow depth was 9 centimetres on Christmas Day and 4 centimetres on Boxing Day in 2009, and 5 centimetres on both days in 2010.",
     "Bron: KNMI": "Source: KNMI",
     "Het weer voor jouw plaats": "The weather for your location",
     "jouw plaats": "your location",
