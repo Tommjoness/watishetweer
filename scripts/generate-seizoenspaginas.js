@@ -177,7 +177,8 @@ function pagina(cfg,buildDag){
     {"@context":"https://schema.org","@type":"WebPage",name:titel,url:canonical,isPartOf:{"@type":"WebSite",name:SEO.siteName,url:SEO.canonical}}
   ];
   const {slug,beschrijving,intro,uitleg:_uitleg,...runtimeCfg}=cfg;
-  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+periodenHtml(cfg,t.jaar);
+  const verdieping=(cfg.uitleg.vragen||[]).map(v=>`<h2>${esc(v.kop)}</h2>\n<p>${esc(v.antwoord)}</p>`).join("\n");
+  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>
