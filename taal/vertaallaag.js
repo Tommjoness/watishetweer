@@ -1,7 +1,13 @@
 /*
  * Vertaallaag in de browser. Vertaalt de pagina na het laden en daarna iedere
  * tekst die de app later schrijft (MutationObserver), inclusief aria-label,
- * title, alt, placeholder en de documenttitel.
+ * title, alt, placeholder, de documenttitel en de beschrijvende metadata in de
+ * head (description, og:title, og:description, twitter:title en
+ * twitter:description).
+ *
+ * Let op: dit is weergave in de browser van deze bezoeker. De HTML die de server
+ * levert (en die zoekmachines en deelpreviews lezen) blijft Nederlands; er is
+ * geen aparte Engelse URL.
  *
  * Werkwijze per zinsblok (element met alleen inline kinderen):
  *   1. het hele blok wordt als één zin vertaald; inline kinderen (bijvoorbeeld
@@ -217,6 +223,18 @@
       }
     }
 
+    /* Beschrijvende metadata in de head: alleen deze vaste lijst. Canonical,
+       og:url, JSON-LD en de overige tags blijven zoals de server ze leverde. */
+    const META = ['meta[name="description"]', 'meta[property="og:title"]', 'meta[property="og:description"]',
+      'meta[name="twitter:title"]', 'meta[name="twitter:description"]'];
+    function isMetaDoel(el) {
+      return !!(el && el.tagName === "META" && typeof el.matches === "function" && doc.head && doc.head.contains(el) && META.some(s => el.matches(s)));
+    }
+    function verwerkMeta() {
+      if (!doc.head) return;
+      for (const el of doc.head.querySelectorAll(META.join(","))) verwerkAttribuut(el, "content");
+    }
+
     function verwerkTitel() {
       const t = doc.title;
       if (!t || gezet.get(doc) === t) return;
@@ -236,11 +254,15 @@
 
     function verwerkMutaties(lijst) {
       const wortels = new Set();
-      let titel = false;
+      let titel = false, meta = false;
       for (const m of lijst) {
         const doel = m.target.nodeType === 1 ? m.target : m.target.parentElement;
         if (!doel) continue;
         if (doel.closest && doel.closest("title")) { titel = true; continue; }
+        /* De app zet op locatiepagina's de Nederlandse metadata terug (herstelRouteSeo)
+           of voegt een tag toe: opnieuw vertalen. */
+        if (m.type === "attributes" && m.attributeName === "content") { if (isMetaDoel(doel)) verwerkAttribuut(doel, "content"); continue; }
+        if (m.type === "childList" && doc.head && doel === doc.head) { meta = true; continue; }
         if (!doc.body || !doc.body.contains(doel)) continue;
         if (m.type === "attributes") { verwerkAttribuut(doel, m.attributeName); continue; }
         wortels.add(blokWortel(doel));
@@ -252,6 +274,7 @@
         if (!binnen && w.isConnected) verwerk(w);
       }
       if (titel) verwerkTitel();
+      if (meta) verwerkMeta();
       if (observer) observer.takeRecords();
     }
 
@@ -294,10 +317,11 @@
     if (opties.onderschep !== false) onderschepTextContent();
     html.setAttribute("lang", taal || "en-GB");
     verwerkTitel();
+    verwerkMeta();
     if (doc.body) verwerk(doc.body);
     if (typeof MutationObserver === "function") {
       observer = new MutationObserver(verwerkMutaties);
-      observer.observe(html, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: E.ATTRIBUTEN });
+      observer.observe(html, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: E.ATTRIBUTEN.concat("content") });
     }
     html.setAttribute("data-taal-klaar", "");
     const staat = { ontbreekt, vertaler, verwerk, stop() { if (observer) observer.disconnect(); } };
