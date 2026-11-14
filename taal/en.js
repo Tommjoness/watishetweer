@@ -834,6 +834,9 @@
     "Zie ook": "See also",
     "Naar dag": "Go to day",
     "Alle regio's": "All regions",
+    "Landelijk overzicht van alle schoolvakantieregio's.": "National overview of all school holiday regions.",
+    "Schoolvakantieregio bij je plaats: gemeentegrenzen uit BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) en de Wijk- en buurtkaart (CBS en Kadaster), bewerkt door watishetweer.nl.":
+      "School holiday region for your location: municipal boundaries from BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) and the Wijk- en buurtkaart (CBS and Kadaster), adapted by watishetweer.nl.",
     "alle regio's": "all regions",
     "Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Mostly dry: 1 mm of precipitation or more falls in fewer than half of the places. Snow is the expected amount of fresh snow on that day. Sunshine is the expected number of hours of sunshine. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
@@ -1243,6 +1246,7 @@
     [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) alle regio's$/i, (m) => `${dagVol(m[1].toLowerCase())} ${m[2]} ${maand(m[3])} all regions`],
     [/^regio (.+)$/, (m) => regios(m[1])],
     [/^Regio (noord|midden|zuid)$/, (m) => `${REGIO[m[1]].charAt(0).toUpperCase() + REGIO[m[1]].slice(1)} region`],
+    [/^Schoolvakantie voor je gekozen plaats in regio (noord|midden|zuid)\.$/, (m) => `School holiday for your selected location in the ${REGIO[m[1]]} region.`],
     [/^(\d{1,2}) t\/m (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/, (m) => `${m[1]}–${m[2]} ${maand(m[3])}`],
     [/^(\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) t\/m (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/, (m) => `${m[1]} ${maand(m[2])} – ${m[3]} ${maand(m[4])}`],
     [/^De vakantiedagen tot en met (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen\.$/, (m) => `The holiday days up to and including ${dagVol(m[1])} ${m[2]} ${maand(m[3])} will appear here automatically once they fall within the 7-day forecast.`],
