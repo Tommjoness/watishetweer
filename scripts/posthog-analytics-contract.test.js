@@ -79,7 +79,6 @@ for(const uitsluiting of ["if(afgemeld())return;","navigator.globalPrivacyContro
 const idDeel=analytics.slice(idStart,idEinde);
 assert.deepEqual([...new Set(idDeel.match(/localStorage\.\w+\([^)]*\)/g))].sort(),['localStorage.getItem(BEZOEKER_KEY)','localStorage.setItem(BEZOEKER_KEY,JSON.stringify({id,sinds:nu})'],"bezoekers-ID leest en schrijft uitsluitend de eigen sleutel");
 assert(idDeel.includes("const BEZOEKER_GELDIG_MS=90*24*60*60*1000;"),"bezoekers-ID vervalt na 90 dagen");
-assert(idDeel.includes("catch(e){return tijdelijkId();}"),"zonder opslag valt de meting terug op een tijdelijke identifier");
 assert(analytics.includes('"$process_person_profile":false'),"er komt nooit een PostHog-personenprofiel");
 assert(afmeldDeel.includes("if(afgemeld())return;"),"na afmelding mag niets meer starten");
 const posthogDeel=analytics.slice(0,afmeldStart)+analytics.slice(afmeldEinde,idStart)+analytics.slice(idEinde,markerPos);
@@ -184,7 +183,7 @@ assert(optimaliseerPos>=0&&posthogPos>optimaliseerPos,"analytics moet aantoonbaa
 
 /* Gedrag van de afmelding, uitgevoerd in een nagebootste productiebrowser. */
 function draai(href,opslag,opties={}){
-  const verzonden=[],vervangen=[],payloads=[];
+  const verzonden=[],vervangen=[],payloads=[],vensterEvents={};
   const url=new URL(href);
   const knop={textContent:"",hidden:false,onclick:null},status={textContent:""},ga4Knop={textContent:"",hidden:false},ga4Status={textContent:""};
   const selectors={"[data-analytics-device-toggle]":knop,"[data-analytics-device-status]":status,"[data-ga4-consent-toggle]":ga4Knop,"[data-ga4-consent-status]":ga4Status};
@@ -192,8 +191,8 @@ function draai(href,opslag,opties={}){
   const localStorage=opties.opslagFout?{getItem:fout,setItem:fout,removeItem:fout}:{getItem:k=>opslag.has(k)?opslag.get(k):null,setItem:(k,v)=>opslag.set(k,String(v)),removeItem:k=>opslag.delete(k)};
   const document={readyState:"complete",referrer:"",title:"t",cookie:"",documentElement:{lang:opties.lang||"nl"},head:{appendChild(){}},body:{appendChild(){}},
     getElementById:()=>null,querySelector:s=>selectors[s]||null,createElement:()=>({setAttribute(){},addEventListener(){},dataset:{},style:{}}),addEventListener(){}};
-  const window={innerWidth:1200,matchMedia:()=>({matches:false}),addEventListener(){}};
-  const context={window,document,localStorage,URL,JSON,Object,Set,Math,Number,String,Array,Date,Uint32Array,
+  const window={innerWidth:1200,matchMedia:()=>({matches:false}),addEventListener:(naam,handler)=>{vensterEvents[naam]=handler;}};
+  const context={window,document,localStorage,URL,JSON,Object,Set,Math,Number,String,Array,Date:opties.klok||Date,Uint32Array,
     navigator:{userAgent:"Mozilla/5.0 (Macintosh) Safari/605.1.15",webdriver:false},
     location:{protocol:url.protocol,hostname:url.hostname,href:url.href,origin:url.origin,pathname:url.pathname,reload(){}},
     history:{state:null,replaceState:(st,t,u)=>vervangen.push(u)},
@@ -201,7 +200,7 @@ function draai(href,opslag,opties={}){
     setTimeout:()=>0,globalThis:{}};
   window.history=context.history;
   vm.runInNewContext(analytics,context);
-  return {verzonden,vervangen,payloads,knop,status,ga4Knop,ga4Status};
+  return {verzonden,vervangen,payloads,knop,status,ga4Knop,ga4Status,installeerApp:()=>vensterEvents.appinstalled?.()};
 }
 const opslag=new Map();
 let r=draai("https://www.watishetweer.nl/weer/almere/?analytics=uit&x=1#top",opslag);
@@ -248,6 +247,50 @@ assert.deepEqual(r.verzonden,[],"na afmelden gaat er niets naar PostHog");
 idOpslag.clear();
 r=draai("https://watishetweer.nl/",idOpslag,{opslagFout:true});
 assert(/^anon_/.test(r.payloads[0].distinct_id)&&idOpslag.size===0,"zonder bruikbare opslag een tijdelijke ID, zonder fout");
+r.installeerApp();
+assert.deepEqual(r.verzonden,["$pageview","app_installed"]);
+assert.equal(r.payloads[1].distinct_id,r.payloads[0].distinct_id,"tijdelijke ID blijft gelijk binnen dezelfde pagina");
+r=draai("https://watishetweer.nl/?analytics=uit",idOpslag,{opslagFout:true});
+assert.deepEqual(r.verzonden,[],"expliciete afmelding geldt op deze pagina ook als opslag geblokkeerd is");
+assert(r.status.textContent.includes("De afmelding kon niet worden bewaard."),"een geblokkeerde opslag krijgt geen bevestiging van permanente afmelding");
+const vertaal=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.equal(vertaal.vertaal(r.status.textContent.trim()),"PostHog and Google Analytics are off on this page. Your opt-out could not be saved.","de opslagfout is ook in het Engels begrijpelijk");
+r=draai("https://watishetweer.nl/privacy",idOpslag,{opslagFout:true});
+r.knop.onclick();
+r.installeerApp();
+assert.deepEqual(r.verzonden,["$pageview"],"de afmeldknop blijft in dit tabblad werken als opslag geblokkeerd is");
+
+const gedeeld=new Map();
+let nu=Date.UTC(2026,7,1);
+const klok={now:()=>nu};
+const tijdelijkeTab=draai("https://watishetweer.nl/",gedeeld,{opslagFout:true,klok});
+nu+=90*24*60*60*1000;
+tijdelijkeTab.installeerApp();
+assert.notEqual(tijdelijkeTab.payloads[1].distinct_id,tijdelijkeTab.payloads[0].distinct_id,"tijdelijke ID verloopt ook na 90 dagen");
+const openTab=()=>draai("https://watishetweer.nl/",gedeeld,{klok});
+const oudeTab=openTab();
+const oudeId=oudeTab.payloads[0].distinct_id;
+nu+=90*24*60*60*1000;
+oudeTab.installeerApp();
+const verlopenId=oudeTab.payloads[1].distinct_id;
+assert.notEqual(verlopenId,oudeId,"open tab roteert de ID precies op de vervaldatum");
+assert.equal(openTab().payloads[0].distinct_id,verlopenId,"nieuw tabblad gebruikt de inmiddels geroteerde ID");
+
+const tabVoorWissen=openTab();
+gedeeld.delete(ID_KEY);
+tabVoorWissen.installeerApp();
+const idNaWissen=tabVoorWissen.payloads[1].distinct_id;
+assert.notEqual(idNaWissen,verlopenId,"open tab gebruikt de gewiste ID nooit opnieuw");
+
+const tabVoorAfmelden=openTab();
+draai("https://watishetweer.nl/?analytics=uit",gedeeld,{klok});
+tabVoorAfmelden.installeerApp();
+assert.deepEqual(tabVoorAfmelden.verzonden,["$pageview"],"afmelding in een ander tabblad blokkeert verzending");
+const opnieuw=draai("https://watishetweer.nl/?analytics=aan",gedeeld,{klok});
+const nieuweId=opnieuw.payloads[0].distinct_id;
+assert.notEqual(nieuweId,idNaWissen,"opnieuw inschakelen maakt een nieuwe bezoekers-ID");
+tabVoorAfmelden.installeerApp();
+assert.equal(tabVoorAfmelden.payloads[1].distinct_id,nieuweId,"open tab hergebruikt na inschakelen de nieuwe ID");
 
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
 assert(privacy.includes("data-analytics-device-toggle")&&privacy.includes("data-analytics-device-status"),"privacypagina mist de knop om statistieken per apparaat uit te zetten");

@@ -86,6 +86,57 @@ server.listen(0, async () => {
       await context.close();
     }
 
+    for (const taal of ["nl", "en"]) {
+      const cfg = SEIZOENSPAGINAS.find(p => p.slug === "voorjaarsvakantie");
+      const context = await browser.newContext({ viewport: { width: taal === "nl" ? 390 : 1366, height: 900 } });
+      try {
+        await context.route("https://api.open-meteo.com/**", route => route.fulfill({json:antwoord(cfg,"2027-02-17")}));
+        const plaatsTab = await context.newPage();
+        await plaatsTab.goto(base + "/locatie-fixture");
+        const plaats = p => plaatsTab.evaluate(value => {
+          if (value) localStorage.setItem("weerbriefing.plaats", JSON.stringify(value));
+          else localStorage.removeItem("weerbriefing.plaats");
+        }, p);
+        if (taal === "en") await plaatsTab.evaluate(() => localStorage.setItem("weerbriefing.taal.v1", "en"));
+        await plaats({lat:52.351,lon:5.265,land:"NL",label:"Almere"});
+        const page = await context.newPage();
+        const fouten = [];
+        page.on("pageerror", e => fouten.push(e.message));
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, "geolocation", {get(){throw Error("Vakantiepagina mag geen nieuwe locatie opvragen");}});
+        });
+        await page.clock.setFixedTime(new Date("2027-02-17T11:00:00Z"));
+        await page.goto(base + "/voorjaarsvakantie/");
+        async function controleer(regio, dagen, melding) {
+          await page.waitForFunction(({regio,dagen,melding}) => {
+            const rijen = [...document.querySelectorAll(".seizoen-perioden:not([hidden]) tbody tr:not([hidden])")].map(r => r.dataset.regio);
+            const zichtbaar = [...document.querySelectorAll("#seizoen-verwachting [data-datum]")].map(e => Number(e.dataset.datum.slice(-2)));
+            return JSON.stringify(rijen) === JSON.stringify(regio) &&
+              JSON.stringify(zichtbaar) === JSON.stringify(dagen) &&
+              document.getElementById("seizoen-regio").textContent === melding;
+          }, {regio,dagen,melding});
+        }
+        const meld = (nl,en) => taal === "nl" ? nl : en;
+        await controleer(["noord"],[20,21,22,23],meld("Schoolvakantie voor je gekozen plaats in regio noord.","School holiday for your selected location in the northern region."));
+        await plaats({lat:52.331,lon:5.543,land:"NL",label:"Zeewolde"});
+        await controleer(["midden"],[20,21,22,23],meld("Schoolvakantie voor je gekozen plaats in regio midden.","School holiday for your selected location in the central region."));
+        await plaats({lat:51.442,lon:5.470,land:"NL",label:"Eindhoven"});
+        await controleer(["zuid"],[17,18,19,20,21],meld("Schoolvakantie voor je gekozen plaats in regio zuid.","School holiday for your selected location in the southern region."));
+        await plaats({lat:51.440,lon:4.927,land:"BE",label:"Baarle-Hertog"});
+        const landelijk=meld("Landelijk overzicht van alle schoolvakantieregio's.","National overview of all school holiday regions.");
+        await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
+        await plaats({lat:52.330,lon:5.361,land:"NL",label:"Grenspunt"});
+        await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
+        await plaats(null);
+        await controleer(["noord","midden","zuid"],[17,18,19,20,21,22,23],landelijk);
+        assert.deepEqual(fouten, [], taal + ": regiowissels zonder scriptfouten");
+        const bron = await page.evaluate(() => { const p = document.getElementById("seizoen-regio-bron"); return p && { tekst: p.textContent.replace(/\s+/g, " ").trim(), links: [...p.querySelectorAll("a")].map(a => [a.textContent, a.getAttribute("href")]) }; });
+        assert.equal(bron && bron.tekst, meld("Schoolvakantieregio bij je plaats: gemeentegrenzen uit BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) en de Wijk- en buurtkaart (CBS en Kadaster), bewerkt door watishetweer.nl.", "School holiday region for your location: municipal boundaries from BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) and the Wijk- en buurtkaart (CBS and Kadaster), adapted by watishetweer.nl."), taal + ": bronvermelding regiokaart");
+        assert.deepEqual(bron.links.map(l => l[0]), ["BRK Bestuurlijke Gebieden", "CC BY 4.0", "Wijk- en buurtkaart"], taal + ": links in de bronvermelding blijven staan");
+        if (taal === "en") assert.deepEqual(await page.evaluate(() => [...window.__WIW_TAAL_ONTBREEKT__]),[]);
+      } finally { await context.close(); }
+    }
+
     /* Zie-ook-links tussen de kerstpagina's, ook in het Engels. */
     for (const [slug, verwacht] of [["kerstvakantie", ["/witte-kerst/", "/oud-en-nieuw/"]], ["witte-kerst", ["/kerstvakantie/", "/oud-en-nieuw/"]], ["oud-en-nieuw", ["/witte-kerst/", "/kerstvakantie/"]]]) for (const taal of ["nl", "en"]) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
