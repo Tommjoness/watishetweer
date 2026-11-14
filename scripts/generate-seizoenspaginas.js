@@ -7,6 +7,7 @@
 
 const fs=require("fs");
 const path=require("path");
+const {createHash}=require("crypto");
 const SEO=require("./seo-foundation.config.js");
 const {SHARE_IMAGE}=require("./seo-foundation.js");
 const {SEIZOENSPAGINAS,seizoenUrl}=require("./seizoenspagina.config.js");
@@ -15,6 +16,25 @@ const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
 const RUNTIME_BRON=fs.readFileSync(path.join(__dirname,"seizoenspagina-runtime.js"),"utf8");
+const REGIO_BRON=fs.readFileSync(path.join(__dirname,"vakantieregio-data.json"),"utf8");
+const REGIO_SCRIPT=`/*!
+ * Geometrie bewerkt en gerasterd door watishetweer.nl (2026).
+ * Kadaster, BRK Bestuurlijke Gebieden 2026: https://data.overheid.nl/dataset/81774-bestuurlijke-gebieden
+ * CBS en Kadaster, Wijk- en Buurtkaarten:
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2004
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2010
+ * https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart-2018
+ * BRK en CBS 2018: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+ * Onno Boonstra, NLGis 1997 v2.2 (CC0): https://doi.org/10.17026/DANS-XB9-T677
+ * Kadaster, BAG-woonplaatsen (PDM 1.0): https://api.pdok.nl/kadaster/bag/ogc/v2
+ */
+globalThis.WeatherNowVakantieregioData=${REGIO_BRON};
+`;
+const REGIO_ASSET="vakantieregio-"+createHash("sha256").update(REGIO_SCRIPT).digest("hex").slice(0,12)+".js";
+/* Zichtbare bronvermelding bij de regio-indicatie: Kadaster (BRK Bestuurlijke Gebieden, CC BY 4.0) en CBS/Kadaster
+   (Wijk- en buurtkaart) vragen om naamsvermelding, licentie en vermelding van bewerking. De volledige herkomst, ook van de
+   CC0- en PDM-bronnen, staat in de kop van REGIO_ASSET en in scripts/vakantieregio-bronnen.md. */
+const REGIO_BRONVERMELDING='<p class="klein" id="seizoen-regio-bron">Schoolvakantieregio bij je plaats: gemeentegrenzen uit <a href="https://api.pdok.nl/kadaster/brk-bestuurlijke-gebieden/ogc/v1" rel="noopener" translate="no">BRK Bestuurlijke Gebieden</a> (Kadaster, <a href="https://creativecommons.org/licenses/by/4.0/deed.nl" rel="noopener" translate="no">CC BY 4.0</a>) en de <a href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart" rel="noopener" translate="no">Wijk- en buurtkaart</a> (CBS en Kadaster), bewerkt door watishetweer.nl.</p>\n';
 
 function esc(v){return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function jsonInHtml(v){return JSON.stringify(v).replace(/</g,"\\u003c");}
@@ -119,10 +139,10 @@ html:lang(en) .breed #seizoen-verwachting:has(.seizoen-dag+.seizoen-dag table.se
    dan één regel "Alle regio's" in plaats van drie gelijke. */
 function rijen(lijst){
   const gelijk=lijst.every(p=>p.van===lijst[0].van&&p.tot===lijst[0].tot);
-  const regels=gelijk?[{kop:"Alle regio's",p:lijst[0]}]:lijst.map(p=>({kop:"Regio "+p.regio,p}));
+  const regels=gelijk?[{kop:"Alle regio's",p:lijst[0],regio:"alle"}]:lijst.map(p=>({kop:"Regio "+p.regio,p,regio:p.regio}));
   /* Een periode over de jaargrens is lang (met jaartallen) en mag op een smal
      scherm over twee regels. */
-  return regels.map(({kop,p})=>`<tr><th scope="row">${esc(kop)}</th><td${p.van.slice(0,4)!==p.tot.slice(0,4)?' class="jaargrens"':""}>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
+  return regels.map(({kop,p,regio})=>`<tr data-regio="${esc(regio)}"><th scope="row">${esc(kop)}</th><td${p.van.slice(0,4)!==p.tot.slice(0,4)?' class="jaargrens"':""}>${esc(runtime.periodeTekst(p.van,p.tot))}</td></tr>`).join("\n");
 }
 function periodenHtml(cfg,jaar){
   if(!cfg.perioden)return "";
@@ -188,16 +208,18 @@ ${STIJL}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 <p>${esc(cfg.intro)}</p>
 <section class="seizoen-status" aria-labelledby="seizoen-kop" aria-live="polite">
+${cfg.soort==="vakantie"?`<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio's.</p>`:""}
 <p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
 <p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>
 <div id="seizoen-verwachting"></div>
 </section>
 <h2>${esc(cfg.uitleg.kop)}</h2>
 ${uitleg}
-${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
+${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 </main>
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>
+${cfg.soort==="vakantie"?`<script defer src="/${REGIO_ASSET}"></script>`:""}
 <script>
 ${RUNTIME_BRON}
 </script>
@@ -221,6 +243,7 @@ function voegToeAanSitemap(){
 function main(){
   if(!fs.existsSync(path.join(OUT,"sitemap.xml")))throw new Error("public/sitemap.xml ontbreekt; draai eerst de plaatsgenerator.");
   const buildDag=runtime.vandaagIn("Europe/Amsterdam",new Date());
+  fs.writeFileSync(path.join(OUT,REGIO_ASSET),REGIO_SCRIPT,"utf8");
   for(const cfg of SEIZOENSPAGINAS){
     const dir=path.join(OUT,cfg.slug);
     if(fs.existsSync(dir))throw new Error(`public/${cfg.slug} bestaat al; seizoenspagina botst met een bestaande route.`);
