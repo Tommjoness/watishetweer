@@ -314,7 +314,7 @@ function kansZin(a,venster,opties){
   const soort=typeNeerslag(a),k=num(a.kans),niveau=kansNiveau(k);
   if(actueelNeerslagSignaal(a)) return actueleZinMetEinde(a);
   const knmiZin=knmiToekomstZin(a,venster);if(knmiZin)return knmiZin;
-  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "In "+venster+" kunnen enkele druppels vallen.";
+  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "Volgens de KNMI-radar kunnen er "+venster+" enkele druppels vallen.";
   if(niveau==="ONBEKEND") return "Neerslagkans niet beschikbaar.";
   const pct=Math.round(clamp(k));
   const hoeveelheidDetail=opties.kort?"":hoeveelheidConditioneel(a);
@@ -352,7 +352,7 @@ function briefingZin(a){
   if(!a||!a.genoeg) return "Onvoldoende gegevens voor een betrouwbare neerslaginschatting in de komende twee uur.";
   if(actueelNeerslagSignaal(a)) return actueleZinMetEinde(a);
   const knmiZin=knmiToekomstZin(a,"de komende twee uur");if(knmiZin)return knmiZin;
-  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "In de komende twee uur kunnen enkele druppels vallen.";
+  if(a.bronHoeveelheid==="knmi-nowcast"&&a.status==="SPOORHOEVEELHEID")return "Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
   if(tegenstrijdigDroogSignaal(a)) return "De neerslagverwachting voor de komende twee uur is onzeker.";
   const niveau=kansNiveau(a.kans);
   if(niveau==="DROOG") return "De komende twee uur wordt er geen neerslag verwacht.";

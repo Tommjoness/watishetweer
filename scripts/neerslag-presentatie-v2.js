@@ -242,7 +242,7 @@ function tweeUurTekst(a,bestaand){
       if(mm!==null&&mm>=0.1)zin+=" Verwachte hoeveelheid: ongeveer "+fmt1(mm)+" mm.";
       return zin;
     }
-    if(a.status==="SPOORHOEVEELHEID")return "Het is nu droog. In de komende twee uur kunnen enkele druppels vallen.";
+    if(a.status==="SPOORHOEVEELHEID")return "Het is nu droog. Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
   }
   return bestaand||"";
 }
