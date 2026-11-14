@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bouwt de Nachtzicht-pagina's als losse subpagina's in de stijl van /over/:
-   - /nachtzicht/: de Nationale Parken op een rij, de donkerste eerst, met de
+   - /nachtzicht/: geselecteerde nationale parken per lichtvervuilingsklasse, met de
      indicatie voor vannacht;
    - /nachtzicht/<park>/: per park de komende nachten, bewolking per uur en maan;
    - /maan/: maanfase, op- en ondergang en de komende hoofdfasen.
@@ -191,12 +191,12 @@ ${BRONNEN}
 
 function overzichtPagina(parken, kern) {
   const canonical = `https://watishetweer.nl${BASIS}`;
-  const titel = "Sterren kijken in Nederland: de donkerste plekken";
-  const beschrijving = "De Nationale Parken van Nederland op een rij, de donkerste eerst: lichtvervuiling per park en de kans op een heldere sterrenhemel vannacht.";
+  const titel = "Sterren kijken in Nederland: nationale parken";
+  const beschrijving = "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.";
   const rijen = parken.map((p, i) => `<tr data-park="${p.slug}"${i > 0 && parken[i - 1].licht.naam !== p.licht.naam ? ' class="nz-groep"' : ""}><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n"><span class="nz-lbl">Vannacht</span><span class="nz-w">…</span></td><td class="nz-venster"><span class="nz-lbl" aria-hidden="true">Beste periode</span><span class="nz-w">…</span></td></tr>`).join("\n");
   return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
-<p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>
+<p>Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in ${parken.length} geselecteerde nationale parken. De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog. Binnen iedere categorie staan ze op alfabetische volgorde. Kies een park voor de komende nachten en de bewolking per uur.</p>
 <div class="nz-antwoordkader">
 <p id="nz-antwoord" class="nz-antwoord" aria-live="polite" hidden></p>
 <p id="nz-status" class="klein">De verwachting voor vannacht wordt geladen.</p>

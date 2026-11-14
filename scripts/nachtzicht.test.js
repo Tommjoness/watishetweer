@@ -112,6 +112,8 @@ const config = JSON.parse(/<script type="application\/json" id="nz-config">([^<]
 assert.deepStrictEqual(config.park, { slug: park.slug, lat: park.lat, lon: park.lon }, "configuratie van de parkpagina");
 const overzicht = overzichtPagina(parken, kern);
 assert.strictEqual((overzicht.match(/<tr data-park="/g) || []).length, parken.length, "overzicht heeft een rij per park");
+assert(overzicht.includes(`in ${parken.length} geselecteerde nationale parken.`), "overzicht beschrijft de selectie en het aantal parken");
+assert(overzicht.includes("De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog. Binnen iedere categorie staan ze op alfabetische volgorde."), "overzicht beschrijft beide sorteerniveaus");
 for (const p of parken) assert(overzicht.includes(`href="${BASIS}${p.slug}/"`), `overzicht linkt niet naar ${p.slug}`);
 const maan = maanPagina(kern, Date.UTC(2026, 9, 6, 12));
 assert(maan.includes(`<link rel="canonical" href="https://watishetweer.nl${MAAN}">`) && maan.includes('id="nz-maan-fasen"'), "maanpagina");

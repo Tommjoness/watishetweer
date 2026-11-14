@@ -103,7 +103,9 @@ async function controleer(browser,root,route,w){
       assert(!tijdenEn[4]||(tijdenEn[1]!==tijdenEn[3]&&tijdenEn[2]<=tijdenEn[4]),`/maan/ ${w}px: op- en ondergang niet in volgorde van de dag: ${tijdenEn[0]}`);
       assert(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{1,2} (July|August), \d{2}:\d{2}/.test(maan.tekst),`/maan/ ${w}px: datums van de fasen niet in het Engels`);
       assert.deepEqual(maan.spans,["nz-maan-plaats","nz-maan-standplaats","nz-maan-tijdzone","nz-maan-elders"],`/maan/ ${w}px: de vertaling heeft de spans van plaats en tijdzone weggehaald`);
-      assert.equal(overzicht.title,"Stargazing in the Netherlands: the darkest places | watishetweer.nl",`/nachtzicht/ ${w}px: titel`);
+      assert.equal(overzicht.title,"Stargazing in the Netherlands: national parks | watishetweer.nl",`/nachtzicht/ ${w}px: titel`);
+      assert.match(overzicht.tekst,new RegExp(`in ${overzicht.parkLinks.length} selected national parks\\.`),`/nachtzicht/ ${w}px: selectie en aantal`);
+      assert.match(overzicht.tekst,/grouped by estimated light pollution, from low to high\. Within each category, parks are listed in alphabetical order\./,`/nachtzicht/ ${w}px: sorteervolgorde`);
       assert(overzicht.parkLinks.includes("De Hoge Veluwe")&&overzicht.parkLinks.includes("Lauwersmeer"),`/nachtzicht/ ${w}px: parknamen blijven niet letterlijk staan`);
       assert(/How dark is it\?/.test(overzicht.tekst)&&/How the indication works/.test(overzicht.tekst),`/nachtzicht/ ${w}px: uitleg niet in het Engels`);
       assert(/Sources: the forecast comes from the weather model via Open-Meteo/.test(overzicht.tekst),`/nachtzicht/ ${w}px: bronregel niet in het Engels`);
