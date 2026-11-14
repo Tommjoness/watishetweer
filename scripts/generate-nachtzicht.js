@@ -170,6 +170,12 @@ const SCORE_UITLEG = `<h2>Hoe de indicatie werkt</h2>
 <p>De indicatie van 0 tot 10 is precies die van het blok Nachtzicht op watishetweer.nl, voor de rest van de nacht vanaf nu. Ze telt vooral de bewolking, en trekt er punten af voor slecht zicht, mist, neerslag, hoge luchtvochtigheid, kans op dauw, harde windstoten en maanlicht. Hoe hoger de maan staat en hoe voller hij is, hoe meer hij meetelt.</p>
 <p>Het kijkvenster is het langste aaneengesloten stuk van minstens twee uur met weinig bewolking (minder dan 35%), goed zicht, geen neerslag of mist en weinig maanlicht. Voor nachten verder vooruit staat er een dagdeel in plaats van kloktijden, omdat die verwachting nog onzeker is. Lichtvervuiling zit niet in de indicatie, want die verandert niet per nacht.</p>`;
 
+/* Uitsluitend brongeverifieerde bezoekersinformatie voor dit ene park. Andere parkpagina's blijven HTML-identiek. */
+function parkVerdieping(p) {
+  if(p.slug!=="lauwersmeer")return "";
+  return `<h2>Waar kun je sterren kijken in Nationaal Park Lauwersmeer?</h2>\n<p>Nationaal Park Lauwersmeer is sinds oktober 2016 officieel erkend als Dark Sky Park. Bij helder weer en weinig storende verlichting kun je er veel sterren zien en soms ook de Melkweg. De parkorganisatie noemt drie geschikte plekken: Activiteitencentrum Lauwersnest, hemelplatform Achter de Zwarten bij Suyderoogh en hemelplatform Vlinderbalg aan de Strandweg.</p>\n<p>Op de wegen en paden gelden volgens de parkorganisatie 's nachts in beginsel dezelfde toegangsregels als overdag; militair oefenterrein Marnewaard is uitgezonderd. Controleer vóór je bezoek de actuele informatie van het park en blijf op toegankelijke routes. De verwachting en lichtvervuilingsklasse hierboven gelden voor een representatief punt in het park; plaatselijke omstandigheden kunnen afwijken.</p>\n<p class="klein">Bron: <a href="https://www.np-lauwersmeer.nl/het-lauwersmeer/dark-sky-park/" rel="noopener" translate="no">Nationaal Park Lauwersmeer</a>.</p>\n`;
+}
+
 function parkPagina(p, kern) {
   const canonical = parkUrl(p);
   const titel = `Sterren kijken in ${p.naam}`;
@@ -184,7 +190,7 @@ function parkPagina(p, kern) {
 <section id="nz-nachten" aria-label="Komende nachten" hidden></section>
 <p id="nz-bijgewerkt" class="klein" hidden></p>
 <p><a href="${esc(weerUrl)}">Het weer per uur voor deze plek</a></p>
-${SCORE_UITLEG}
+${parkVerdieping(p)}${SCORE_UITLEG}
 ${BRONNEN}
 ` + staart({ soort: "park", tz: TIJDZONE, park: { slug: p.slug, lat: p.lat, lon: p.lon } }, kern);
 }

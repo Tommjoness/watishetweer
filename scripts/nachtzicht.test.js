@@ -110,6 +110,19 @@ assert(/connect-src 'self' https:\/\/api\.open-meteo\.com;/.test(html), "CSP sta
 assert(!/<script[^>]+src=/.test(html), "geen externe scripts");
 const config = JSON.parse(/<script type="application\/json" id="nz-config">([^<]*)<\/script>/.exec(html)[1]);
 assert.deepStrictEqual(config.park, { slug: park.slug, lat: park.lat, lon: park.lon }, "configuratie van de parkpagina");
+/* Lauwersmeer heeft eigen broncontent; de andere 18 parken mogen die niet overnemen. */
+const lauwersmeer=parken.find(p=>p.slug==="lauwersmeer");
+assert(lauwersmeer,"Lauwersmeer hoort tot de geselecteerde parken");
+const lauwersmeerHtml=parkPagina(lauwersmeer,kern);
+assert(lauwersmeerHtml.includes("Waar kun je sterren kijken in Nationaal Park Lauwersmeer?"),"specifieke Lauwersmeer-kop");
+assert(lauwersmeerHtml.includes("Dark Sky Park")&&lauwersmeerHtml.includes("Achter de Zwarten")&&lauwersmeerHtml.includes("Vlinderbalg"),"drie kijklocaties en erkenning");
+assert(lauwersmeerHtml.includes("Marnewaard")&&lauwersmeerHtml.includes('https://www.np-lauwersmeer.nl/het-lauwersmeer/dark-sky-park/'),"veiligheidsnuance en officiële bron");
+for(const ander of parken.filter(p=>p.slug!=="lauwersmeer"))assert(!parkPagina(ander,kern).includes("Waar kun je sterren kijken in Nationaal Park Lauwersmeer?"),ander.slug+": Lauwersmeer-informatie lekt naar een ander park");
+const vertalerPark=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.equal(vertalerPark.vertaal("Waar kun je sterren kijken in Nationaal Park Lauwersmeer?"),"Where can you go stargazing in Lauwersmeer National Park?");
+assert.equal(vertalerPark.vertaal("Bron:"),"Source:","de zichtbare bronvermelding moet ook in het Engels zijn");
+assert(vertalerPark.vertaal("Nationaal Park Lauwersmeer is sinds oktober 2016 officieel erkend als Dark Sky Park. Bij helder weer en weinig storende verlichting kun je er veel sterren zien en soms ook de Melkweg. De parkorganisatie noemt drie geschikte plekken: Activiteitencentrum Lauwersnest, hemelplatform Achter de Zwarten bij Suyderoogh en hemelplatform Vlinderbalg aan de Strandweg.").includes("Lauwersnest Visitor Centre"),"Engelse kijklocaties");
+assert(vertalerPark.vertaal("Op de wegen en paden gelden volgens de parkorganisatie 's nachts in beginsel dezelfde toegangsregels als overdag; militair oefenterrein Marnewaard is uitgezonderd. Controleer vóór je bezoek de actuele informatie van het park en blijf op toegankelijke routes. De verwachting en lichtvervuilingsklasse hierboven gelden voor een representatief punt in het park; plaatselijke omstandigheden kunnen afwijken.").includes("Marnewaard military training area"),"Engelse toegangswaarschuwing");
 const overzicht = overzichtPagina(parken, kern);
 assert.strictEqual((overzicht.match(/<tr data-park="/g) || []).length, parken.length, "overzicht heeft een rij per park");
 assert(overzicht.includes(`in ${parken.length} geselecteerde nationale parken.`), "overzicht beschrijft de selectie en het aantal parken");

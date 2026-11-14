@@ -112,6 +112,10 @@ async function controleer(browser,root,route,w){
       assert.equal(park.title,"Stargazing in Lauwersmeer National Park | watishetweer.nl",`park ${w}px: titel`);
       assert.equal(park.h1,"Stargazing in Lauwersmeer National Park",`park ${w}px: kop`);
       assert(/Light pollution: low \(estimated\)/.test(park.tekst),`park ${w}px: lichtvervuiling niet in het Engels`);
+      assert(park.tekst.includes("Where can you go stargazing in Lauwersmeer National Park?"),`Lauwersmeer ${w}px: sterrenkijkkop niet vertaald`);
+      assert(park.tekst.includes("Lauwersnest Visitor Centre")&&park.tekst.includes("Achter de Zwarten")&&park.tekst.includes("Vlinderbalg"),`Lauwersmeer ${w}px: kijklocaties niet zichtbaar in het Engels`);
+      assert(park.tekst.includes("Marnewaard military training area")&&park.tekst.includes("Nationaal Park Lauwersmeer"),`Lauwersmeer ${w}px: bron/toegangsinformatie ontbreekt`);
+      assert(!vanGogh.tekst.includes("Achter de Zwarten"),`ander park ${w}px: Lauwersmeer-content gelekt`);
       assert(/average \d+%/.test(park.tekst)&&/Cloud cover per hour/.test(park.tekst),`park ${w}px: feiten en grafiek niet in het Engels`);
       assert.equal(vanGogh.h1,"Stargazing in Van Gogh National Park",`Van Gogh ${w}px: parknaam met "Nationaal Park" achteraan`);
     }
