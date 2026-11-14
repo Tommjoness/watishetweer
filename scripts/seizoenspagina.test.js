@@ -135,6 +135,16 @@ assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
 assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
+/* SEO-content blijft statisch, bronverifieerbaar en in het Engels volledig vertaald. */
+assert.equal(kerst.uitleg.vragen.length,2,"twee gerichte KNMI-vragen");
+assert(html.includes('<h2>'+kerst.uitleg.vragen[0].kop+'</h2>')&&html.includes("09:00 uur"),"officiële definitie met meetmoment");
+assert(html.includes("1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010")&&html.includes("2009 op eerste kerstdag 9 centimeter"),"KNMI-historie en sneeuwdiepte");
+assert(html.includes("https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"),"historische bron is zichtbaar");
+const vertalerKerst=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.equal(vertalerKerst.vertaal(kerst.uitleg.vragen[0].kop),"Why does snow at Christmas not always count as an official white Christmas?");
+assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[0].antwoord),/09:00 on both 25 and 26 December/);
+assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[1].antwoord),/nine centimetres|9 centimetres/);
+
 const zichtbaar=html.split('<script type="application/json" id="seizoen-config">')[0];
 assert(!/undefined|\{\w+\}|NaN/.test(zichtbaar),"geen lege plaatshouders in de statische pagina");
 const cfgJson=html.match(/<script type="application\/json" id="seizoen-config">([\s\S]*?)<\/script>/);
