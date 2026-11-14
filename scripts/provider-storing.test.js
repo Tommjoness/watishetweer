@@ -45,3 +45,6 @@ assert.equal(h({volledigStoring:1,reserveOk:2}).ok,false,"de reserveroute maar �
 assert.match(h({volledigStoring:2}).reden,/429\/5xx 2/);
 
 console.log("Provider-storing: alleen 429/5xx van Open-Meteo-hosts is een opvangbare storing; eigen 5xx, 4xx, scriptfouten en andere hosts blijven fouten; herkomst van de verwachting: Open-Meteo of, alleen na een Open-Meteo-storing, precies één keer de reserveroute.");
+
+/* Diagnostiek van de Open-Meteo-verbinding in scripts/openmeteo-daggrens-contract.js (geen netwerk). */
+require("./openmeteo-verbindingsdiagnose.test.js");
