@@ -27,6 +27,7 @@ test("neerslagowner levert definitieve Nederlandse copy zonder postbuild-normali
   assert.equal(kansZin({...basis,kans:0},"de komende twee uur"),"Voor de komende twee uur wordt er geen neerslag verwacht.");
   assert.equal(briefingZin({...basis,kans:0}),"De komende twee uur wordt er geen neerslag verwacht.");
   assert.equal(briefingZin({...basis,bronHoeveelheid:"knmi-nowcast",status:"SPOORHOEVEELHEID",kans:0,hoeveelheid:0.04}),"Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.");
+  assert.equal(kansZin({...basis,bronHoeveelheid:"knmi-nowcast",status:"SPOORHOEVEELHEID",kans:0,hoeveelheid:0.04},"de komende twee uur"),"Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.","twee-uursblok en toegankelijke naam vermelden de radarbron");
   assert.equal(komendUurTekst({...basis,bronHoeveelheid:"knmi-nowcast",status:"NEERSLAG_VERWACHT",kans:50,hoeveelheid:1}),"Het komende uur wordt neerslag verwacht.");
   assert.equal(komendUurTekst({...basis,bronHoeveelheid:"knmi-nowcast",status:"SPOORHOEVEELHEID",kans:20,hoeveelheid:0.04}),"Het komende uur zijn enkele druppels mogelijk.");
   assert.equal(komendUurTekst({...basis,kans:9}),"Het komende uur is er een zeer kleine kans op neerslag.");
