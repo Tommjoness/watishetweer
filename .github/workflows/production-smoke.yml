@@ -167,7 +167,13 @@ jobs:
         if: failure()
         continue-on-error: true
         timeout-minutes: 2
-        run: node scripts/netwerkdiagnostiek.js https://watishetweer.nl
+        # De Open-Meteo-meting is alleen een aanvullende aanwijzing: zelfde host en poort als de
+        # forecastaanvraag, maar /robots.txt en / in plaats van /v1/forecast, en een moment later.
+        # De echte foutoorzaak van de forecastaanvraag staat in de foutregel van de stap zelf.
+        run: |
+          node scripts/netwerkdiagnostiek.js https://watishetweer.nl
+          echo "NETWERKDIAGNOSTIEK aanvullende aanwijzing, geen equivalent van de forecastaanvraag: api.open-meteo.com /robots.txt en / (niet /v1/forecast)"
+          node scripts/netwerkdiagnostiek.js https://api.open-meteo.com
       - name: Bewaar screenshots en bewijsrapport
         if: always()
         uses: actions/upload-artifact@v6

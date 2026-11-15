@@ -26,6 +26,28 @@ function coloUitRay(ray){
 const veilig=w=>String(w==null?"":w).replace(/[^A-Za-z0-9._:-]/g,"").slice(0,64)||"-";
 const ms=getal=>Math.round(getal)+"ms";
 
+/* Foutregel voor een mislukte fetch in de productiemonitors: het bestaande bericht (bijv. "fetch failed" of
+   "HTTP 503") ongewijzigd voorop, daarachter de foutcode en -naam van de onderliggende oorzaak en de duur van die
+   poging. Undici meldt iedere transportfout als "fetch failed"; pas de oorzaakcode onderscheidt DNS
+   (ENOTFOUND, EAI_AGAIN), connect- of TLS-time-out (UND_ERR_CONNECT_TIMEOUT), reset (ECONNRESET) of een
+   happy-eyeballs-time-out (AggregateError ETIMEDOUT). Alleen code en naam worden gelezen, nooit het
+   oorzaakbericht (dat kan een URL of adres bevatten). Puur diagnostisch: retries, time-outs en uitkomsten
+   veranderen niet. */
+function beschrijfFetchFout(fout,duurMs){
+  const bericht=String(fout&&fout.message||fout);
+  const oorzaak=fout&&typeof fout==="object"?fout.cause:null;
+  const delen=[];
+  if(oorzaak&&typeof oorzaak==="object"){
+    const code=oorzaak.code?veilig(oorzaak.code):"",naam=oorzaak.name?veilig(oorzaak.name):"";
+    if(code||naam)delen.push("oorzaak="+(code&&naam?`${code} (${naam})`:code||naam));
+    if(Array.isArray(oorzaak.errors)&&oorzaak.errors.length){
+      delen.push("adrespogingen="+oorzaak.errors.slice(0,4).map(e=>veilig(e&&(e.code||e.name))).join(","));
+    }
+  }
+  if(Number.isFinite(duurMs))delen.push("na="+ms(duurMs));
+  return delen.length?`${bericht} [${delen.join("; ")}]`:bericht;
+}
+
 async function meetVerzoek(root,pad,{fetchImpl=globalThis.fetch,timeoutMs=TIMEOUT_MS,klok=()=>performance.now()}={}){
   const begin=klok(),stop=new AbortController(),timer=setTimeout(()=>stop.abort(),timeoutMs);
   const uit={pad,host:veilig(new URL(root).host)};
@@ -59,7 +81,7 @@ async function diagnose(root,opties){
   return regels;
 }
 
-module.exports={coloUitRay,meetVerzoek,formatteer,diagnose,PADEN,TIMEOUT_MS};
+module.exports={coloUitRay,meetVerzoek,formatteer,diagnose,beschrijfFetchFout,PADEN,TIMEOUT_MS};
 
 if(require.main===module){
   (async()=>{

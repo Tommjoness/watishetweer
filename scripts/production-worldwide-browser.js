@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {zichtbaarGetal,verifieerBronwaarheid}=require("./production-source-truth.js");
+const {beschrijfFetchFout}=require("./netwerkdiagnostiek.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -89,20 +90,22 @@ async function haalJson(url){
 async function haalLiveForecast(url,naam,locatie){
   let laatsteFout=null;
   for(let poging=1;poging<=3;poging++){
+    const begin=Date.now();
     try{
       return {bron:await haalJson(url),poging,via:"Open-Meteo"};
     }catch(e){
-      laatsteFout=String(e&&e.message||e);
+      laatsteFout=beschrijfFetchFout(e,Date.now()-begin);
       if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging);
     }
   }
   const reserve=ROOT+"/api/forecast?"+new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon)});
   let reserveFout=null;
   for(let poging=1;poging<=2;poging++){
+    const begin=Date.now();
     try{
       return {bron:await haalJson(reserve),poging,via:"reserveroute /api/forecast (Open-Meteo: "+laatsteFout+")"};
     }catch(e){
-      reserveFout=String(e&&e.message||e);
+      reserveFout=beschrijfFetchFout(e,Date.now()-begin);
       if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS);
     }
   }

@@ -21,6 +21,9 @@ async function bouwHistoryForecastFixtures(browser){
     {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP",tz:"Asia/Kathmandu"}
   ];
   const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  /* Deze functie draait als broncode in het tijdelijke runtimebestand (zie onderaan); de helper wordt daarom
+     hier binnen de functie geladen, relatief aan scripts/. */
+  const {beschrijfFetchFout}=require("./netwerkdiagnostiek.js");
   const begrensdeMs=(naam,standaard,min,max)=>{
     const waarde=Number(process.env[naam]||standaard);
     return Number.isFinite(waarde)?Math.min(max,Math.max(min,Math.round(waarde))):standaard;
@@ -59,6 +62,7 @@ async function bouwHistoryForecastFixtures(browser){
     let laatsteFout=null;
     for(let poging=1;poging<=4;poging++){
       let wacht=retryBackoff*poging;
+      const begin=Date.now();
       try{
         const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-pre-sale-history-fixture/1.0"},signal:AbortSignal.timeout(15000)});
         if(response.status===429){
@@ -70,7 +74,7 @@ async function bouwHistoryForecastFixtures(browser){
         if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
         return {bron,poging};
       }catch(e){
-        laatsteFout=String(e&&e.message||e);
+        laatsteFout=beschrijfFetchFout(e,Date.now()-begin);
         if(poging<4)await slaap(wacht);
       }
     }
