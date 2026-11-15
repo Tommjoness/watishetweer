@@ -176,7 +176,7 @@ function controleer(naam, tekst) {
 /* Leg immutable referenties vast voor acties en containerimages uit de eigen workflows. */
 for (const naam of fs.readdirSync(workflowDir).filter(n => /\.ya?ml$/.test(n))) {
   const workflow = fs.readFileSync(path.join(workflowDir, naam), "utf8");
-  for (const [regel, actie] of workflow.matchAll(/^\s*- uses: ([^\s#]+)/gm)) {
+  for (const [regel, actie] of workflow.matchAll(/^[ \t]*(?:-[ \t]+)?uses:[ \t]+([^\s#]+)/gm)) {
     if (actie.startsWith("./")) continue;
     assert.match(actie, /@[a-f0-9]{40}$/, `${naam}: actie moet vastgezet zijn: ${regel.trim()}`);
   }
