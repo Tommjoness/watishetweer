@@ -1,3 +1,4 @@
+import { leesLocatieQuery } from "../lib/locatie-api-query.mjs";
 import legacyHandler from "../lib/waarschuwingen.cjs";
 import scopeModule from "../lib/waarschuwing-scope.cjs";
 import vertalingModule from "../lib/waarschuwing-vertaling.cjs";
@@ -20,12 +21,13 @@ function methodeNietToegestaan() {
 export default {
   /* ctx (Cloudflare) geeft waitUntil: een grote MeteoAlarm-landfeed mag dan na
      het antwoord verder downloaden en in de cache komen. */
-  async fetch(request, env, ctx) {
+  async fetch(request, env, ctx, locatieQuery) {
     const method = String(request.method || "GET").toUpperCase();
     if (method !== "GET" && method !== "HEAD") return methodeNietToegestaan();
 
-    const url = new URL(request.url);
-    const query = Object.fromEntries(url.searchParams.entries());
+    const query = (locatieQuery === undefined
+      ? leesLocatieQuery(new URL(request.url), "waarschuwingen")
+      : locatieQuery) || {};
     let statusCode = 200;
     let body = null;
     let gedegradeerd = false;

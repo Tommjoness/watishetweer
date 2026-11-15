@@ -209,7 +209,7 @@ const compatInCache=cache=>[...cache.map.keys()].filter(k=>k.startsWith(COMPAT+"
       await Promise.all(achtergrond);
     });
     const fn=require("fs").readFileSync(path.join(__dirname,"..","functions","api","waarschuwingen.js"),"utf8");
-    assert.ok(fn.includes("worker.fetch(context.request, context.env, context)"),"Pages Function geeft de context (met waitUntil) door");
+    assert.ok(fn.includes("worker.fetch(context.request, context.env, context, query)"),"Pages Function geeft de context (met waitUntil) door");
   }
 
   console.log("MeteoAlarm grote landfeed: bezoeker wacht hooguit 4 s, download loopt door via waitUntil, compacte feed (zelfde uitkomst) in de cache, verversen op de achtergrond, Node-gedrag ongewijzigd.");
