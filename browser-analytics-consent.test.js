@@ -54,6 +54,9 @@ async function maakPagina(browserType,opt={}){
   });
   if(!opt.automatisering)await context.addInitScript(()=>Object.defineProperty(Navigator.prototype,"webdriver",{configurable:true,get:()=>false}));
   if(opt.gpc)await context.addInitScript(()=>Object.defineProperty(navigator,"globalPrivacyControl",{configurable:true,value:true}));
+  if(opt.geblokkeerdeOpslag)await context.addInitScript(()=>{
+    Object.defineProperty(window,"localStorage",{get(){throw new DOMException("Opslag geblokkeerd","SecurityError");}});
+  });
   const events=[],google=[];
   await context.route("https://watishetweer.nl/**",async route=>{
     const url=new URL(route.request().url());
@@ -261,6 +264,26 @@ async function controleerAfmelding(){
   }finally{await browser.close();}
 }
 
+async function controleerAfmeldingZonderOpslag(){
+  const {browser,page,events,google}=await maakPagina(chromium,{zoek:"?analytics=uit",geblokkeerdeOpslag:true});
+  try{
+    assert.match(await page.locator("[data-analytics-device-status]").textContent(),/op deze pagina.*niet worden bewaard/);
+    await page.locator("#ververs").click();
+    assert.equal(await page.locator("#analytics-toestemming").count(),0);
+    assert.deepEqual(events,[],"expliciete afmelding zonder opslag blokkeert PostHog");
+    assert.deepEqual(google,[],"expliciete afmelding zonder opslag blokkeert GA4");
+
+    await page.goto("https://watishetweer.nl/privacy");
+    await wachtOpEvent(events,"$pageview");
+    await page.locator("[data-analytics-device-toggle]").click();
+    assert.match(await page.locator("[data-analytics-device-status]").textContent(),/op deze pagina.*niet worden bewaard/);
+    assert.equal(await page.locator("#analytics-toestemming").count(),0,"afmelden verwijdert de GA4-banner");
+    await page.locator("#ververs").click();
+    assert.deepEqual(events.map(event=>event.event),["$pageview"],"afmelden blijft gelden in de bestaande pagina");
+    assert.deepEqual(google,[]);
+  }finally{await browser.close();}
+}
+
 (async()=>{
   await meetBanner(chromium,"Chromium 320 licht",{width:320,height:844},"light");
   await meetBanner(chromium,"Chromium 390 donker",{width:390,height:844},"dark");
@@ -272,5 +295,6 @@ async function controleerAfmelding(){
   await controleerAutomatisering();
   await controleerGpc();
   await controleerAfmelding();
+  await controleerAfmeldingZonderOpslag();
   console.log("Analytics-consentbrowsercontract groen: compacte toegankelijke banner, gelijke keuzes, GPC, afmelding per apparaat, vooraf geblokkeerde GA4, privacyveilige taakuitkomsten, herkomstcategorie zonder verwijzer en uitsluiting van geautomatiseerde browsers in Chromium en WebKit.");
 })().catch(error=>{console.error(error&&error.stack||error);process.exit(1);});
