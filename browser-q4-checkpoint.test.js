@@ -81,9 +81,9 @@ const stub=`<script>
   const params=new URL(location.href).searchParams;
   const q=window.__q4={
     mode:params.get('mode')||'api',visual:params.get('visual')||'',
-    counts:{full:{},min:{},air:{},warn:{},geocode:0,bdc:0,reverse:0},starts:[],
+    counts:{full:{},min:{},air:{},warn:{},geocode:0,gps:0,bdc:0,reverse:0},starts:[],
     holds:{air:{A:false},warn:{A:false}},pending:{air:[],warn:[]},
-    fail:{full:{},min:{},air:{},warn:{}},bdcComplete:true,
+    fail:{full:{},min:{},air:{},warn:{}},bdcComplete:true,geoDenied:false,
     geo:{lat:7.2906,lon:80.6337,accuracy:18}
   };
   if(q.mode==='api'){q.holds.air.A=true;q.holds.warn.A=true;}
@@ -126,7 +126,13 @@ const stub=`<script>
     return goed({});
   };
   try{Object.defineProperty(navigator,'permissions',{configurable:true,value:{query:async()=>({state:'granted'})}});}catch(e){}
-  try{Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(ok){setTimeout(()=>ok({coords:{latitude:q.geo.lat,longitude:q.geo.lon,accuracy:q.geo.accuracy}}),0);}}});}catch(e){}
+  try{Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(ok,fout){
+    q.counts.gps++;
+    setTimeout(()=>{
+      if(q.geoDenied)fout({code:1});
+      else ok({coords:{latitude:q.geo.lat,longitude:q.geo.lon,accuracy:q.geo.accuracy}});
+    },0);
+  }}});}catch(e){}
   Date.now=()=>Date.UTC(2026,6,22,12,0,0);
 })();
 </script>`;
@@ -224,7 +230,8 @@ async function apiStress(browser,naam){
     /* Reverse geocoding: serverfallback alleen wanneer primaire bron onvolledig is. */
     await page.evaluate(()=>{__q4.fail.full.G=false;__q4.fail.min.G=false;__q4.bdcComplete=true;__q4.geo={lat:7.2906,lon:80.6337,accuracy:18};});
     const geoVoor=await page.evaluate(()=>({bdc:__q4.counts.bdc,reverse:__q4.counts.reverse}));
-    assert.equal(await page.evaluate(()=>locatieNu('knop')),true,naam+": GPS met complete primaire reverse-geocode slaagt");
+    await page.locator("#here").click();
+    await page.waitForFunction(()=>S.label==='Kandy'&&!gpsBezig);
     const geoEen=await page.evaluate(()=>({bdc:__q4.counts.bdc,reverse:__q4.counts.reverse,label:S.label}));
     assert.equal(geoEen.bdc-geoVoor.bdc,1,naam+": complete GPS doet één primaire reverse-geocode");
     assert.equal(geoEen.reverse-geoVoor.reverse,0,naam+": complete primaire reverse-geocode doet geen serverfallback");
@@ -232,11 +239,24 @@ async function apiStress(browser,naam){
 
     await page.evaluate(()=>{__q4.bdcComplete=false;__q4.geo={lat:6.9271,lon:79.8612,accuracy:20};});
     const geoTweeVoor=await page.evaluate(()=>({bdc:__q4.counts.bdc,reverse:__q4.counts.reverse}));
-    assert.equal(await page.evaluate(()=>locatieNu('knop')),true,naam+": GPS met onvolledige primaire bron gebruikt fallback");
+    await page.locator("#here").click();
+    await page.waitForFunction(()=>S.label==='Fallbackplaats'&&!gpsBezig);
     const geoTwee=await page.evaluate(()=>({bdc:__q4.counts.bdc,reverse:__q4.counts.reverse,label:S.label}));
     assert.equal(geoTwee.bdc-geoTweeVoor.bdc,1,naam+": fallbackpad probeert primaire reverse-geocode één keer");
     assert.equal(geoTwee.reverse-geoTweeVoor.reverse,1,naam+": fallbackpad doet exact één serverreverse-geocode");
     assert.equal(geoTwee.label,'Fallbackplaats',naam+": serverfallback levert plaatsnaam");
+
+    await page.evaluate(()=>{__q4.geoDenied=true;});
+    await page.locator("#here").click();
+    await page.waitForFunction(()=>document.getElementById('state').textContent.includes('Locatie geweigerd.'));
+    const geweigerd=await page.evaluate(()=>({gps:__q4.counts.gps,bdc:__q4.counts.bdc,reverse:__q4.counts.reverse,label:S.label}));
+    assert.deepEqual(geweigerd,{gps:3,...geoTwee},naam+": weigering behoudt locatie en doet geen reverse-geocoding");
+
+    /* De oude startkoppeling mag ook met verleende machtiging geen GPS gebruiken. */
+    await page.goto(`http://127.0.0.1:${server.address().port}/?mode=shortcut&hier=1`,{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>!document.getElementById('here').disabled&&typeof S!=='undefined'&&S.d);
+    const snelkoppeling=await page.evaluate(()=>({gps:__q4.counts.gps,bdc:__q4.counts.bdc,reverse:__q4.counts.reverse}));
+    assert.deepEqual(snelkoppeling,{gps:0,bdc:0,reverse:0},naam+": startkoppeling doet zonder klik geen GPS of reverse-geocoding");
 
     assert.deepEqual(fouten,[],naam+": API-stresspad zonder runtime/consolefouten");
   }finally{await context.close();}
