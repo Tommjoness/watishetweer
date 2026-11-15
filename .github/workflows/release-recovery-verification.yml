@@ -12,12 +12,12 @@ jobs:
   recovery-build-browser:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
       - name: Installeer builddependencies
@@ -68,7 +68,7 @@ jobs:
           node browser-serviceworker-upgrade.test.js 2>&1 | tee release-recovery-serviceworker.log
       - name: Bewaar hersteltestdiagnostiek
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-recovery-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
           path: release-recovery-*.log
