@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {zichtbaarGetal,verifieerBronwaarheid}=require("./production-source-truth.js");
+const {bronPogingLog,korteFout}=require("./worldwide-bron-diagnostiek.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -74,9 +75,9 @@ async function ontdekVolledigeForecastUrl(browser,locatie){
 
 async function haalJson(url){
   const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-worldwide-monitor/1.0"},signal:AbortSignal.timeout(15000)});
-  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  if(!response.ok){const e=new Error(`HTTP ${response.status}`);e.httpStatus=response.status;throw e;}
   const bron=await response.json();
-  if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
+  if(!isVolledigeBron(bron)){const e=new Error("onvolledige forecastrespons");e.code="ONVOLLEDIGE_BRON";throw e;}
   return bron;
 }
 /* Open-Meteo knijpt de gedeelde IP-adressen van GitHub-runners geregeld af
@@ -89,20 +90,28 @@ async function haalJson(url){
 async function haalLiveForecast(url,naam,locatie){
   let laatsteFout=null;
   for(let poging=1;poging<=3;poging++){
+    const start=performance.now();
     try{
-      return {bron:await haalJson(url),poging,via:"Open-Meteo"};
+      const bron=await haalJson(url);
+      console.log(bronPogingLog({locatie:naam,provider:"Open-Meteo",poging,duurMs:performance.now()-start}));
+      return {bron,poging,via:"Open-Meteo"};
     }catch(e){
-      laatsteFout=String(e&&e.message||e);
+      console.log(bronPogingLog({locatie:naam,provider:"Open-Meteo",poging,duurMs:performance.now()-start,fout:e}));
+      laatsteFout=korteFout(e);
       if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging);
     }
   }
   const reserve=ROOT+"/api/forecast?"+new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon)});
   let reserveFout=null;
   for(let poging=1;poging<=2;poging++){
+    const start=performance.now();
     try{
-      return {bron:await haalJson(reserve),poging,via:"reserveroute /api/forecast (Open-Meteo: "+laatsteFout+")"};
+      const bron=await haalJson(reserve);
+      console.log(bronPogingLog({locatie:naam,provider:"reserveroute",poging,duurMs:performance.now()-start}));
+      return {bron,poging,via:"reserveroute /api/forecast (Open-Meteo: "+laatsteFout+")"};
     }catch(e){
-      reserveFout=String(e&&e.message||e);
+      console.log(bronPogingLog({locatie:naam,provider:"reserveroute",poging,duurMs:performance.now()-start,fout:e}));
+      reserveFout=korteFout(e);
       if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS);
     }
   }

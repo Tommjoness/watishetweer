@@ -155,6 +155,42 @@ assert(cls.includes('uitkomst:heeftData?"data":terminaleFout?"fout":"laden"'),"p
 assert(cls.includes("assert(dataRondes>=MIN_DATA_RONDEN"),"productie-CLS-monitor mag niet groen worden zonder representatieve echte weerdata");
 assert(cls.includes("Beschikbaarheid wordt apart bewaakt"),"CLS-monitor moet beschikbaarheid expliciet als aparte verantwoordelijkheid rapporteren");
 
+/* Wereldwijde bronlogging moet onderliggende Node/undici-codes herkennen,
+   zonder onbetrouwbare foutteksten, URLs of geheimen te publiceren. */
+{
+  const {foutKenmerken,bronPogingLog,korteFout}=require("./worldwide-bron-diagnostiek.js");
+  const geheim="https://provider.example/api?apiKey=GEHEIM";
+  const fout=code=>Object.assign(new TypeError(geheim),{
+    cause:Object.assign(new Error(geheim),{code})
+  });
+  for(const [code,soort] of [
+    ["ENOTFOUND","dns"],["EAI_AGAIN","dns"],["ECONNREFUSED","tcp"],
+    ["ECONNRESET","tcp"],["ERR_TLS_CERT_ALTNAME_INVALID","tls"],
+    ["UND_ERR_CONNECT_TIMEOUT","timeout"]
+  ]){
+    const e=fout(code);
+    assert.equal(foutKenmerken(e).soort,soort);
+    assert.deepEqual(foutKenmerken(e).codes,[code]);
+    const regel=bronPogingLog({locatie:"La Paz",provider:"Open-Meteo",poging:2,duurMs:15042.8,fout:e});
+    assert(regel.includes("locatie=La Paz provider=Open-Meteo poging=2 duur_ms=15043"));
+    assert(regel.includes("oorzaakcodes="+code)&&regel.includes("soort="+soort));
+    assert(/tijd=20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d\d\dZ/.test(regel));
+    assert(!regel.includes(geheim)&&!korteFout(e).includes(geheim));
+  }
+  const http=Object.assign(new Error(geheim),{httpStatus:503});
+  assert.equal(foutKenmerken(http).soort,"http");
+  assert(bronPogingLog({locatie:"La Paz",provider:"reserveroute",poging:1,duurMs:12,fout:http}).includes("http_status=503"));
+  assert.equal(foutKenmerken(Object.assign(new Error(),{name:"TimeoutError"})).soort,"timeout");
+  assert.equal(foutKenmerken(Object.assign(new Error(),{code:"ONVOLLEDIGE_BRON"})).soort,"brondata");
+  assert.equal(foutKenmerken(new SyntaxError("invalid JSON")).soort,"json");
+  assert(bronPogingLog({locatie:"La Paz",provider:"Open-Meteo",poging:1,duurMs:5.3}).includes("uitkomst=succes"));
+  assert(wereldwijd.includes("await haalJson(url)")&&wereldwijd.includes("await haalJson(reserve)"),"beide echte providers blijven live");
+  assert(wereldwijd.includes("for(let poging=1;poging<=3;poging++)")&&wereldwijd.includes("for(let poging=1;poging<=2;poging++)"),"retry-aantallen blijven gelijk");
+  assert(wereldwijd.includes("if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging)")&&wereldwijd.includes("if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS)"),"backoff blijft gelijk");
+  assert(wereldwijd.includes("live bron niet bereikbaar"),"geen ontbrekende bron accepteren");
+  assert(wereldwijd.includes('bronPogingLog({locatie:naam,provider:"Open-Meteo"')&&wereldwijd.includes('bronPogingLog({locatie:naam,provider:"reserveroute"'),"beide providers loggen per poging");
+}
+
 require("./pressure-retirement.test.js");
 require("./production-source-truth.test.js");
 
