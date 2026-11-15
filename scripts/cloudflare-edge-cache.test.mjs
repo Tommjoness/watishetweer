@@ -52,6 +52,7 @@ async function run(context,route,fn){
   const c=canoniekeCacheUrl(new Request(BASE+"/api/forecast?lon=4.8956&lat=52.3706"),"forecast");
   assert.equal(a,b,"WeatherAPI-punten binnen dezelfde driedecimalencel horen één edge-cacheobject te delen");
   assert.notEqual(a,c,"een andere driedecimalencel mag niet met de WeatherAPI-cache botsen");
+  assert.equal(new URL(a).searchParams.get("__wiw_cache"),"v1","forecast behoudt zijn bestaande cacheschema");
   assert.match(a,/lat=52\.370/);
   assert.match(a,/lon=4\.895/);
 }
@@ -249,24 +250,82 @@ async function run(context,route,fn){
 }
 
 {
-  const routes = { waarschuwingen, neerslag, plaatsnaam };
-  for (const [route, handler] of Object.entries(routes)) {
+  const routes = [
+    ["waarschuwingen", waarschuwingen, ["lat", "lon", "land", "taal"]],
+    ["neerslag", neerslag, ["lat", "lon", "land"]],
+    ["plaatsnaam", plaatsnaam, ["lat", "lon"]]
+  ];
+  const basis = { lat: "52.37", lon: "4.89", land: "NL", taal: "en" };
+  for (const [route, handler, velden] of routes) {
     const cache = new MemoryCache();
-    const url = new URL(`/api/${route}?lat=52.37&lon=4.89`, BASE);
+    const url = new URL(`/api/${route}`, BASE);
+    for (const veld of velden) url.searchParams.set(veld, basis[veld]);
     const sleutel = canoniekeCacheUrl(new Request(url), route);
     assert.equal(new URL(sleutel).searchParams.get("__wiw_cache"), "v2");
     await cache.put(new Request(sleutel), jsonResponse({ test: true }));
-    url.searchParams.append("lat", "52.37");
 
-    for (const method of ["GET", "HEAD"]) {
-      const response = await handler({ request: new Request(url, { method }), cache, env: {} });
-      assert.equal(response.status, 400, route);
-      assert.equal(response.headers.get("Cache-Control"), "private, no-store");
-      if (method === "HEAD") assert.equal(await response.text(), "");
+    for (const veld of velden) {
+      const aanvraag = new URL(url);
+      aanvraag.searchParams.append(veld, basis[veld]);
+      for (const method of ["GET", "HEAD"]) {
+        const label = `${route} ${method}, dubbel veld ${veld}`;
+        const response = await handler({ request: new Request(aanvraag, { method }), cache, env: {} });
+        assert.equal(response.status, 400, label);
+        assert.equal(response.headers.get("Cache-Control"), "private, no-store", label);
+        assert.equal(cache.matches, 0, label);
+        assert.equal(cache.puts, 1, label);
+        if (method === "HEAD") assert.equal(await response.text(), "", label);
+      }
     }
-    assert.equal(cache.matches, 0, route);
-    assert.equal(cache.puts, 1, route);
   }
+}
+
+{
+  const cache = new MemoryCache();
+  const situaties = [
+    { land: "NL", taal: "nl" },
+    { land: "NL", taal: "en" },
+    { land: "BE", taal: "nl" },
+    { land: "BE", taal: "en" }
+  ];
+
+  for (const status of ["MISS", "HIT"]) {
+    for (const situatie of situaties) {
+      const { land, taal } = situatie;
+      const request = new Request(`${BASE}/api/waarschuwingen?lat=52.37&lon=4.89&land=${land}&taal=${taal}`);
+      const response = await run({ request, cache }, "waarschuwingen", async (_requestId, query) => {
+        assert.equal(status, "MISS", "een warme cache mag de handler niet aanroepen");
+        return jsonResponse({ dekking: true, land: query.land, lijst: [{ titel: `${query.land}/${query.taal}` }] });
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("x-wiw-edge-cache"), status, `${land}/${taal}`);
+      const body = await response.json();
+      assert.equal(body.land, land);
+      assert.equal(body.lijst[0].titel, `${land}/${taal}`);
+    }
+  }
+  assert.equal(cache.puts, situaties.length);
+}
+
+{
+  const cache = new MemoryCache();
+  for (const status of ["MISS", "HIT"]) {
+    for (const land of ["NL", "DE"]) {
+      const request = new Request(`${BASE}/api/neerslag?lat=52.37&lon=4.89&land=${land}`);
+      const response = await run({ request, cache }, "neerslag", async (_requestId, query) => {
+        assert.equal(status, "MISS", "een warme cache mag de handler niet aanroepen");
+        return jsonResponse(query.land === "NL"
+          ? { beschikbaar: true, provider: "knmi" }
+          : { beschikbaar: false, provider: null, reden: "geen actuele neerslagprovider voor deze locatie" });
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("x-wiw-edge-cache"), status, land);
+      const body = await response.json();
+      assert.equal(body.beschikbaar, land === "NL");
+      assert.equal(body.provider, land === "NL" ? "knmi" : null);
+    }
+  }
+  assert.equal(cache.puts, 2);
 }
 
 console.log("Cloudflare edge-cache regressies: ok");
