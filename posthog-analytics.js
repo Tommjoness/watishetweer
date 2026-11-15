@@ -14,7 +14,7 @@
   /* AFMELDING PER APPARAAT. Wie zelf kiest om statistieken op dit apparaat uit
      te zetten (knop op /privacy, of eenmalig ?analytics=uit), krijgt die keuze
      als enige waarde in localStorage bewaard. Zolang die vlag staat, start
-     niets: geen PostHog, geen GA4-banner en geen GA4. ?analytics=aan of de knop
+     niets: geen PostHog, geen GA4-banner en geen GA4. Alleen de privacyknop
      heft de afmelding weer op. De parameter wordt direct uit de adresbalk
      gehaald, zodat een gedeelde link niemand anders afmeldt. */
   const AFMELD_KEY="weerbriefing.analytics.uit.v1";
@@ -46,7 +46,7 @@
     const adres=new URL(location.href);
     const keuze=adres.searchParams.get("analytics");
     if(keuze==="uit"||keuze==="aan"){
-      zetAfmelding(keuze==="uit");
+      if(keuze==="uit")zetAfmelding(true);
       adres.searchParams.delete("analytics");
       if(window.history&&typeof history.replaceState==="function")history.replaceState(history.state,"",adres.pathname+adres.search+adres.hash);
     }

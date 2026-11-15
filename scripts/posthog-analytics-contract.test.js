@@ -186,21 +186,22 @@ function draai(href,opslag,opties={}){
   const verzonden=[],vervangen=[],payloads=[],vensterEvents={};
   const url=new URL(href);
   const knop={textContent:"",hidden:false,onclick:null},status={textContent:""},ga4Knop={textContent:"",hidden:false},ga4Status={textContent:""};
+  const scripts=[];
   const selectors={"[data-analytics-device-toggle]":knop,"[data-analytics-device-status]":status,"[data-ga4-consent-toggle]":ga4Knop,"[data-ga4-consent-status]":ga4Status};
   const fout=()=>{throw new Error("opslag geblokkeerd");};
   const localStorage=opties.opslagFout?{getItem:fout,setItem:fout,removeItem:fout}:{getItem:k=>opslag.has(k)?opslag.get(k):null,setItem:(k,v)=>opslag.set(k,String(v)),removeItem:k=>opslag.delete(k)};
-  const document={readyState:"complete",referrer:"",title:"t",cookie:"",documentElement:{lang:opties.lang||"nl"},head:{appendChild(){}},body:{appendChild(){}},
+  const document={readyState:"complete",referrer:"",title:"t",cookie:"",documentElement:{lang:opties.lang||"nl"},head:{appendChild:s=>scripts.push(s.src)},body:{appendChild(){}},
     getElementById:()=>null,querySelector:s=>selectors[s]||null,createElement:()=>({setAttribute(){},addEventListener(){},dataset:{},style:{}}),addEventListener(){}};
   const window={innerWidth:1200,matchMedia:()=>({matches:false}),addEventListener:(naam,handler)=>{vensterEvents[naam]=handler;}};
   const context={window,document,localStorage,URL,JSON,Object,Set,Math,Number,String,Array,Date:opties.klok||Date,Uint32Array,
-    navigator:{userAgent:"Mozilla/5.0 (Macintosh) Safari/605.1.15",webdriver:false},
+    navigator:{userAgent:"Mozilla/5.0 (Macintosh) Safari/605.1.15",webdriver:false,globalPrivacyControl:opties.gpc,doNotTrack:opties.dnt},
     location:{protocol:url.protocol,hostname:url.hostname,href:url.href,origin:url.origin,pathname:url.pathname,reload(){}},
     history:{state:null,replaceState:(st,t,u)=>vervangen.push(u)},
     fetch:(u,o)=>{const b=JSON.parse(o.body);verzonden.push(b.event);payloads.push(b);return {catch(){}};},
     setTimeout:()=>0,globalThis:{}};
   window.history=context.history;
   vm.runInNewContext(analytics,context);
-  return {verzonden,vervangen,payloads,knop,status,ga4Knop,ga4Status,installeerApp:()=>vensterEvents.appinstalled?.()};
+  return {verzonden,vervangen,payloads,scripts,knop,status,ga4Knop,ga4Status,installeerApp:()=>vensterEvents.appinstalled?.()};
 }
 const opslag=new Map();
 let r=draai("https://www.watishetweer.nl/weer/almere/?analytics=uit&x=1#top",opslag);
@@ -215,7 +216,13 @@ r=draai("https://www.watishetweer.nl/",opslag);
 assert.deepEqual(r.verzonden,[],"afmelding blijft bij een volgend bezoek gelden");
 assert.deepEqual(r.vervangen,[],"zonder parameter wordt de adresbalk niet aangepast");
 r=draai("https://www.watishetweer.nl/?analytics=aan",opslag);
-assert(!opslag.has("weerbriefing.analytics.uit.v1"),"?analytics=aan heft de afmelding op");
+assert.equal(opslag.get("weerbriefing.analytics.uit.v1"),"1","navigatie kan de afmelding niet opheffen");
+assert.deepEqual(r.verzonden,[]);
+assert.deepEqual(r.scripts,[]);
+assert.deepEqual(r.vervangen,["/"]);
+r.knop.onclick();
+r=draai("https://www.watishetweer.nl/",opslag);
+assert(!opslag.has("weerbriefing.analytics.uit.v1"),"de expliciete privacyknop heft de afmelding op");
 assert.deepEqual(r.verzonden,["$pageview"],"na opheffen telt de paginaweergave weer");
 assert(r.knop.textContent.includes("uitzetten")&&r.status.textContent.includes("staan de statistieken aan"),"privacyknop toont de actieve toestand");
 r=draai("https://www.watishetweer.nl/?analytics=iets",opslag);
@@ -286,11 +293,32 @@ const tabVoorAfmelden=openTab();
 draai("https://watishetweer.nl/?analytics=uit",gedeeld,{klok});
 tabVoorAfmelden.installeerApp();
 assert.deepEqual(tabVoorAfmelden.verzonden,["$pageview"],"afmelding in een ander tabblad blokkeert verzending");
-const opnieuw=draai("https://watishetweer.nl/?analytics=aan",gedeeld,{klok});
+const navTab=draai("https://watishetweer.nl/?analytics=aan",gedeeld,{klok});
+assert.deepEqual(navTab.verzonden,[]);
+tabVoorAfmelden.installeerApp();
+assert.deepEqual(tabVoorAfmelden.verzonden,["$pageview"],"navigatie hervat ook geen meting in een bestaand tabblad");
+navTab.knop.onclick();
+const opnieuw=openTab();
 const nieuweId=opnieuw.payloads[0].distinct_id;
 assert.notEqual(nieuweId,idNaWissen,"opnieuw inschakelen maakt een nieuwe bezoekers-ID");
 tabVoorAfmelden.installeerApp();
 assert.equal(tabVoorAfmelden.payloads[1].distinct_id,nieuweId,"open tab hergebruikt na inschakelen de nieuwe ID");
+
+for(const keuze of ["granted","denied"]){
+  const bewaard=new Map([["weerbriefing.analytics.uit.v1","1"],["weerbriefing.ga4.consent.v1",keuze]]);
+  const vertrek=draai("https://watishetweer.nl/?analytics=aan",bewaard);
+  assert.deepEqual(vertrek.verzonden,[]);
+  assert.deepEqual(vertrek.scripts,[]);
+  vertrek.knop.onclick();
+  const vervolg=draai("https://watishetweer.nl/",bewaard);
+  assert.equal(vervolg.scripts.some(src=>src.includes("googletagmanager.com")),keuze==="granted");
+}
+for(const opties of [{gpc:true},{dnt:"1"}]){
+  const bewaard=new Map([["weerbriefing.ga4.consent.v1","granted"]]);
+  const nav=draai("https://watishetweer.nl/?analytics=aan",bewaard,opties);
+  assert.deepEqual(nav.verzonden,[]);
+  assert.deepEqual(nav.scripts,[]);
+}
 
 const privacy=fs.readFileSync(path.join(root,"privacy.html"),"utf8");
 assert(privacy.includes("data-analytics-device-toggle")&&privacy.includes("data-analytics-device-status"),"privacypagina mist de knop om statistieken per apparaat uit te zetten");
