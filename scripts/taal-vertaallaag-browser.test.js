@@ -15,7 +15,7 @@ const TAAL = path.join(__dirname, "..", "taal");
 const bron = ["vertaalkern.js", "eenheden.js", "vertaallaag.js"].map(f => fs.readFileSync(path.join(TAAL, f), "utf8")).join("\n;\n");
 
 const woordenboek = `window.WeatherNowWoordenboekEn = {
-  exact: { "Neerslag": "Precipitation", "Droog": "Dry", "Zoek een plaats": "Search for a place", "Weer vandaag": "Weather today", "Morgen": "Tomorrow", "Vragen of feedback?": "Questions or feedback?", "Mail naar": "Email", "Mail naar support@watishetweer.nl": "Email support@watishetweer.nl" },
+  exact: { "Beschrijving van de pagina.": "Description of the page.", "Deeltitel": "Share title", "Neerslag": "Precipitation", "Droog": "Dry", "Zoek een plaats": "Search for a place", "Weer vandaag": "Weather today", "Morgen": "Tomorrow", "Vragen of feedback?": "Questions or feedback?", "Mail naar": "Email", "Mail naar support@watishetweer.nl": "Email support@watishetweer.nl" },
   patronen: [
     [/^Vannacht koelt het af naar ongeveer (\\d+) graden\\.$/, (m) => "Tonight it cools to about " + m[1] + " degrees."],
     [/^Deel het weer voor (.+)$/, (m) => "Share the weather for " + m[1]],
@@ -25,7 +25,11 @@ const woordenboek = `window.WeatherNowWoordenboekEn = {
   eigennamen: ["Almere"]
 };`;
 
-const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Weer vandaag</title></head><body>
+const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Weer vandaag</title>
+<meta name="description" content="Beschrijving van de pagina."><meta property="og:title" content="Deeltitel"><meta property="og:description" content="Beschrijving van de pagina.">
+<meta name="twitter:title" content="Deeltitel"><meta name="twitter:description" content="Beschrijving van de pagina.">
+<meta name="robots" content="Neerslag"><meta property="og:site_name" content="Neerslag"><link rel="canonical" href="https://watishetweer.nl/">
+<script type="application/ld+json">{"name":"Neerslag"}</script></head><body>
 <h2 id="kop">Neerslag</h2>
 <p id="zin">Vannacht koelt het af naar ongeveer <b id="vet">12 graden</b>.</p>
 <div id="tegel"><span>Neerslag</span><span>0,4 mm</span></div>
@@ -137,7 +141,29 @@ const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>
   });
   assert(duur < 2000, `heen-en-weer schrijven wordt geremd (duurde ${Math.round(duur)} ms)`);
 
+  /* Metadata in de head: alleen description, og:title, og:description en twitter:*; de rest blijft staan. */
+  const metaLees = () => page.evaluate(() => {
+    const c = s => document.querySelector(s).getAttribute("content");
+    return { d: c('meta[name="description"]'), ogt: c('meta[property="og:title"]'), ogd: c('meta[property="og:description"]'), twt: c('meta[name="twitter:title"]'), twd: c('meta[name="twitter:description"]'),
+      robots: c('meta[name="robots"]'), site: c('meta[property="og:site_name"]'), canonical: document.querySelector('link[rel="canonical"]').getAttribute("href"),
+      ld: document.querySelector('script[type="application/ld+json"]').textContent, ontbreekt: [...window.__WIW_TAAL_ONTBREEKT__] };
+  });
+  let mr = await metaLees();
+  assert.deepEqual([mr.d, mr.ogt, mr.ogd, mr.twt, mr.twd], ["Description of the page.", "Share title", "Description of the page.", "Share title", "Description of the page."], "beschrijvende metadata wordt vertaald");
+  assert.deepEqual([mr.robots, mr.site, mr.canonical, mr.ld], ["Neerslag", "Neerslag", "https://watishetweer.nl/", '{"name":"Neerslag"}'], "andere metatags, canonical en JSON-LD blijven onaangeroerd");
+  /* De app zet de Nederlandse tekst terug (zoals herstelRouteSeo) of voegt een tag toe zonder vertaling. */
+  await page.evaluate(() => {
+    document.querySelector('meta[name="description"]').setAttribute("content", "Beschrijving van de pagina.");
+    const m = document.createElement("meta"); m.setAttribute("property", "og:description"); m.setAttribute("content", "Geen vertaling voor deze beschrijving."); m.id = "extra"; document.head.appendChild(m);
+  });
+  await page.waitForTimeout(50);
+  mr = await metaLees();
+  const extra = await page.evaluate(() => document.getElementById("extra").getAttribute("content"));
+  assert.equal(mr.d, "Description of the page.", "teruggezette Nederlandse metadata wordt opnieuw vertaald");
+  assert.equal(extra, "Geen vertaling voor deze beschrijving.", "metadata zonder vertaling blijft heel en Nederlands");
+  assert(mr.ontbreekt.includes("Geen vertaling voor deze beschrijving."), "metadata zonder vertaling wordt gemeld aan de taalbewaker");
+
   assert.deepEqual(fouten, [], "geen paginafouten");
   await browser.close();
-  console.log("Vertaallaag-browsertest geslaagd: zinsblokken met opmaak, losse labels, attributen, titel, latere updates, getallen, translate=no en lusrem.");
+  console.log("Vertaallaag-browsertest geslaagd: zinsblokken met opmaak, losse labels, attributen, titel, metadata in de head, latere updates, getallen, translate=no en lusrem.");
 })().catch(e => { console.error(e); process.exit(1); });

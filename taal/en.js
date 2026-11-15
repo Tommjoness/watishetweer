@@ -636,6 +636,11 @@
     "Vannacht blijft de temperatuur ongeveer gelijk.": "Tonight the temperature stays about the same.",
 
     /* Nachtzicht */
+    /* Alleen de officiële Dark Sky Park-informatie voor Lauwersmeer. */
+    "Bron:": "Source:",
+    "Waar kun je sterren kijken in Nationaal Park Lauwersmeer?": "Where can you go stargazing in Lauwersmeer National Park?",
+    "Nationaal Park Lauwersmeer is sinds oktober 2016 officieel erkend als Dark Sky Park. Bij helder weer en weinig storende verlichting kun je er veel sterren zien en soms ook de Melkweg. De parkorganisatie noemt drie geschikte plekken: Activiteitencentrum Lauwersnest, hemelplatform Achter de Zwarten bij Suyderoogh en hemelplatform Vlinderbalg aan de Strandweg.": "Lauwersmeer National Park has been officially recognised as a Dark Sky Park since October 2016. On a clear night, away from intrusive lighting, you can see many stars and sometimes the Milky Way. The park organisation recommends three locations: Lauwersnest Visitor Centre, the Achter de Zwarten sky-viewing platform near Suyderoogh, and the Vlinderbalg platform on Strandweg.",
+    "Op de wegen en paden gelden volgens de parkorganisatie 's nachts in beginsel dezelfde toegangsregels als overdag; militair oefenterrein Marnewaard is uitgezonderd. Controleer vóór je bezoek de actuele informatie van het park en blijf op toegankelijke routes. De verwachting en lichtvervuilingsklasse hierboven gelden voor een representatief punt in het park; plaatselijke omstandigheden kunnen afwijken.": "According to the park organisation, the usual rules for walking on roads and paths also apply at night, except in the Marnewaard military training area. Check the park's current visitor information before travelling and stay on accessible routes. The forecast and light pollution category above refer to a representative point in the park; conditions may differ at your exact viewing location.",
     "Hoe goed je 's nachts de sterren kunt zien, hangt af van bewolking, zicht, mist, neerslag, vocht, wind en maanlicht.": "How well you can see the stars at night depends on cloud, visibility, fog, precipitation, humidity, wind and moonlight.",
     "Globale zichtscore op basis van de huidige verwachting": "Approximate stargazing score based on the current forecast",
     "Voorlopige zichtscore op basis van de huidige verwachting": "Provisional stargazing score based on the current forecast",
@@ -721,6 +726,35 @@
     /* Laden en fouten */
     "Weer vandaag en 7-daagse verwachting | watishetweer.nl": "Weather today and 7-day forecast | watishetweer.nl",
     "Het weer vandaag, morgen en per uur | watishetweer.nl": "The weather today, tomorrow and by the hour | watishetweer.nl",
+    /* Metadata in de head (description, og:title, og:description, twitter:*). Alleen weergave in de browser:
+       de HTML die de server levert blijft Nederlands (geen aparte Engelse URL). */
+    "Het actuele weer voor elke plek, in Nederland en wereldwijd: hoeveel graden het nu is, regen in de komende uren, het weer per uur, morgen en de 7-daagse verwachting.":
+      "The current weather for any place, in the Netherlands and worldwide: how warm it is now, rain over the coming hours, the hourly weather, tomorrow and the 7-day forecast.",
+    "Bekijk het actuele weer en de 7-daagse verwachting voor grote plaatsen in Nederland.": "See the current weather and the 7-day forecast for large places in the Netherlands.",
+    "Kies een plaats voor neerslag, lokale tijden, luchtkwaliteit en nachtzicht.": "Choose a place for precipitation, local times, air quality and stargazing.",
+    "Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt, welke bronnen worden gebruikt en hoe je de informatie moet lezen.":
+      "Read how watishetweer.nl brings together current weather information and model forecasts, which sources are used and how to read the information.",
+    "Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt en welke bronnen worden gebruikt.":
+      "Read how watishetweer.nl brings together current weather information and model forecasts, and which sources are used.",
+    "Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag, bezoekstatistieken en externe databronnen.":
+      "Read how watishetweer.nl handles location data, local storage, visitor statistics and external data sources.",
+    "Sterren kijken in Nederland: nationale parken": "Stargazing in the Netherlands: national parks",
+    "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.":
+      "Compare estimated light pollution and tonight's conditions in selected Dutch national parks.",
+    "Indicatie per nacht met de beste periode, bewolking per uur, de maan en de lichtvervuiling.":
+      "A night-by-night indication with the best period, hourly cloud cover, the moon and light pollution.",
+    "De maan vandaag: fase, opkomst en ondergang": "The moon today: phase, moonrise and moonset",
+    "Welke maanfase is het vandaag, hoeveel procent is de maan verlicht en wanneer komt hij op en gaat hij onder?":
+      "What is today's moon phase, how much of the moon is lit and when does it rise and set?",
+    "Met de datums van de volgende nieuwe en volle maan.": "With the dates of the next new and full moon.",
+    "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
+      "Rain, sunshine and temperature per day in seven large places, with the holiday dates.",
+    "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
+      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates.",
+    "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
+      "Rain, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
+    "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
+      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
     "Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.": "See the current weather, precipitation for the coming hours, the 7-day forecast, air quality and stargazing conditions for places worldwide.",
     "Op een later moment": "At a later time",
     "op een later moment": "at a later time",
@@ -761,6 +795,11 @@
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
+    /* Witte kerst: KNMI-definitie en historische metingen (2026). */
+    "Waarom is sneeuw met kerst niet altijd een officiële witte kerst?": "Why does snow at Christmas not always count as an official white Christmas?",
+    "Een paar sneeuwvlokken tijdens kerst zijn niet genoeg. Voor een officiële witte kerst moet in De Bilt op zowel 25 als 26 december om 09:00 uur een gesloten sneeuwdek liggen. Elders in Nederland kan het wit zijn terwijl aan die landelijke definitie niet wordt voldaan.": "A few snowflakes at Christmas are not enough. For an official white Christmas in the Netherlands, there must be continuous snow cover in De Bilt at 09:00 on both 25 and 26 December. Other parts of the country can be snowy without meeting this national definition.",
+    "Wanneer hadden we voor het laatst een witte kerst?": "When was the last official white Christmas?",
+    "Volgens het KNMI waren er sinds 1901 acht officiële witte kersten: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010. De laatste twee volgden dus direct op elkaar. In De Bilt lag er in 2009 op eerste kerstdag 9 centimeter sneeuw en op tweede kerstdag 4 centimeter; in 2010 op beide dagen 5 centimeter.": "According to KNMI, there have been eight official white Christmases since 1901: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 and 2010. The most recent two happened in consecutive years. In De Bilt, snow depth was 9 centimetres on Christmas Day and 4 centimetres on Boxing Day in 2009, and 5 centimetres on both days in 2010.",
     "Bron: KNMI": "Source: KNMI",
     "Het weer voor jouw plaats": "The weather for your location",
     "jouw plaats": "your location",
@@ -874,10 +913,10 @@
     "Maanfoto: NASA's Scientific Visualization Studio.": "Moon photo: NASA's Scientific Visualization Studio.",
     "Sterren kijken": "Stargazing",
     "Sterren kijken in Nederland": "Stargazing in the Netherlands",
-    "Sterren kijken in Nederland: de donkerste plekken | watishetweer.nl": "Stargazing in the Netherlands: the darkest places | watishetweer.nl",
+    "Sterren kijken in Nederland: nationale parken | watishetweer.nl": "Stargazing in the Netherlands: national parks | watishetweer.nl",
     "Waar het donker is en hoe de komende nachten worden, staat op Sterren kijken in Nederland.": "Where it is dark and what the coming nights will be like is on Stargazing in the Netherlands.",
-    "De Nationale Parken behoren tot de donkerste plekken van Nederland.": "The National Parks are among the darkest places in the Netherlands.",
-    "Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht.": "They are listed below, darkest first, with the indication for tonight.",
+    "De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog.": "Parks are grouped by estimated light pollution, from low to high.",
+    "Binnen iedere categorie staan ze op alfabetische volgorde.": "Within each category, parks are listed in alphabetical order.",
     "Kies een park voor de komende nachten en de bewolking per uur.": "Choose a park for the coming nights and the hourly cloud cover.",
     "De verwachting voor vannacht wordt geladen.": "Loading tonight's forecast.",
     "De verwachting voor vannacht kon niet worden geladen.": "Tonight's forecast could not be loaded.",
@@ -1054,6 +1093,20 @@
   const D = "(ma|di|wo|do|vr|za|zo)";       // dag kort
 
   const patronen = [
+    /* Metadata in de head (zie de exacte zinnen hierboven): teksten met plaats, jaar of datum. */
+    [/^Actuele temperatuur en het weer in (.+) vandaag, morgen en per uur: hoeveel graden het nu is, regen in de komende uren en de 7-daagse verwachting\.$/,
+      (m) => `Current temperature and the weather in ${plaats(m[1])} today, tomorrow and by the hour: how warm it is now, rain over the coming hours and the 7-day forecast.`],
+    [/^Hoe wordt het weer in de (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4})\?$/, (m) => `What will the weather be like during the ${m[2]} ${VAKANTIE[m[1]]}?`],
+    [/^Weer (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}): regen, (zon|sneeuw) en temperatuur per dag$/, (m) => `${VakantieKop[m[1]]} weather ${m[2]}: rain, ${m[3] === "zon" ? "sunshine" : "snow"} and temperature per day`],
+    [/^Hoe wordt het weer met oud en nieuw (\d{4})\?$/, (m) => `What will the weather be like on New Year's Eve ${m[1]}?`],
+    [/^Vanaf (\d{1,2}) december staat hier de verwachting voor neerslag, wind en mist rond middernacht in zeven grote plaatsen in Nederland\.$/,
+      (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven large places in the Netherlands.`],
+    [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight`],
+    [/^Wordt het een witte kerst in (\d{4})\?$/, (m) => `Will it be a white Christmas in ${m[1]}?`],
+    [/^Vanaf (\d{1,2}) december staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland\.$/,
+      (m) => `From ${m[1]} December, this page shows the forecast for snow and temperature at Christmas, for De Bilt and large places in the Netherlands.`],
+    [/^Witte kerst (\d{4}): kans op sneeuw met kerst$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas`],
+    [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
        achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
        zonder achtervoegsel wordt vertaald en het Engelse achtervoegsel komt weer achter de tijd. */
