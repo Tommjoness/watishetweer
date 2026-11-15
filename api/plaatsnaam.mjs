@@ -1,3 +1,4 @@
+import { leesLocatieQuery } from "../lib/locatie-api-query.mjs";
 import legacyHandler from "../lib/plaatsnaam.cjs";
 
 function methodeNietToegestaan() {
@@ -13,12 +14,13 @@ function methodeNietToegestaan() {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, locatieQuery) {
     const method = String(request.method || "GET").toUpperCase();
     if (method !== "GET" && method !== "HEAD") return methodeNietToegestaan();
 
-    const url = new URL(request.url);
-    const query = Object.fromEntries(url.searchParams.entries());
+    const query = (locatieQuery === undefined
+      ? leesLocatieQuery(new URL(request.url), "plaatsnaam")
+      : locatieQuery) || {};
     let statusCode = 200;
     let body = null;
     let gedegradeerd = false;

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { canoniekeCacheUrl, metEdgeCache, _intern } from "../lib/cloudflare-edge-cache.mjs";
+import { onRequest as waarschuwingen } from "../functions/api/waarschuwingen.js";
+import { onRequest as neerslag } from "../functions/api/neerslag.js";
+import { onRequest as plaatsnaam } from "../functions/api/plaatsnaam.js";
 import knmiNeerslag from "../lib/knmi-neerslag.cjs";
 
 const knmiIntern = knmiNeerslag._intern;
@@ -243,6 +246,27 @@ async function run(context,route,fn){
 
 {
   assert.equal(_intern.edgeTtl(jsonResponse({},"s-maxage=999999, stale-while-revalidate=1")),86400,"cache-TTL is defensief begrensd");
+}
+
+{
+  const routes = { waarschuwingen, neerslag, plaatsnaam };
+  for (const [route, handler] of Object.entries(routes)) {
+    const cache = new MemoryCache();
+    const url = new URL(`/api/${route}?lat=52.37&lon=4.89`, BASE);
+    const sleutel = canoniekeCacheUrl(new Request(url), route);
+    assert.equal(new URL(sleutel).searchParams.get("__wiw_cache"), "v2");
+    await cache.put(new Request(sleutel), jsonResponse({ test: true }));
+    url.searchParams.append("lat", "52.37");
+
+    for (const method of ["GET", "HEAD"]) {
+      const response = await handler({ request: new Request(url, { method }), cache, env: {} });
+      assert.equal(response.status, 400, route);
+      assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+      if (method === "HEAD") assert.equal(await response.text(), "");
+    }
+    assert.equal(cache.matches, 0, route);
+    assert.equal(cache.puts, 1, route);
+  }
 }
 
 console.log("Cloudflare edge-cache regressies: ok");
