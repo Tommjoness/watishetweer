@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
+const {beschrijfFetchFout}=require("./netwerkdiagnostiek.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
@@ -283,6 +284,7 @@ async function requestedLocationMatrix(browser){
   const haalLiveForecast=async (url,loc)=>{
     let laatsteFout=null;
     for(let poging=1;poging<=3;poging++){
+      const begin=Date.now();
       try{
         const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-pre-sale-location-matrix/1.0"},signal:AbortSignal.timeout(15000)});
         if(!response.ok)throw new Error(`HTTP ${response.status}`);
@@ -290,7 +292,7 @@ async function requestedLocationMatrix(browser){
         if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
         return {bron,poging};
       }catch(e){
-        laatsteFout=String(e&&e.message||e);
+        laatsteFout=beschrijfFetchFout(e,Date.now()-begin);
         if(poging<3)await slaap(500*poging);
       }
     }
