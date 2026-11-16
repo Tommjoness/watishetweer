@@ -153,7 +153,7 @@ async function testPlaceholders(browser,root){
 
 server.listen(0,"127.0.0.1",async()=>{
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   try{
     await testNormaal(browser,root);
     await testStoring503(browser,root);
