@@ -45,14 +45,21 @@ async function chromiumVenster(page){
 async function ready(page,timeout=20000){
   await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready",null,{timeout});
 }
+/* Alleen echte weerdata is een geldig uitgangspunt. De statische HTML draagt al
+   aria-label="Plaats" en #t="--", en de foutpagina zonder data maakt #app zichtbaar
+   met data-zonder-data maar zonder weerdata. Die foutpagina faalt direct, zodat
+   openWeather() zijn begrensde pogingen en backoff gebruikt. */
+const GENERIEKE_PLAATSLABELS=Object.freeze(["Plaats","Gedeelde locatie"]);
 async function weatherReady(page,timeout=20000){
   await ready(page,timeout);
   await page.waitForSelector("#app",{state:"visible",timeout});
-  await page.waitForFunction(()=>{
+  const uitkomst=await page.waitForFunction(generiek=>{
+    if(document.getElementById("app")?.hasAttribute("data-zonder-data"))return "zonder-data";
     const plaats=(document.getElementById("place")?.getAttribute("aria-label")||"").trim();
     const temp=(document.getElementById("t")?.textContent||"").trim();
-    return !!plaats&&!!temp;
-  },null,{timeout});
+    return !!plaats&&!generiek.includes(plaats)&&/^[\u2212-]?\d+$/.test(temp)?"data":false;
+  },GENERIEKE_PLAATSLABELS,{timeout});
+  if(await uitkomst.jsonValue()==="zonder-data")throw new Error("foutpagina zonder weerdata (data-zonder-data)");
 }
 async function openWeather(page,url,label,{reloadOnly=false}={}){
   let laatsteFout=null,laatsteToestand=null;
@@ -69,7 +76,12 @@ async function openWeather(page,url,label,{reloadOnly=false}={}){
         href:location.href,
         bootstrap:document.documentElement.dataset.appBootstrap||null,
         appVisible:!!document.getElementById("app")&&getComputedStyle(document.getElementById("app")).display!=="none"&&!document.getElementById("app").hasAttribute("data-zonder-data"),
-        status:(document.getElementById("locatie-laadstatus")?.textContent||document.getElementById("state")?.textContent||"").trim()
+        status:(document.getElementById("locatie-laadstatus")?.textContent||document.getElementById("state")?.textContent||"").trim(),
+        statusKlasse:document.getElementById("state")?.className||null,
+        zonderData:!!document.getElementById("app")?.hasAttribute("data-zonder-data"),
+        plaats:(document.getElementById("place")?.getAttribute("aria-label")||"").trim(),
+        kop:[...(document.getElementById("place")?.childNodes||[])].filter(n=>n.nodeType===3).map(n=>n.textContent).join("").trim(),
+        temp:(document.getElementById("t")?.textContent||"").trim()
       })).catch(e=>({evaluatieFout:String(e&&e.message||e).split("\n")[0]}));
       if(poging<3){
         const backoff=NAVIGATION_WEATHER_RETRY_BACKOFF_MS*poging;
@@ -246,7 +258,7 @@ async function maakStaleCache(page,naam){
   },{naam});
 }
 
-(async()=>{
+async function main(){
   const browser=await chromium.launch({headless:HEADLESS});
   try{
     if(NAVIGATION_INITIAL_COOLDOWN_MS>0){
@@ -259,7 +271,7 @@ async function maakStaleCache(page,naam){
       const page=await context.newPage();
       await openWeather(page,ROOT+"/?lat=52.368&lon=4.904&plaats=Amsterdam&land=NL","hard-refresh voor");
       const voor=await snap(page);assertRelease(voor,"hard-refresh voor");
-      assert.equal(voor.plaats,"Amsterdam","hard-refresh uitgangspunt moet Amsterdam zijn");
+      assert.equal(voor.plaats,"Amsterdam",`hard-refresh uitgangspunt moet Amsterdam zijn; getoond=${JSON.stringify(voor.plaats)}`);
       const cdp=await context.newCDPSession(page);
       await cdp.send("Network.enable");
       await cdp.send("Network.setCacheDisabled",{cacheDisabled:true});
@@ -432,4 +444,7 @@ async function maakStaleCache(page,naam){
   }finally{
     await browser.close();
   }
-})().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+}
+
+module.exports={GENERIEKE_PLAATSLABELS,weatherReady,openWeather};
+if(require.main===module)main().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
