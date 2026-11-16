@@ -16,6 +16,7 @@ const {bouw}=require("../data.js");
 
 const OUT=path.join(__dirname,"..","public");
 const HOST="https://watishetweer.nl";
+const EXTERNE_LINK="https://privacy-test.example/";
 const GA4_ID="G-H498VPZ9Z1";
 const types={".html":"text/html; charset=utf-8",".js":"application/javascript",".css":"text/css",".woff2":"font/woff2",".svg":"image/svg+xml",".json":"application/json",".png":"image/png",".webmanifest":"application/manifest+json"};
 function lokaalBestand(pathname){
@@ -40,6 +41,7 @@ async function context(browser,{ga4,taal}={}){
   const posthog=[];
   await ctx.route("**/*",async r=>{
     const req=r.request(),u=new URL(req.url());
+    if(u.href===EXTERNE_LINK)return r.fulfill({contentType:"text/html",body:`<a href="${HOST}/?analytics=aan">Weerbericht</a>`});
     if(u.origin===HOST){
       if(u.pathname.startsWith("/api/")){
         if(u.pathname==="/api/waarschuwingen")return r.fulfill({json:{bron:"test",dekking:true,land:"NL",lijst:[]}});
@@ -93,6 +95,24 @@ const ga4Uit=page=>page.evaluate(id=>({vlag:window["ga-disable-"+id]===true,
       assert.deepEqual(na,[],"na afmelden in een ander tabblad nog PostHog-meldingen: "+na.join(", "));
       const ga=await ga4Uit(A.page);
       assert(ga.vlag&&ga.denied,"Google Analytics in het al geopende tabblad niet uitgeschakeld: "+JSON.stringify(ga));
+
+      const C=await ctx.newPage(),google=[];
+      C.on("request",req=>{
+        if(new URL(req.url()).hostname==="www.googletagmanager.com")google.push(req.url());
+      });
+      await C.goto(EXTERNE_LINK);
+      await C.getByRole("link",{name:"Weerbericht"}).click();
+      await C.waitForURL(u=>u.origin===HOST&&!u.searchParams.has("analytics"));
+      await C.waitForFunction(()=>typeof S!=="undefined"&&S.d&&document.querySelectorAll("#days .row.day").length>=7);
+      const keuze=await C.evaluate(()=>({
+        afmelding:localStorage.getItem("weerbriefing.analytics.uit.v1"),
+        ga4Keuze:localStorage.getItem("weerbriefing.ga4.consent.v1"),
+        ga4Gestart:window.__weatherNowGa4Started===true
+      }));
+      assert.deepEqual(keuze,{afmelding:"1",ga4Keuze:"granted",ga4Gestart:false},"externe navigatie behoudt afmelding en afzonderlijke GA4-keuze");
+      assert.deepEqual(google,[],"externe navigatie laadt geen Google-tag");
+      assert.deepEqual(posthog.slice(voor),[],"externe navigatie hervat PostHog in geen enkel tabblad");
+      assert.deepEqual(await ga4Uit(A.page),ga,"externe navigatie hervat GA4 niet in het al geopende tabblad");
       assert.deepEqual(A.fouten.concat(B.fouten),[],"paginafouten");
       await ctx.close();
     }

@@ -1,3 +1,4 @@
+import { leesLocatieQuery } from "../lib/locatie-api-query.mjs";
 import providerHandler from "../lib/neerslag.cjs";
 
 function methodeNietToegestaan(method) {
@@ -13,12 +14,13 @@ function methodeNietToegestaan(method) {
 }
 
 export default {
-  async fetch(request, env = {}) {
+  async fetch(request, env = {}, locatieQuery) {
     const method = String(request.method || "GET").toUpperCase();
     if (method !== "GET" && method !== "HEAD") return methodeNietToegestaan(method);
 
-    const url = new URL(request.url);
-    const query = Object.fromEntries(url.searchParams.entries());
+    const query = (locatieQuery === undefined
+      ? leesLocatieQuery(new URL(request.url), "neerslag")
+      : locatieQuery) || {};
     let statusCode = 200;
     let body = null;
     let gedegradeerd = false;

@@ -43,7 +43,7 @@ assert.deepEqual(r.aanvragen,[appAdres(parseFloat("52.396"),parseFloat("5.280"))
 assert(r.aanvragen[0].includes("latitude=52.396&longitude=5.28&"),"coördinaten staan zoals de app ze schrijft");
 assert.equal(r.vroeg.url,r.aanvragen[0]);assert.equal(r.vroeg.gebruikt,false);
 r=draaiBootstrap({zoek:"?hier=1",opslag:{lat:52.35,lon:5.265,label:"Almere"}});
-assert.deepEqual(r.aanvragen,[],"?hier=1 wacht op gps; geen vroege aanvraag");
+assert.equal(r.aanvragen.length,1,"de snelkoppeling behoudt de vroege verwachting voor de laatst gekozen plaats");
 r=draaiBootstrap({opslag:{lat:52.35,lon:5.265,label:"Almere",land:"NL"}});
 assert.deepEqual(r.aanvragen,[appAdres(52.35,5.265)],"laatst gekozen plaats zoals ls.get() hem teruggeeft");
 r=draaiBootstrap({});
@@ -59,7 +59,7 @@ assert.equal(standaardPlaats(html),null);
   assert.deepEqual(aanvragen,[appAdres(52.3676,4.9041)],"eerste bezoek: vroege aanvraag voor de standaardplaats, zoals de app");
   const ctx2={...ctx,window:{},location:{search:"?hier=1"}},aanvragen2=[];ctx2.fetch=u=>{aanvragen2.push(u);return Promise.resolve({ok:true});};
   vm.runInNewContext(bronMet,ctx2);
-  assert.deepEqual(aanvragen2,[],"?hier=1 blijft wachten op gps, ook met standaardplaats");
+  assert.deepEqual(aanvragen2,aanvragen,"de snelkoppeling behoudt de normale standaardverwachting");
 }
 r=draaiBootstrap({route:{lat:"x",lon:5,name:"Kapot"},zoek:""});
 assert.deepEqual(r.aanvragen,[],"ongeldige route zonder andere plaats: geen aanvraag");
