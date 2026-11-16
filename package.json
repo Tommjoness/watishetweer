@@ -18,7 +18,10 @@
     "playwright": "1.62.1",
     "playwright-core": "1.62.1",
     "terser": "5.50.0",
-    "wrangler": "4.151.2"
+    "wrangler": "4.153.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "undici": "7.30.2"
+  }
 }
