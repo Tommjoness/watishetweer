@@ -39,9 +39,10 @@ const index=fs.readFileSync(path.join(root,"index.html"),"utf8");
 assert.doesNotMatch(index,/\bfunction logBij\b|\bls\.set\(KEY_LOG\b/,"nieuwe bezoeken mogen geen locatiehistorie opbouwen");
 const migratie=index.split("\n").find(regel=>regel.includes('localStorage.removeItem("weerbriefing.log")'));
 assert(migratie,"oude locatiehistorie moet worden verwijderd");
-const oudeOpslag=new Map([["weerbriefing.log","oud"],["weerbriefing.plaats","gekozen"],["weerbriefing.ga4.consent.v1","denied"]]);
+const behouden=[["weerbriefing.plaats","gekozen"],["weerbriefing.lijst","bewaard"],["weerbriefing.ga4.consent.v1","denied"],["weerbriefing.analytics.uit.v1","1"],["weerbriefing.analytics.id.v1","code"]];
+const oudeOpslag=new Map([["weerbriefing.log","oud"],...behouden]);
 vm.runInNewContext(migratie,{localStorage:{removeItem:key=>oudeOpslag.delete(key)}});
-assert.deepStrictEqual([...oudeOpslag],[["weerbriefing.plaats","gekozen"],["weerbriefing.ga4.consent.v1","denied"]]);
+assert.deepStrictEqual([...oudeOpslag],behouden,"alleen de oude locatiehistorie mag verdwijnen");
 assert.doesNotThrow(()=>vm.runInNewContext(migratie,{localStorage:{removeItem(){throw Error("geblokkeerd");}}}));
 
 function voerAnalyticsUit(opt={}){
