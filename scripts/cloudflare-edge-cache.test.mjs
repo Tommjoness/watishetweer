@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { canoniekeCacheUrl, metEdgeCache, _intern } from "../lib/cloudflare-edge-cache.mjs";
+import { onRequest as waarschuwingen } from "../functions/api/waarschuwingen.js";
+import { onRequest as neerslag } from "../functions/api/neerslag.js";
+import { onRequest as plaatsnaam } from "../functions/api/plaatsnaam.js";
 import knmiNeerslag from "../lib/knmi-neerslag.cjs";
 
 const knmiIntern = knmiNeerslag._intern;
@@ -49,6 +52,7 @@ async function run(context,route,fn){
   const c=canoniekeCacheUrl(new Request(BASE+"/api/forecast?lon=4.8956&lat=52.3706"),"forecast");
   assert.equal(a,b,"WeatherAPI-punten binnen dezelfde driedecimalencel horen één edge-cacheobject te delen");
   assert.notEqual(a,c,"een andere driedecimalencel mag niet met de WeatherAPI-cache botsen");
+  assert.equal(new URL(a).searchParams.get("__wiw_cache"),"v1","forecast behoudt zijn bestaande cacheschema");
   assert.match(a,/lat=52\.370/);
   assert.match(a,/lon=4\.895/);
 }
@@ -243,6 +247,85 @@ async function run(context,route,fn){
 
 {
   assert.equal(_intern.edgeTtl(jsonResponse({},"s-maxage=999999, stale-while-revalidate=1")),86400,"cache-TTL is defensief begrensd");
+}
+
+{
+  const routes = [
+    ["waarschuwingen", waarschuwingen, ["lat", "lon", "land", "taal"]],
+    ["neerslag", neerslag, ["lat", "lon", "land"]],
+    ["plaatsnaam", plaatsnaam, ["lat", "lon"]]
+  ];
+  const basis = { lat: "52.37", lon: "4.89", land: "NL", taal: "en" };
+  for (const [route, handler, velden] of routes) {
+    const cache = new MemoryCache();
+    const url = new URL(`/api/${route}`, BASE);
+    for (const veld of velden) url.searchParams.set(veld, basis[veld]);
+    const sleutel = canoniekeCacheUrl(new Request(url), route);
+    assert.equal(new URL(sleutel).searchParams.get("__wiw_cache"), "v2");
+    await cache.put(new Request(sleutel), jsonResponse({ test: true }));
+
+    for (const veld of velden) {
+      const aanvraag = new URL(url);
+      aanvraag.searchParams.append(veld, basis[veld]);
+      for (const method of ["GET", "HEAD"]) {
+        const label = `${route} ${method}, dubbel veld ${veld}`;
+        const response = await handler({ request: new Request(aanvraag, { method }), cache, env: {} });
+        assert.equal(response.status, 400, label);
+        assert.equal(response.headers.get("Cache-Control"), "private, no-store", label);
+        assert.equal(cache.matches, 0, label);
+        assert.equal(cache.puts, 1, label);
+        if (method === "HEAD") assert.equal(await response.text(), "", label);
+      }
+    }
+  }
+}
+
+{
+  const cache = new MemoryCache();
+  const situaties = [
+    { land: "NL", taal: "nl" },
+    { land: "NL", taal: "en" },
+    { land: "BE", taal: "nl" },
+    { land: "BE", taal: "en" }
+  ];
+
+  for (const status of ["MISS", "HIT"]) {
+    for (const situatie of situaties) {
+      const { land, taal } = situatie;
+      const request = new Request(`${BASE}/api/waarschuwingen?lat=52.37&lon=4.89&land=${land}&taal=${taal}`);
+      const response = await run({ request, cache }, "waarschuwingen", async (_requestId, query) => {
+        assert.equal(status, "MISS", "een warme cache mag de handler niet aanroepen");
+        return jsonResponse({ dekking: true, land: query.land, lijst: [{ titel: `${query.land}/${query.taal}` }] });
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("x-wiw-edge-cache"), status, `${land}/${taal}`);
+      const body = await response.json();
+      assert.equal(body.land, land);
+      assert.equal(body.lijst[0].titel, `${land}/${taal}`);
+    }
+  }
+  assert.equal(cache.puts, situaties.length);
+}
+
+{
+  const cache = new MemoryCache();
+  for (const status of ["MISS", "HIT"]) {
+    for (const land of ["NL", "DE"]) {
+      const request = new Request(`${BASE}/api/neerslag?lat=52.37&lon=4.89&land=${land}`);
+      const response = await run({ request, cache }, "neerslag", async (_requestId, query) => {
+        assert.equal(status, "MISS", "een warme cache mag de handler niet aanroepen");
+        return jsonResponse(query.land === "NL"
+          ? { beschikbaar: true, provider: "knmi" }
+          : { beschikbaar: false, provider: null, reden: "geen actuele neerslagprovider voor deze locatie" });
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("x-wiw-edge-cache"), status, land);
+      const body = await response.json();
+      assert.equal(body.beschikbaar, land === "NL");
+      assert.equal(body.provider, land === "NL" ? "knmi" : null);
+    }
+  }
+  assert.equal(cache.puts, 2);
 }
 
 console.log("Cloudflare edge-cache regressies: ok");

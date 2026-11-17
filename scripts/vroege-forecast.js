@@ -10,7 +10,7 @@ function tel(tekst,zoek){return String(tekst).split(zoek).length-1;}
    load() in de finale, onverkleinde app-runtime (const basis=… en const f=…,
    ná pressure-retirement en alle andere bouwlagen), zodat er één bron
    is; de plaats volgt dezelfde volgorde en dezelfde waarden als de app-start:
-   plaatsroute (Number), gedeelde link (parseFloat), ?hier=1 (niets), laatst
+   plaatsroute (Number), gedeelde link (parseFloat), laatst
    gekozen plaats (JSON uit localStorage). */
 const FORECAST_START='const basis="https://api.open-meteo.com/v1/forecast?latitude="+lat+"&longitude="+lon';
 const FORECAST_EIND="\n  const fmin=basis+";
@@ -47,7 +47,6 @@ try{
     const p=new URLSearchParams(location.search);
     const la=parseFloat(p.get("lat")),lo=parseFloat(p.get("lon"));
     if(!isNaN(la)&&!isNaN(lo)){lat=la;lon=lo;}
-    else if(p.get("hier"))return;
     else{
       let v=null;
       try{const ruw=localStorage.getItem("weerbriefing.plaats");v=ruw?JSON.parse(ruw):null;}catch(e){v=null;}

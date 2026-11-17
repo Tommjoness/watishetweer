@@ -3595,9 +3595,8 @@ let gpsGeneratie=0, gpsBezig=false, gpsGeweigerd=false;
 /**
  * modus bepaalt alleen de zichtbare kant: welke meldingen wel of niet komen.
  * De onderliggende gps-then-grover-dan-reverse-geocoding-procedure is voor
- * alle vier vormen identiek.
+ * alle drie vormen identiek.
  *   "knop"             - de knop zelf: altijd volledige meldingen
- *   "hier"              - url-parameter hier: hetzelfde als de knop
  *   "auto-leeg"          - eerste bezoek zonder eerdere locatie: bij falen een
  *                         duidelijke, doorzoekbare status, nooit Almere
  *   "auto-terugkerend"   - er staat al een geladen locatie: bij falen alleen
@@ -3871,8 +3870,12 @@ function winterBij(){
     return;
   }
 
-  // B. hier=1 in de url: dezelfde procedure als de knop, direct bij het laden
-  if(p.get("hier")){ locatieNu("hier"); return; }
+  // B. De PWA-snelkoppeling markeert de knop. Locatie start pas bij bediening.
+  if(p.has("hier")){
+    const locatieknop=document.getElementById("here");
+    if(locatieknop.disabled) window.addEventListener("weathernow:app-ready",()=>locatieknop.focus(),{once:true});
+    else locatieknop.focus();
+  }
 
   // C. terugkerende gebruiker: laad de laatst gekozen plaats direct. De browser
   //    krijgt geen nieuwe locatievraag totdat de gebruiker zelf "Mijn locatie" kiest.
