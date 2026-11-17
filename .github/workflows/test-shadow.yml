@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           package-manager-cache: false
@@ -55,8 +55,8 @@ jobs:
     env:
       CI_FAMILIE: test
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           package-manager-cache: false
@@ -69,14 +69,14 @@ jobs:
         run: node scripts/ci/run-fase.js schoon
       - name: Resultaat van de bouwfase bewaren
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: resultaat-test-bouw
           path: ci-resultaat/test-bouw.json
           if-no-files-found: error
           retention-days: 3
       - name: Artifact publiceren voor de shards
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: artifact-test
           path: |
@@ -99,13 +99,13 @@ jobs:
     env:
       CI_FAMILIE: test
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           package-manager-cache: false
       - run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: artifact-test
           path: .
@@ -120,7 +120,7 @@ jobs:
           node scripts/ci/run-fase.js schoon
       - name: Resultaat van de shard bewaren
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: resultaat-test-shard-${{ matrix.shard }}
           path: ci-resultaat/test-shard-${{ matrix.shard }}.json
@@ -133,14 +133,14 @@ jobs:
     needs: shadow-plan
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 45
     env:
       CI_FAMILIE: checkpoint
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
       - name: Installeer Playwright-pakket
@@ -160,14 +160,14 @@ jobs:
         run: node scripts/ci/run-fase.js schoon
       - name: Resultaat van de bouwfase bewaren
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: resultaat-checkpoint-bouw
           path: ci-resultaat/checkpoint-bouw.json
           if-no-files-found: error
           retention-days: 3
       - name: Artifact publiceren voor de shards
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: artifact-checkpoint
           path: |
@@ -183,7 +183,7 @@ jobs:
     needs: shadow-checkpoint-bouw
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 45
     strategy:
@@ -193,8 +193,8 @@ jobs:
     env:
       CI_FAMILIE: checkpoint
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
       - name: Installeer Playwright-pakket
@@ -206,7 +206,7 @@ jobs:
           ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
           test -x /usr/local/bin/google-chrome
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: artifact-checkpoint
           path: .
@@ -221,7 +221,7 @@ jobs:
           node scripts/ci/run-fase.js schoon
       - name: Resultaat van de shard bewaren
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: resultaat-checkpoint-shard-${{ matrix.shard }}
           path: ci-resultaat/checkpoint-shard-${{ matrix.shard }}.json
@@ -234,14 +234,14 @@ jobs:
     needs: shadow-checkpoint-bouw
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 30
     env:
       CI_FAMILIE: checkpoint
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
       - name: Installeer Playwright-pakket
@@ -253,7 +253,7 @@ jobs:
           ln -sf "$CHROME_PATH" /usr/local/bin/google-chrome
           test -x /usr/local/bin/google-chrome
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: artifact-checkpoint
           path: .
@@ -290,13 +290,13 @@ jobs:
     env:
       NEEDS_JSON: ${{ toJSON(needs) }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           package-manager-cache: false
       - name: Resultaten van alle jobs ophalen
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: resultaat-*
           path: ci-resultaat

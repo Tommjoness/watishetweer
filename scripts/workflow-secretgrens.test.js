@@ -179,6 +179,18 @@ function controleer(naam, tekst) {
   return f;
 }
 
+/* Leg immutable referenties vast voor acties en containerimages uit de eigen workflows. */
+for (const naam of fs.readdirSync(workflowDir).filter(n => /\.ya?ml$/.test(n))) {
+  const workflow = fs.readFileSync(path.join(workflowDir, naam), "utf8");
+  for (const [regel, actie] of workflow.matchAll(/^[ \t]*(?:-[ \t]+)?uses:[ \t]+([^\s#]+)/gm)) {
+    if (actie.startsWith("./")) continue;
+    assert.match(actie, /@[a-f0-9]{40}$/, `${naam}: actie moet vastgezet zijn: ${regel.trim()}`);
+  }
+  for (const [, image] of workflow.matchAll(/^\s+image: ([^\s#]+)/gm)) {
+    assert.match(image, /@sha256:[a-f0-9]{64}$/, `${naam}: image moet vastgezet zijn: ${image}`);
+  }
+}
+
 /* ---- 1. de echte workflows voldoen aan het contract ---- */
 const bestanden = fs.readdirSync(workflowDir).filter(n => /\.ya?ml$/.test(n));
 assert(bestanden.length >= 10, "workflowmap niet gevonden");
