@@ -1116,6 +1116,8 @@ const ls={
   get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
+/* Ruim het oude, ongebruikte locatiegebonden weerslog uit bestaande profielen op. */
+try{ localStorage.removeItem("weerbriefing.log"); }catch(e){}
 /* Uurselectie (zie het blok "uurselectie" bij scrubKoppel): staat hier, bij S, zodat ook een vroege etmaal-aanroep tijdens het opstarten hem kent. */
 const UURSEL={handmatig:null,plaats:null,programmatisch:false,alleenWeergave:false,gepland:false,huidig:null};
 const UUR_AANDUIDINGEN=new WeakMap();
@@ -1464,7 +1466,6 @@ function tekenAlles(){
   themaToepassen();
   minibarBij();
   waarschuwingen();
-  logBij();
   meters();briefing();etmaal(startIdx,S.bereik);nowcast();dagen();nachten();lucht();stempel();
   nuTimerStart();
   klokTimerStart();
@@ -3140,24 +3141,6 @@ function lucht(){
   el.innerHTML=out;
   el.classList.remove("aq-cols-1","aq-cols-2","aq-cols-3","aq-cols-4");
   el.classList.add("aq-cols-"+Math.max(1,Math.min(4,el.children.length)));
-}
-
-/* ---------- verwachting versus meting ---------- */
-const KEY_LOG="weerbriefing.log";
-function logBij(){
-  if(!S.d||!S.d.daily||!S.d.daily.time[1]) return;
-  const log=ls.get(KEY_LOG,{});
-  const sleutel=S.lat.toFixed(2)+","+S.lon.toFixed(2);
-  const perPlaats=log[sleutel]||{};
-  const datum=S.d.daily.time[1];
-  if(!perPlaats[datum]){
-    perPlaats[datum]={max:S.d.daily.temperature_2m_max[1],min:S.d.daily.temperature_2m_min[1],
-                      mm:S.d.daily.precipitation_sum[1],gemaaktOp:S.d.daily.time[0]};
-    // hoogstens veertien dagen bewaren
-    const datums=Object.keys(perPlaats).sort();
-    while(datums.length>14) delete perPlaats[datums.shift()];
-    log[sleutel]=perPlaats; ls.set(KEY_LOG,log);
-  }
 }
 
 /* ---------- officiele waarschuwingen ---------- */
