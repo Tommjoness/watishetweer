@@ -47,7 +47,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root="http://127.0.0.1:"+server.address().port;
-  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   const regels=[];
   try{
     const gevallen=[
