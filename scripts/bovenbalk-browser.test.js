@@ -8,9 +8,10 @@
      vanaf 901px op het papier boven het vel zonder dat de kop verschuift;
    - maat: tapdoelen minstens 44px (aanraken, tot 900px) of 24px (muis, de
      huisregel), geen afgeknipte tekst, geen overflow, link en keuze op één
-     rij vanaf 375px;
-   - eerste scherm: temperatuur (telefoon) en grafiekkop (desktop) blijven
-     binnen dezelfde grenzen als in first-screen-browser.test.js;
+     rij op iedere breedte;
+   - eerste scherm: temperatuur hoogstens op 380px tot en met 900px (eigenaar
+     18 november; vanaf 360px, de breedtes van die regel) en grafiekkop (desktop) binnen de grens van
+     first-screen-browser.test.js;
    - gedrag: de schakelaar zet echt donker en licht, Auto zet terug, de link
      brengt de kop van Nachtzicht in beeld, toetsenbordvolgorde begint bovenin;
    - leesbaarheid: contrast van de link minstens 4,5:1.
@@ -110,8 +111,9 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         }
         assert.deepEqual(m.geknipt,[],`${label}: tekst in de bovenbalk wordt afgeknipt: ${m.geknipt.join(", ")}`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
-        if(w>=375)assert(Math.abs(m.link.top-m.thema.top)<=2,`${label}: Nachtzicht en de weergavekeuze staan niet op één rij (${Math.round(m.link.top)} tegen ${Math.round(m.thema.top)})`);
-        if(w<=430)assert(m.hero&&m.hero.top<=560,`${label}: temperatuur begint pas op ${m.hero&&Math.round(m.hero.top)}px`);
+        assert(Math.abs(m.link.top-m.thema.top)<=2,`${label}: Nachtzicht en de weergavekeuze staan niet op één rij (${Math.round(m.link.top)} tegen ${Math.round(m.thema.top)})`);
+        /* Eigenaar 18 november: de balk kost op telefoon en tablet één rij; de temperatuur begint dan hoogstens op 380px. */
+        if(w<=900)assert(m.hero&&m.hero.top<=(w>=360?380:560),`${label}: temperatuur begint pas op ${m.hero&&Math.round(m.hero.top)}px`);
         else if(w>=1100)assert(m.chartkop&&m.chartkop.top<=h-100,`${label}: grafiek begint pas op ${m.chartkop&&Math.round(m.chartkop.top)}px (vouw ${h}px)`);
         if(taal==="en"){
           assert(/Stargazing/.test(m.linkTekst),`${label}: Nachtzicht-link niet vertaald: '${m.linkTekst}'`);
@@ -145,7 +147,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         const iN=volgorde.indexOf("wiw-snel-nachtzicht"),iT=volgorde.findIndex(x=>x==="thema-auto"||x==="thema-switch"),iQ=volgorde.indexOf("q");
         assert(iN>=0&&iT>iN&&(iQ<0||iQ>iT),`${label}: toetsenbordvolgorde begint niet met de bovenbalk: ${volgorde.join(" → ")}`);
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
-        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=430?"temperatuur op "+Math.round(m.hero.top)+"px":w>=1100?"grafiekkop op "+Math.round(m.chartkop.top)+"px":"tablet"}, contrast link ${c.toFixed(1)}:1`);
+        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}, contrast link ${c.toFixed(1)}:1`);
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

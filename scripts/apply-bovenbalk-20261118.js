@@ -74,9 +74,8 @@ html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{w
   html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:44px!important}
 }
 @media(max-width:340px){
-  /* Op de smalste telefoons past de keuze niet naast de link: eigen rij, volle breedte. */
-  .${BALK_CLASS} .wiw-weergave-boven{flex:1 1 100%}
-  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:100%!important;min-width:0!important}
+  /* Smalste telefoons: drie vakjes van 44px, zodat link en keuze op één rij blijven. */
+  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:132px!important;min-width:132px!important}
 }
 `;
 
