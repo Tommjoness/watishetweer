@@ -3,10 +3,10 @@
 
 /* Dekkingsbewijs en aggregatie voor de gesharde testketen (P3-4, PR B).
      node scripts/ci/verifieer-dekking.js plan
-         Vooraf: de 276 commando's van `npm test` zitten precies één keer in de bouwfase of in precies één shard; de bouwfase is een
+         Vooraf: de 277 commando's van `npm test` zitten precies één keer in de bouwfase of in precies één shard; de bouwfase is een
          voorvoegsel in de oorspronkelijke volgorde; geen commando ná het laatste muterende commando muteert; alle commando's zijn eenvoudig.
      node scripts/ci/verifieer-dekking.js resultaten <map> [--jobs '{"naam":"success",...}']
-         Achteraf: per testfamily (test, checkpoint) precies één bouwrapport en shards 1..4 aanwezig, alle 276 commando's precies één keer
+         Achteraf: per testfamily (test, checkpoint) precies één bouwrapport en shards 1..4 aanwezig, alle 277 commando's precies één keer
          uitgevoerd, allemaal status 0; en (met --jobs) elke job `success`. Ontbrekende, dubbele, overgeslagen of geannuleerde resultaten zijn rood. */
 
 const fs = require("fs");
@@ -22,7 +22,7 @@ function plan() {
   p.shards.forEach(s => s.indexen.forEach(i => geteld[i]++));
   geteld.forEach((n, i) => { if (n !== 1) problemen.push(`commando #${i} zit ${n} keer in het plan: ${p.alle[i]}`); });
   if (p.bouw.join(",") !== Array.from({ length: p.laatsteMutator + 1 }, (_, i) => i).join(",")) problemen.push("de bouwfase is geen aaneengesloten voorvoegsel van de oorspronkelijke volgorde");
-  if (p.alle.length !== 276) problemen.push(`verwacht 276 commando's, gevonden ${p.alle.length} (de keten is gewijzigd: werk het plan en de verwachting bewust bij)`);
+  if (p.alle.length !== 277) problemen.push(`verwacht 277 commando's, gevonden ${p.alle.length} (de keten is gewijzigd: werk het plan en de verwachting bewust bij)`);
   for (const i of p.shardbaar) if (T.isMutator(p.alle[i])) problemen.push(`muterend commando in een shard: #${i} ${p.alle[i]}`);
   for (const c of p.alle) if (!T.eenvoudig(c)) problemen.push(`geen eenvoudig node-commando: ${c}`);
   const alleShards = p.shards.flatMap(s => s.indexen);
