@@ -1,6 +1,8 @@
 "use strict";
 
 const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
 const {
   DOMAIN,tokenKandidaten,venstersUitOmgeving,periode,bouwQuery,graphql,haalVenster,rapportMarkdown
 }=require("./cloudflare-human-analytics-report.js");
@@ -10,12 +12,23 @@ const {
 
   assert.deepEqual(
     tokenKandidaten({CLOUDFLARE_ANALYTICS_API_TOKEN:" ana ",CLOUDFLARE_DEPLOY_API_TOKEN:" dep "}),
-    [{bron:"dedicated-analytics",token:"ana"},{bron:"deploy-fallback",token:"dep"}]
+    [{bron:"dedicated-analytics",token:"ana"}]
   );
   assert.deepEqual(
     tokenKandidaten({CLOUDFLARE_ANALYTICS_API_TOKEN:"same",CLOUDFLARE_DEPLOY_API_TOKEN:"same"}),
     [{bron:"dedicated-analytics",token:"same"}]
   );
+  assert.deepEqual(tokenKandidaten({CLOUDFLARE_DEPLOY_API_TOKEN:"dep",CLOUDFLARE_API_TOKEN:"legacy"}),[]);
+  assert.deepEqual(tokenKandidaten({CLOUDFLARE_ANALYTICS_API_TOKEN:"   "}),[]);
+
+  const workflow=fs.readFileSync(path.join(__dirname,"..",".github","workflows","cloudflare-human-analytics-report.yml"),"utf8");
+  const rumStep=workflow.split("      - name: Haal Cloudflare RUM op met botfilter")[1]?.split("      - name:")[0];
+  assert.ok(rumStep,"RUM-rapportagestap ontbreekt");
+  assert.match(rumStep,/secrets\.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN/);
+  assert.doesNotMatch(rumStep,/CLOUDFLARE_DEPLOY_API_TOKEN|secrets\.CLOUDFLARE_PRODUCTIE_API_TOKEN/);
+  const syncStep=workflow.split("      - name: Sync read-only analytics naar Pages production runtime")[1];
+  assert.ok(syncStep,"Analytics runtime-sync ontbreekt");
+  assert.match(syncStep,/CLOUDFLARE_API_TOKEN:.*secrets\.CLOUDFLARE_PRODUCTIE_API_TOKEN/);
 
   assert.deepEqual(venstersUitOmgeving(""),[1,7,30]);
   assert.deepEqual(venstersUitOmgeving("30,1,7,7"),[1,7,30]);
