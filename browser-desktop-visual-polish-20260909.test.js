@@ -139,7 +139,7 @@ function meet(){
     zet("numerals",numeriekGoed?"ok":numerieken.map(el=>[el.id||el.className,C(el).fontFamily,C(el).fontVariantNumeric,C(el).fontFeatureSettings].join("/")).join("|"));
     zet("hero-family",C(document.getElementById("t")).fontFamily);zet("mini-family",C(document.getElementById("minitemp")).fontFamily);
     zet("footer-font",parseFloat(C(footer).fontSize));zet("footer-margin",parseFloat(C(footer).marginTop)||0);zet("footer-padding",parseFloat(C(footer).paddingTop)||0);zet("aq-footer-gap",R(footer).top-R(aq).bottom);
-    zet("sheet-padding-bottom",parseFloat(C(sheet).paddingBottom)||0);zet("footer-nav-gap",R(nav).top-R(footer).bottom);const weergave=document.querySelector(".wiw-weergave-voet");zet("weergave-after-footer",weergave?R(weergave).top-R(footer).bottom:999);zet("nav-after-weergave",weergave?R(nav).top-R(weergave).bottom:999);zet("nav-margin",parseFloat(C(nav).marginTop)||0);zet("nav-padding",parseFloat(C(nav).paddingTop)||0);zet("nav-height",R(nav).height);
+    zet("sheet-padding-bottom",parseFloat(C(sheet).paddingBottom)||0);zet("footer-nav-gap",R(nav).top-R(footer).bottom);zet("weergave-onder-voet",document.querySelector(".wiw-weergave-voet")?"ja":"nee");zet("nav-margin",parseFloat(C(nav).marginTop)||0);zet("nav-padding",parseFloat(C(nav).paddingTop)||0);zet("nav-height",R(nav).height);
     zet("aq-label",aq.querySelector(".stat .eyebrow")?.textContent.trim()||"");zet("nav-label",nav.querySelector(".seo-plaatsnav-kop")?.textContent.trim()||"");zet("lki-copy",document.querySelector(".luchtmeetnet-lki")?"aanwezig":"afwezig");zet("lki-requests",String((window.__POLISH_LKI_URLS||[]).length));zet("theme",document.documentElement.getAttribute("data-thema")||"");
     zet("assessment-visible",C(nHead.querySelector(".wiw-night-assessment-head")).display!=="none"?1:0);
     zet("done","ok");
@@ -232,10 +232,12 @@ try{
       const gaps=["gap-chart-days","gap-days-night","gap-night-air"].map(n);
       if(w>=1360){
         if(gaps[0]<27||gaps[0]>29||gaps.slice(1).some(g=>g<23||g>25))throw new Error(`${w}px: onderste sectieritme niet gericht compacter (${gaps.join("/")})`);
-        /* Voet opnieuw ingedeeld op 25 september; de weergaveknop staat sinds 24 september direct onder de voet en de plaatsenstrook heeft
-           sinds 12 september een zachte overgang van 10px. */
+        /* Voet opnieuw ingedeeld op 25 september; de plaatsenstrook heeft sinds 12 september een zachte overgang van 10px. De
+           weergaveknop stond van 24 september tot 18 november direct onder de voet (voet → knop hooguit 8px, knop → strook hooguit
+           50px); sinds 18 november staat hij in de bovenbalk. Daarom nu: geen Weergave-regel onder de voet en voet → strook
+           hooguit 58px (de som van de oude twee grenzen, zonder de knop ertussen). */
         if(n("footer-margin")>20||n("footer-padding")>16||n("aq-footer-gap")>20)throw new Error(`${w}px: luchtkwaliteit/footer blijft te los (${v("footer-margin")}/${v("footer-padding")}/${v("aq-footer-gap")}px)`);
-        if(n("sheet-padding-bottom")>32.1||n("weergave-after-footer")>8||n("nav-after-weergave")>50||Math.abs(n("nav-margin")-10)>.6||n("nav-padding")>1.1||n("nav-height")>70)throw new Error(`${w}px: overgang naar plaatsnavigatie blijft te ruim (${v("sheet-padding-bottom")}/${v("weergave-after-footer")}/${v("nav-after-weergave")}/${v("nav-margin")}/${v("nav-padding")}/${v("nav-height")}px)`);
+        if(n("sheet-padding-bottom")>32.1||v("weergave-onder-voet")!=="nee"||n("footer-nav-gap")>58||Math.abs(n("nav-margin")-10)>.6||n("nav-padding")>1.1||n("nav-height")>70)throw new Error(`${w}px: overgang naar plaatsnavigatie blijft te ruim (${v("sheet-padding-bottom")}/weergave onder voet: ${v("weergave-onder-voet")}/${v("footer-nav-gap")}/${v("nav-margin")}/${v("nav-padding")}/${v("nav-height")}px)`);
       }else if(Math.max(...gaps)-Math.min(...gaps)>1.1||gaps.some(g=>g<27||g>29))throw new Error(`${w}px: bestaand sectieritme gewijzigd (${gaps.join("/")})`);
     }else{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);

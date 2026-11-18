@@ -134,7 +134,7 @@ async function controleer(browserType,naam){
       const knop=document.getElementById("here"),invoer=document.getElementById("q"),bewaar=document.querySelector(".chip.add");
       const r=el=>el?el.getBoundingClientRect():null;
       /* Sinds het eerste-schermontwerp (20260924) staan in de zoekbalk alleen
-         Locatie en Ververs; de thema-keuze staat onder de footer. Alle vier
+         Locatie en Ververs; de thema-keuze staat sinds 18 november in de bovenbalk boven de kop. Alle vier
          blijven minstens 44px hoog. */
       return {knop:r(knop),knoppen:[...document.querySelectorAll(".tools button"),...document.querySelectorAll("#thema button")].map(r),zoekbalkKnoppen:document.querySelectorAll(".tools button").length,invoer:r(invoer),bewaar:r(bewaar),tekst:knop?knop.innerText.trim():"",naam:knop?knop.getAttribute("aria-label"):"",overflow:document.documentElement.scrollWidth-window.innerWidth};
     });

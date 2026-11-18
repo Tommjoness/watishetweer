@@ -134,11 +134,13 @@ function meet(){
         assert(m.namen.some(n=>/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|ma|di|wo|do|vr|za|zo) /.test(n.t)),label+": weekdagnamen horen in de tekst klein te blijven: "+JSON.stringify(m.namen));
         /* Bronnen: doorlopende regel, alleen wat gebruikt is. */
         assert.equal(m.bronDisplay,"flex",label+": bronnen staan niet als doorlopende regel");
+        /* Sinds 18 november staat de weergavekeuze in de bovenbalk; onder de voet staat geen Weergave-regel meer. */
+        assert.equal(m.weergaveMidden,null,label+": er staat nog een Weergave-regel onder de voet");
         const namen=m.bronnen.map(b=>b.t);
         assert(namen.includes("Open-Meteo")&&namen.includes("CAMS"),label+": kernbronnen ontbreken: "+JSON.stringify(namen));
         assert(!namen.some(n=>/Visual Crossing|WeatherAPI/.test(n)),label+": Visual Crossing of WeatherAPI.com staat vermeld bij Open-Meteo-data: "+JSON.stringify(namen));
         if(touch)assert(Math.abs(m.labelLinks-m.appLinks)<=1.5,label+": bronlabel begint niet op de lijn van de pagina ("+m.labelLinks+" tegen "+m.appLinks+")");
-        else for(const [n,x] of Object.entries({bronnen:m.bronMidden,links:m.linksMidden,weergave:m.weergaveMidden}))
+        else for(const [n,x] of Object.entries({bronnen:m.bronMidden,links:m.linksMidden}))
           assert(x!==null&&Math.abs(x-m.voetMidden)<=3,label+": "+n+" staan niet gecentreerd onder de pagina (midden "+x+" tegen "+m.voetMidden+")");
         /* Touch: label op een eigen regel, bronnen eronder vanaf de paginalijn.
            Muis: bronnen direct achter het label op dezelfde regel. */
