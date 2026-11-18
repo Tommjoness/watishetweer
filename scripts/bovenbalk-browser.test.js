@@ -6,8 +6,8 @@
    Gecontroleerd per breedte, in licht en donker en in het Engels:
    - plaats: balk vóór de kop, #thema erin, geen Weergave-regel onder de footer;
      vanaf 901px op het papier boven het vel zonder dat de kop verschuift;
-   - maat: tapdoelen minstens 44px (aanraken, tot 900px) of 24px (muis, de
-     huisregel), geen afgeknipte tekst, geen overflow, link en keuze op één
+   - maat: link minstens 44px (aanraken, tot 900px) of 36px (muis), weergaverij
+     volgens preview-responsive-visual-browser.js, geen afgeknipte tekst, geen overflow, link en keuze op één
      rij op iedere breedte;
    - eerste scherm: temperatuur hoogstens op 380px tot en met 900px (eigenaar
      18 november; vanaf 360px, de breedtes van die regel) en grafiekkop (desktop) binnen de grens van
@@ -51,7 +51,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
   const regels=[];
   try{
     const gevallen=[
-      [320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],
+      [320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[481,900,"light","nl"],
       [768,1024,"light","nl"],[1100,800,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1440,900,"light","en"]
     ];
     for(const [w,h,schema,taal] of gevallen){
@@ -92,26 +92,39 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
             themaInBalk:!!(thema&&balk&&balk.contains(thema)),balkVoorKop:!!(balk&&mast&&balk.compareDocumentPosition(mast)&Node.DOCUMENT_POSITION_FOLLOWING),
             balkBuitenApp:!!(balk&&!balk.closest("#app")),voet:!!document.querySelector(".wiw-weergave-voet"),
             hero:r(".hero"),chartkop:r(".dashrow-chart .chartkop")||r(".chartkop"),
-            linkKleur:link?getComputedStyle(link).color:"",achter,
+            linkKleur:link?getComputedStyle(link).color:"",achter,linkZichtbaar:!!(link&&link.getClientRects().length),
+            nachtNav:!![...document.querySelectorAll('.mobile-section-nav a[href="#nights"]')].find(a=>a.getClientRects().length),
             overflow:document.documentElement.scrollWidth-innerWidth
           };
         });
         assert(m.balk&&m.themaInBalk&&m.balkVoorKop&&m.balkBuitenApp,`${label}: weergavekeuze staat niet in de bovenbalk boven de kop buiten #app ${JSON.stringify({b:!!m.balk,i:m.themaInBalk,k:m.balkVoorKop,a:m.balkBuitenApp})}`);
         assert(!m.voet,`${label}: er staat nog een Weergave-regel onder de footer`);
         assert(m.balk.top<=90,`${label}: bovenbalk is niet de eerste rij (begint op ${Math.round(m.balk.top)}px)`);
-        const minDoel=w<=900?44:24;
-        assert(m.link&&m.link.height>=minDoel&&m.link.width>=44,`${label}: Nachtzicht-link is geen ${minDoel}px-doel (${m.link&&Math.round(m.link.width)}x${m.link&&Math.round(m.link.height)})`);
+        /* Hoogtes volgens het contract van preview-responsive-visual-browser.js: weergaverij ≥45,5px tot 430px,
+           ≥43,5px tot 900px en ≥35,5px op desktop; de link minstens even hoog als een aanraakdoel (44px) of 36px met muis. */
+        const minDoel=w<=900?44:36,minThema=w<=430?45.5:w<=900?43.5:35.5;
+        assert(m.thema.height>=minThema,`${label}: weergaverij is ${m.thema.height}px hoog (minstens ${minThema}px)`);
+        /* Telefoon (tot en met 480px, eigenaar 18 november): alleen de weergavekeuze, over de volle breedte;
+           Nachtzicht via de bestaande snelnavigatie. Daarboven link en keuze naast elkaar. */
+        const telefoon=w<=480;
+        if(telefoon){
+          assert(!m.linkZichtbaar,`${label}: Nachtzicht-link staat op telefoon toch in de bovenbalk`);
+          assert(Math.abs(m.thema.width-m.balk.width)<=1,`${label}: weergavekeuze vult de breedte niet (${Math.round(m.thema.width)} van ${Math.round(m.balk.width)}px)`);
+          assert(m.nachtNav,`${label}: Nachtzicht is op telefoon niet bereikbaar via de snelnavigatie`);
+        }else assert(m.link&&m.linkZichtbaar&&m.link.height>=minDoel&&m.link.width>=44,`${label}: Nachtzicht-link is geen ${minDoel}px-doel (${m.link&&Math.round(m.link.width)}x${m.link&&Math.round(m.link.height)})`);
         assert(m.knoppen.length>=2,`${label}: knoppen van de weergavekeuze ontbreken`);
         for(const k of m.knoppen)assert(k.height>=minDoel&&k.width>=44,`${label}: weergaveknop '${k.naam}' is geen ${minDoel}px-doel (${Math.round(k.width)}x${Math.round(k.height)})`);
         if(w>=901){
           /* Op het papier boven het vel, op de lijnen van de inhoud, zonder de kop te verschuiven. */
           assert(m.balk.bottom<=m.sheetTop+1&&m.balk.top>=-1,`${label}: balk staat niet in de marge boven het vel (${Math.round(m.balk.top)}–${Math.round(m.balk.bottom)}, vel op ${Math.round(m.sheetTop)})`);
-          assert(Math.abs(m.mast.top-(m.sheetTop+m.sheetBinnen))<=1,`${label}: de kop verschuift door de balk (${Math.round(m.mast.top)} tegen ${Math.round(m.sheetTop+m.sheetBinnen)})`);
+          /* Zonder balk begon de kop op 73px (901–1099px) of 81px (vanaf 1100px); dat blijft zo. */
+          const kopZonderBalk=w>=1100?81:73;
+          assert(Math.abs(m.mast.top-kopZonderBalk)<=1,`${label}: de kop verschuift door de balk (${Math.round(m.mast.top)} tegen ${kopZonderBalk}px)`);
           assert(Math.abs(m.link.left-m.sheetLinks)<=1&&Math.abs(m.thema.right-m.sheetRechts)<=1,`${label}: balk lijnt niet uit met de inhoud (${Math.round(m.link.left)}/${Math.round(m.thema.right)} tegen ${Math.round(m.sheetLinks)}/${Math.round(m.sheetRechts)})`);
         }
         assert.deepEqual(m.geknipt,[],`${label}: tekst in de bovenbalk wordt afgeknipt: ${m.geknipt.join(", ")}`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
-        assert(Math.abs(m.link.top-m.thema.top)<=2,`${label}: Nachtzicht en de weergavekeuze staan niet op één rij (${Math.round(m.link.top)} tegen ${Math.round(m.thema.top)})`);
+        if(!telefoon)assert(Math.abs(m.link.top-m.thema.top)<=2,`${label}: Nachtzicht en de weergavekeuze staan niet op één rij (${Math.round(m.link.top)} tegen ${Math.round(m.thema.top)})`);
         /* Eigenaar 18 november: de balk kost op telefoon en tablet één rij; de temperatuur begint dan hoogstens op 380px. */
         if(w<=900)assert(m.hero&&m.hero.top<=(w>=360?380:560),`${label}: temperatuur begint pas op ${m.hero&&Math.round(m.hero.top)}px`);
         else if(w>=1100)assert(m.chartkop&&m.chartkop.top<=h-100,`${label}: grafiek begint pas op ${m.chartkop&&Math.round(m.chartkop.top)}px (vouw ${h}px)`);
@@ -123,8 +136,8 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
           assert(/Nachtzicht/.test(m.linkTekst),`${label}: linktekst '${m.linkTekst}'`);
           assert(m.groepNaam.startsWith("Weergave kiezen"),`${label}: groepsnaam van de weergavekeuze gewijzigd: '${m.groepNaam}'`);
         }
-        const c=contrast(m.linkKleur,m.achter);
-        assert(c>=4.5,`${label}: contrast Nachtzicht-link ${c.toFixed(2)}:1 (${m.linkKleur} op ${m.achter})`);
+        const c=telefoon?null:contrast(m.linkKleur,m.achter);
+        if(!telefoon)assert(c>=4.5,`${label}: contrast Nachtzicht-link ${c.toFixed(2)}:1 (${m.linkKleur} op ${m.achter})`);
         /* Gedrag: schakelaar zet donker of licht, Auto zet terug op het systeem. */
         const begin=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));
         const thema=()=>page.evaluate(()=>document.documentElement.getAttribute("data-thema"));
@@ -136,18 +149,18 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         const na2=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));
         assert.equal(na2,begin,`${label}: Auto zet het thema niet terug (${begin} → ${na2})`);
         /* Nachtzicht: de kop komt in beeld, onder een eventuele vaste balk. */
-        await page.click(".wiw-snel-nachtzicht");await sleep(400);
+        if(!telefoon){await page.click(".wiw-snel-nachtzicht");await sleep(400);
         const doel=await page.evaluate(()=>{const e=document.getElementById("nachtzicht");const b=e.getBoundingClientRect();return {top:b.top,zicht:b.top>=0&&b.bottom<=innerHeight,hash:location.hash};});
-        assert(doel.zicht&&doel.top<=140&&doel.hash==="#nachtzicht",`${label}: Nachtzicht-link brengt de kop niet in beeld (${JSON.stringify(doel)})`);
+        assert(doel.zicht&&doel.top<=140&&doel.hash==="#nachtzicht",`${label}: Nachtzicht-link brengt de kop niet in beeld (${JSON.stringify(doel)})`);}
         /* Toetsenbord: na de skiplink komen eerst de bovenbalk en dan de zoekbalk. */
         await page.evaluate(()=>{scrollTo(0,0);document.activeElement&&document.activeElement.blur();});
         await page.goto(root+"/weer/utrecht/"+(taal==="en"?"?taal=en":""),{waitUntil:"domcontentloaded"});
         await page.waitForFunction(()=>!document.getElementById("here")?.disabled,null,{timeout:10000});
         const volgorde=[];for(let i=0;i<5;i++){await page.keyboard.press("Tab");volgorde.push(await page.evaluate(()=>{const a=document.activeElement;return a.id||a.className||a.tagName;}));}
         const iN=volgorde.indexOf("wiw-snel-nachtzicht"),iT=volgorde.findIndex(x=>x==="thema-auto"||x==="thema-switch"),iQ=volgorde.indexOf("q");
-        assert(iN>=0&&iT>iN&&(iQ<0||iQ>iT),`${label}: toetsenbordvolgorde begint niet met de bovenbalk: ${volgorde.join(" → ")}`);
+        assert((telefoon||iN>=0&&iT>iN)&&iT>=0&&(iQ<0||iQ>iT),`${label}: toetsenbordvolgorde begint niet met de bovenbalk: ${volgorde.join(" → ")}`);
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
-        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}, contrast link ${c.toFixed(1)}:1`);
+        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}, ${telefoon?"alleen weergave":"contrast link "+c.toFixed(1)+":1"}`);
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

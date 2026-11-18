@@ -21,17 +21,19 @@ const VOET_STYLE_ID=require("./apply-voet.js").STYLE_ID;
    - "Nachtzicht" springt naar de kop van het blok Nachtzicht, die daarvoor het
      anker #nachtzicht krijgt. De linktekst is het bestaande woord, zodat de
      Engelse vertaling ("Stargazing") vanzelf meegaat.
-   - Tot en met 900px staat de balk bovenaan in het vel en kost hij één rij
-     van 44px; op een telefoon valt het label "Weergave" weg en zijn licht en
-     donker symbolen, zodat link en keuze naast elkaar passen.
+   - Tot en met 900px staat de balk bovenaan in het vel en kost hij één rij.
+     Tot en met 480px is dat alleen de weergavekeuze over de volle breedte
+     (eigenaar 18 november); daarboven staan link en keuze naast elkaar.
    - Vanaf 901px heeft de pagina 32px papier boven het vel. Daar staat de balk,
      absoluut ten opzichte van .sheet: hij neemt geen ruimte in, dus kop,
      tegels en grafiek staan exact waar ze stonden (indeling-browser.test.js
      eist de grafiek bij 1366×768 met waarschuwing op hooguit y=690). De
      binnenmarge erft hij van .sheet, zodat hij op elke breedte op dezelfde
-     lijnen uitlijnt. Met muis zijn de knoppen 28px hoog (huisregel ≥24px), met 2px lucht boven en onder;
-     op een aanraakscherm 44px, en dan wordt het papier boven het vel
-     zo veel hoger als nodig. */
+     lijnen uitlijnt. Met muis zijn de knoppen 36px hoog (contract
+     preview-responsive-visual-browser.js: ≥35,5px): het papier boven het vel
+     gaat van 32 naar 40px en de binnenmarge boven in het vel 8px omlaag
+     (40→32px tot 1099px, 48→40px vanaf 1100px), zodat de kop op dezelfde
+     hoogte blijft. Op een aanraakscherm zijn de knoppen 44px. */
 const STYLE_ID="wiw-bovenbalk-20261118";
 const BALK_CLASS="wiw-bovenbalk";
 const VOET_LEEG='<div class="wiw-weergave-voet"><span class="wiw-weergave-label" aria-hidden="true">Weergave</span></div>';
@@ -50,32 +52,42 @@ html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{w
 .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 #thema-switch,.${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{min-height:44px!important}
 .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:44px!important}
 #nachtzicht{scroll-margin-top:72px}
-@media(max-width:430px){
-  /* Telefoon: label weg en licht/donker als symbool (☀/☾), zodat link en keuze
-     op één rij passen. De toegankelijke namen staan op de knoppen zelf en
-     veranderen niet; de woorden waren alleen zichtbare opmaak (::after). */
+@media(max-width:600px){
+  /* Tot 600px past het label "Weergave" niet naast link en keuze; de keuze heeft zelf een groepsnaam. */
   .${BALK_CLASS} .wiw-weergave-label{display:none}
-  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:180px!important;min-width:180px!important}
-  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:none!important;display:none!important}
+}
+@media(max-width:480px){
+  /* Telefoon (eigenaar 18 november): alleen de weergavekeuze, over de volle
+     breedte en met de woorden Licht, Auto en Donker (contract
+     preview-responsive-visual-browser.js), 46px hoog zoals onder de voet. Met
+     woorden is de keuze minstens 242px breed; naast de Nachtzicht-link (91px)
+     past dat op geen telefoon. Nachtzicht blijft op telefoon bereikbaar via de
+     bestaande snelnavigatie ("Nacht"). */
+  .${BALK_CLASS}{padding-bottom:6px;margin-bottom:10px}
+  .${BALK_CLASS} .wiw-snel-nachtzicht,.${BALK_CLASS} .wiw-weergave-label{display:none}
+  .${BALK_CLASS} .wiw-weergave-boven{flex:1 1 100%;margin-left:0}
+  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:100%!important;min-width:0!important;min-height:46px!important}
+  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 #thema-switch,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{min-height:46px!important}
+  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:46px!important}
 }
 @media(min-width:901px){
-  .sheet{position:relative}
-  .${BALK_CLASS}{position:absolute;top:-33px;left:0;right:0;height:32px;margin:0;padding:0;padding-left:inherit;padding-right:inherit;border:0;flex-wrap:nowrap}
-  .${BALK_CLASS} .wiw-snel-nachtzicht{min-height:28px}
-  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{min-height:28px!important;height:28px!important}
-  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 #thema-switch,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{min-height:28px!important;height:28px!important}
-  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:28px!important}
+  html body{padding-top:40px!important}
+  html body .sheet{position:relative;padding-top:32px!important}
+  .${BALK_CLASS}{position:absolute;top:-41px;left:0;right:0;height:40px;margin:0;padding:0;padding-left:inherit;padding-right:inherit;border:0;flex-wrap:nowrap}
+  .${BALK_CLASS} .wiw-snel-nachtzicht{min-height:36px}
+  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{min-height:36px!important;height:36px!important}
+  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 #thema-switch,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{min-height:36px!important;height:36px!important}
+  html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:36px!important}
+}
+@media(min-width:1100px){
+  html body .sheet{padding-top:40px!important}
 }
 @media(min-width:901px) and (pointer:coarse){
-  html body{padding-top:46px!important}
-  .${BALK_CLASS}{top:-45px;height:44px}
+  html body{padding-top:48px!important}
+  .${BALK_CLASS}{top:-49px;height:48px}
   .${BALK_CLASS} .wiw-snel-nachtzicht{min-height:44px}
   html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 #thema-switch,html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-auto{min-height:44px!important;height:44px!important}
   html body .${BALK_CLASS} #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{height:44px!important}
-}
-@media(max-width:340px){
-  /* Smalste telefoons: drie vakjes van 44px, zodat link en keuze op één rij blijven. */
-  html body .${BALK_CLASS} #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:132px!important;min-width:132px!important}
 }
 `;
 
