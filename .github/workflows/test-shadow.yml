@@ -1,4 +1,4 @@
-# Shadow-testketen (P3-4, PR B): dezelfde 276 testcommando's als `npm test`, maar de bouwfase één keer per testfamily en de 71 tests ná de laatste
+# Shadow-testketen (P3-4, PR B): dezelfde 277 testcommando's als `npm test`, maar de bouwfase één keer per testfamily en de 71 tests ná de laatste
 # artifact-mutatie verdeeld over vier shards op eigen runners. Dit is een AANVULLENDE, NIET-VERPLICHTE controle naast de bestaande jobs:
 # `test` (ci-interpretatie-v2.yml) en `checkpoint-npm-test` (checkpoint-eindronde.yml) blijven ongewijzigd en blijven de vereiste checks.
 # De jobnamen hier beginnen bewust met `shadow-`, zodat ze nooit met een vereiste check verward worden.
@@ -43,7 +43,7 @@ jobs:
           package-manager-cache: false
       - name: Eenheidstests van de shardlogica (fail-closed aggregatie, artifact, gevoelige gegevens)
         run: node scripts/ci/testketen.test.js
-      - name: Dekkingsbewijs vooraf (276 commando's, precies één keer, volgorde)
+      - name: Dekkingsbewijs vooraf (277 commando's, precies één keer, volgorde)
         run: node scripts/ci/verifieer-dekking.js plan
 
   # ---------- Testfamily "test": gewone ubuntu-latest, systeem-Chrome ----------
@@ -274,7 +274,7 @@ jobs:
             exit "$code"
           fi
 
-  # Fail-closed aggregatie: draait altijd; alleen groen als ALLE jobs `success` zijn en alle 276 commando's per testfamily precies één keer zijn uitgevoerd.
+  # Fail-closed aggregatie: draait altijd; alleen groen als ALLE jobs `success` zijn en alle 277 commando's per testfamily precies één keer zijn uitgevoerd.
   shadow-aggregatie:
     name: shadow-aggregatie
     if: always()
