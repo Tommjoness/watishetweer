@@ -65,7 +65,6 @@ jobs:
       - name: Haal Cloudflare RUM op met botfilter
         env:
           CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}
-          CLOUDFLARE_DEPLOY_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         run: node scripts/cloudflare-human-analytics-report.js
 
