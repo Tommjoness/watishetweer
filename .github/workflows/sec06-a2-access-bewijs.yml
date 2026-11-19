@@ -1,0 +1,34 @@
+name: SEC-06 A2 Access-authenticatiebewijs
+
+# Alleen handmatig en op main; geen PR-code met productiesecrets.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  access-bewijs:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    environment:
+      name: productie
+      deployment: false
+    steps:
+      - name: Checkout vertrouwde exacte main-SHA
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Gebruik Node 22
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: Zelftests zonder credentials
+        run: node scripts/ci/sec06-a2-access-bewijs.test.js
+      - name: Bewijs beschermde host zonder en met huidige credentials (read-only)
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
+        run: node scripts/ci/sec06-a2-access-bewijs.js
