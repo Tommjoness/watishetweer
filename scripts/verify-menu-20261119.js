@@ -27,6 +27,8 @@ for(const p of htmlBestanden(OUT)){
   const m0=html.indexOf('id="wiw-menu"'),m1=html.indexOf("</nav></details>",m0),menu=html.slice(m0,m1);
   assert(m1>m0,rel+": einde van het menu niet gevonden");
   assert(m0<html.indexOf('id="thema"'),rel+": menu staat niet vóór de weergavekeuze");
+  /* Menuknop met icoon; translate="no" houdt het lege icoon heel in de Engelse taallaag. */
+  assert(html.includes('<summary class="wiw-menu-knop" translate="no"><span class="wiw-menu-icoon" aria-hidden="true"></span><span class="wiw-menu-tekst">Menu</span></summary>'),rel+": menuknop zonder icoon of zonder translate=\"no\"");
   assert(!menu.includes('id="thema"'),rel+": weergavekeuze staat in het menu");
   for(const d of DOELEN)assert(menu.includes(`<a href="${d}">`),rel+": menu mist de link naar "+d);
   for(const kop of ["Weer en plaatsen","Sterren en nacht","Seizoenen en feestdagen","Over en informatie"])assert(menu.includes(">"+kop+"</summary>"),rel+": menugroep ontbreekt of heeft geen klikbare titel: "+kop);

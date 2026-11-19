@@ -89,7 +89,8 @@ async function axMenu(page){
     const {nodes}=await cdp.send("Accessibility.getFullAXTree");
     const waarde=n=>n&&n.value!==undefined?n.value:undefined;
     const prop=(n,k)=>{const p=(n.properties||[]).find(p=>p.name===k);return p?waarde(p.value):undefined;};
-    const isKnop=n=>!n.ignored&&/^(DisclosureTriangle|button)$/.test(waarde(n.role));
+    /* Een groepstitel in een accordeon (<details name>) heet in Chrome DisclosureTriangleGrouped. */
+    const isKnop=n=>!n.ignored&&/^(DisclosureTriangle|DisclosureTriangleGrouped|button)$/.test(waarde(n.role));
     const knop=nodes.find(n=>isKnop(n)&&/^Menu$/.test(String(waarde(n.name)||"").trim()));
     const nav=nodes.find(n=>!n.ignored&&waarde(n.role)==="navigation"&&waarde(n.name)==="Menu");
     const byId=new Map(nodes.map(n=>[n.nodeId,n]));
@@ -114,7 +115,7 @@ const meet=()=>{
   return {aantalMenus:document.querySelectorAll("#wiw-menu,.wiw-menu").length,inBalk:!!(balk&&menu&&balk.firstElementChild===menu),themaInMenu:!!(menu&&thema&&menu.contains(thema)),themaInBalk:!!(balk&&thema&&balk.contains(thema)),
     open:!!(menu&&menu.open),rail:document.documentElement.classList.contains("wiw-menu-rail"),knop:zie(knop)?r(knop):null,paneel:r(paneel),paneelZicht:zie(paneel),
     thema:r(thema),segs:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].map(s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().width:0;}),balk:r(balk),hero:r(".hero"),sheet:r(sheet),ctx:r(".seo-route-context"),plaatsnav:r(".seo-plaatsnav"),
-    links,groepen,navLabel:paneel?paneel.getAttribute("aria-label"):"",knopTekst:knop?knop.textContent.replace(/\s+/g," ").trim():"",
+    links,groepen,navLabel:paneel?paneel.getAttribute("aria-label"):"",knopTekst:knop?knop.textContent.replace(/\s+/g," ").trim():"",icoon:(()=>{const i=knop&&knop.querySelector(".wiw-menu-icoon");if(!zie(i))return null;const b=i.getBoundingClientRect();return {w:b.width,h:b.height};})(),
     voetTekst:voet?voet.textContent.replace(/\s+/g," "):"",voetHrefs:voet?[...voet.querySelectorAll("a")].map(a=>a.getAttribute("href")):[],
     overflow:document.documentElement.scrollWidth-innerWidth,focus:document.activeElement?(document.activeElement.tagName+"."+(document.activeElement.className||"")):""};
 };
@@ -133,7 +134,7 @@ async function loopGroepen(page,label,eis){
     assert.equal(eigen.length,g.n,`${label}: links van een dichte groep zichtbaar`);
     for(const l of eigen)eis(l,m,g);
     const ax=await axMenu(page);
-    assert(ax.groepen.length===4&&ax.groepen.every((x,j)=>x.uitgeklapt===(j===i))&&ax.links===g.n&&ax.lijsten.length===1&&ax.lijsten[0]===g.kop,`${label}: schermlezer na openen van '${g.kop}' klopt niet: ${JSON.stringify(ax)}`);
+    assert(ax.groepen.length===4&&ax.groepen.every((x,j)=>x.uitgeklapt===(j===i))&&ax.links===g.n&&ax.lijsten.length===1&&ax.lijsten[0].toLowerCase()===g.kop.toLowerCase()&&ax.groepen[i].naam.toLowerCase()===g.kop.toLowerCase(),`${label}: schermlezer na openen van '${g.kop}' klopt niet: ${JSON.stringify(ax)}`);
   }
   /* Nog eens op de open titel: groep weer dicht. */
   await page.click(KOP(n-1));await sleep(120);
@@ -237,6 +238,8 @@ async function loopGroepen(page,label,eis){
           if(w<360)assert(m.hero.ptop<=560,`${label}: temperatuur pas op ${Math.round(m.hero.ptop)}px`);
           if(DESKTOP_HERO[w]&&!touch)assert(Math.abs(m.hero.ptop-DESKTOP_HERO[w])<=1,`${label}: temperatuur verschoven (${Math.round(m.hero.ptop)} tegen ${DESKTOP_HERO[w]}px)`);
           assert(/Menu/.test(m.knopTekst),`${label}: knop heet niet Menu`);
+          /* Het icoon blijft staan, ook na de Engelse taallaag (die lege elementen in vertaalde blokken weglaat). */
+          assert(m.icoon&&m.icoon.w>=14&&m.icoon.h>=10,`${label}: menu-icoon ontbreekt of is onzichtbaar (${JSON.stringify(m.icoon)})`);
           const ax0=await axMenu(page);
           assert(ax0.knopRol&&ax0.uitgeklapt===false&&ax0.links===0&&ax0.groepen.length===0,`${label}: dichte menuknop niet als ingeklapte knop "Menu" voor schermlezers, of inhoud toch voorleesbaar: ${JSON.stringify(ax0)}`);
           /* Openen met muis: vier titels, nog geen links */

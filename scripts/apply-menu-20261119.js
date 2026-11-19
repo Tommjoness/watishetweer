@@ -52,7 +52,7 @@ function groep(id,kop,links){
 }
 
 function menuHtml(vandaag){
-  return `<details class="wiw-menu" id="wiw-menu"><summary class="wiw-menu-knop"><span class="wiw-menu-icoon" aria-hidden="true"></span><span class="wiw-menu-tekst">Menu</span></summary>`+
+  return `<details class="wiw-menu" id="wiw-menu"><summary class="wiw-menu-knop" translate="no"><span class="wiw-menu-icoon" aria-hidden="true"></span><span class="wiw-menu-tekst">Menu</span></summary>`+
     `<nav class="wiw-menu-paneel" aria-label="Menu">`+
     groep("weer","Weer en plaatsen",[{href:"/",naam:"Actueel weer"},{href:"/weer/",naam:"Weer per plaats"}])+
     groep("nacht","Sterren en nacht",[{href:"#nachtzicht",naam:"Nachtzicht vanavond"},{href:NZ.BASIS,naam:"Sterren kijken"},{href:NZ.MAAN,naam:"De maan vandaag"}])+
@@ -70,7 +70,8 @@ const CSS=`
 .wiw-menu>summary::marker{content:""}
 .wiw-menu>summary:hover{border-color:var(--ink-45)}
 .wiw-menu[open]>summary{border-color:var(--ink)}
-/* Menu-icoon (drie streepjes) als randen, niet als tekstteken: geen onvertaalde tekst en ook zichtbaar in hoog-contrastmodus. */
+/* Menu-icoon (drie streepjes) als randen, niet als tekstteken: geen onvertaalde tekst en ook zichtbaar in hoog-contrastmodus.
+   De knop heeft translate="no" ("Menu" is in het Engels gelijk): anders herbouwt de taallaag de knop en valt het lege icoon weg. */
 .wiw-menu-icoon{position:relative;display:inline-block;flex:0 0 auto;width:16px;height:12px;box-sizing:border-box;border-top:2px solid currentColor;border-bottom:2px solid currentColor}
 .wiw-menu-icoon::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:2px solid currentColor}
 .wiw-menu-paneel{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;display:block;padding:4px 16px;background:var(--sheet);border:1px solid var(--rule);max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow:auto;overscroll-behavior:contain;text-align:left}
