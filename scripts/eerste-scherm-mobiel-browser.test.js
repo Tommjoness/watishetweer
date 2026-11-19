@@ -78,7 +78,9 @@ const meet=page=>page.evaluate(()=>{
         const m=await meet(page);
         assert.deepEqual(m.kinderen,["hero","brief","waarschuwingen"],`${label}: volgorde in het eerste scherm ${m.kinderen.join(" > ")}`);
         assert(m.hero.top<m.brief.top&&m.brief.top<m.warn.top,`${label}: temperatuur (${Math.round(m.hero.top)}) staat niet zichtbaar boven briefing (${Math.round(m.brief.top)}) en waarschuwingen (${Math.round(m.warn.top)})`);
-        assert(m.hero.top<=320,`${label}: temperatuur begint pas op ${Math.round(m.hero.top)}px`);
+        /* Grens 320px (eigenaar 15 oktober) is op 18 november door de eigenaar verhoogd naar 380px: de bovenbalk met
+           Nachtzicht en de weergavekeuze staat op telefoon en tablet bovenaan en kost één rij (zie bovenbalk-browser.test.js). */
+        assert(m.hero.top<=380,`${label}: temperatuur begint pas op ${Math.round(m.hero.top)}px`);
         const [vandaag,...rest]=m.rijen;
         assert.equal(vandaag.label,"vanaf nu",`${label}: Vandaag mist "vanaf nu" onder de neerslag`);
         assert(vandaag.zichtbaar,`${label}: "vanaf nu" is niet zichtbaar`);

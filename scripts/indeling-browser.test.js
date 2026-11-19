@@ -91,7 +91,7 @@ function meet(){
   const aq=document.getElementById("aq"),aqTegels=aq?[...aq.children].filter(el=>el.classList.contains("stat")):[];
   const ink=getComputedStyle(document.body).color;
   const klein=[...document.querySelectorAll(".stats>.stat>.eyebrow,#modelrisico .modelrisico-label")].filter(el=>el.getBoundingClientRect().height>0&&parseFloat(getComputedStyle(el).fontSize)<10.95).map(el=>el.textContent.trim()+" "+getComputedStyle(el).fontSize);
-  const schakelaar=[...document.querySelectorAll(".wiw-weergave-voet #thema .wiw-theme-icon, .wiw-weergave-voet #thema .wiw-theme-auto")].map(el=>Math.round(el.getBoundingClientRect().width));
+  const schakelaar=[...document.querySelectorAll(".wiw-bovenbalk #thema .wiw-theme-icon, .wiw-bovenbalk #thema .wiw-theme-auto")].map(el=>Math.round(el.getBoundingClientRect().width));
   return {stats:box(stats),model:box(document.getElementById("modelrisico")),chart:box(svg),
     kolommen:new Set(tegels.map(t=>Math.round(t.getBoundingClientRect().left))).size,
     aqInspring:aq&&aqTegels.length?Math.round(aqTegels[0].getBoundingClientRect().left-aq.getBoundingClientRect().left):null,
@@ -142,7 +142,7 @@ function meet(){
         assert.deepEqual(m.klein,[],label+": tekst kleiner dan 11px");
         assert(m.aqKleur.length&&m.aqKleur.every(k=>k===m.ink),label+": luchtwaarden niet in inkt: "+m.aqKleur.join(", "));
         if(/Dauwpunt/.test(m.dauwpunt))assert(/\d\u00a0°C/.test(m.dauwpunt)&&!/\d °C/.test(m.dauwpunt),label+": dauwpunt zonder vaste spatie: "+m.dauwpunt);
-        if(w>430&&m.schakelaar.length)assert(m.schakelaar.every(b=>b>=86),label+": vakjes van de weergave-schakelaar te smal: "+m.schakelaar.join("/"));
+        if(w>430)assert(m.schakelaar.length>=3&&m.schakelaar.every(b=>b>=86),label+": vakjes van de weergave-schakelaar te smal: "+m.schakelaar.join("/"));
         /* Dagweergave: terugknop leesbaar en op de telefoon goed te raken. */
         const rij=await page.$$("#days .row.day");
         if(rij[3]){
