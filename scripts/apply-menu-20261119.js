@@ -111,7 +111,7 @@ const CSS=`
   .wiw-menu>summary{display:none}
   html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:8px;right:auto;width:136px;display:block;padding:3px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
   html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{margin-top:22px}
-  html.wiw-menu-rail .wiw-menu-kop{font-size:11px;letter-spacing:.08em;line-height:1.35;margin-bottom:2px}
+  html.wiw-menu-rail .wiw-menu-kop{font-size:12px;letter-spacing:.08em;line-height:1.35;margin-bottom:2px}
   html.wiw-menu-rail .wiw-menu-paneel a{min-height:30px;font-size:14px;color:var(--ink-70)}
   html.wiw-menu-rail .wiw-menu-paneel a:hover{color:var(--ink)}
 }
