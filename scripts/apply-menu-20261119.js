@@ -99,6 +99,8 @@ const CSS=`
 @media(max-width:345px){
   /* 320px: de keuze heeft met woorden minstens 242px nodig; menu op een eigen rij (eigenaar 19 november). */
   html body .wiw-bovenbalk .wiw-weergave-boven{flex:1 1 100%}
+  /* Het paneel hangt dan onder twee rijen (rond 151px): korter, zodat het binnen het scherm blijft. */
+  .wiw-menu-paneel{max-height:calc(100vh - 170px);max-height:calc(100dvh - 170px)}
 }
 @media(min-width:481px){
   /* Eén kolom titels: het paneel hoeft niet breder dan de langste titel of link. */

@@ -105,7 +105,7 @@ async function axMenu(page){
 const meet=()=>{
   const zie=e=>!!(e&&e.checkVisibility&&e.checkVisibility({visibilityProperty:true,opacityProperty:true}));
   const r=e=>{if(typeof e==="string")e=document.querySelector(e);if(!e||!e.getClientRects().length)return null;const b=e.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height,ptop:b.top+scrollY};};
-  const vak=e=>{const b=e.getBoundingClientRect();return {l:b.left,r:b.right,t:b.top,b:b.bottom,h:b.height};};
+  const vak=e=>{const b=e.getBoundingClientRect();return {l:b.left,r:b.right,boven:b.top,b:b.bottom,h:b.height};};
   const menu=document.getElementById("wiw-menu"),knop=menu&&menu.querySelector(":scope > summary"),paneel=menu&&menu.querySelector(".wiw-menu-paneel"),balk=document.querySelector(".wiw-bovenbalk"),thema=document.getElementById("thema");
   const links=paneel?[...paneel.querySelectorAll("a")].map(a=>({href:a.getAttribute("href"),t:a.textContent.trim(),zicht:zie(a),fs:parseFloat(getComputedStyle(a).fontSize),knip:a.scrollWidth>a.clientWidth+1,...(zie(a)?vak(a):{})})):[];
   const groepen=paneel?[...paneel.querySelectorAll(".wiw-menu-groep")].map(g=>{const k=g.querySelector(":scope > summary"),u=g.querySelector("ul"),id=u&&u.getAttribute("aria-labelledby");
@@ -253,7 +253,7 @@ async function loopGroepen(page,label,eis){
           assert(ax1.uitgeklapt===true&&ax1.nav&&ax1.groepen.length===4&&ax1.groepen.every(g=>g.uitgeklapt===false)&&ax1.links===0,`${label}: schermlezerstructuur open menu klopt niet: ${JSON.stringify(ax1)}`);
           await loopGroepen(page,label,(l,x)=>{
             assert(!l.knip&&l.fs>=14&&l.h>=minDoel-0.5,`${label}: menulink '${l.t}' afgeknipt of kleiner dan het doel (${l.fs}px, ${Math.round(l.h)}px hoog)`);
-            assert(l.l>=x.paneel.left&&l.r<=x.paneel.right+1&&x.paneel.bottom<=h+1&&x.overflow<=1,`${label}: menulink '${l.t}' buiten het paneel of paneel buiten beeld`);
+            assert(l.l>=x.paneel.left&&l.r<=x.paneel.right+1&&x.paneel.bottom<=h+1&&x.overflow<=1,`${label}: menulink '${l.t}' buiten het paneel of paneel buiten beeld (link ${Math.round(l.l)}–${Math.round(l.r)}, paneel ${Math.round(x.paneel.left)}–${Math.round(x.paneel.right)} tot ${Math.round(x.paneel.bottom)}, venster ${h}, overflow ${x.overflow})`);
           });
           await page.keyboard.press("Escape");await sleep(100);
           o=await page.evaluate(meet);
