@@ -113,7 +113,7 @@ const meet=()=>{
   const voet=document.querySelector("footer"),sheet=document.querySelector(".sheet");
   return {aantalMenus:document.querySelectorAll("#wiw-menu,.wiw-menu").length,inBalk:!!(balk&&menu&&balk.firstElementChild===menu),themaInMenu:!!(menu&&thema&&menu.contains(thema)),themaInBalk:!!(balk&&thema&&balk.contains(thema)),
     open:!!(menu&&menu.open),rail:document.documentElement.classList.contains("wiw-menu-rail"),knop:zie(knop)?r(knop):null,paneel:r(paneel),paneelZicht:zie(paneel),
-    thema:r(thema),balk:r(balk),hero:r(".hero"),sheet:r(sheet),ctx:r(".seo-route-context"),plaatsnav:r(".seo-plaatsnav"),
+    thema:r(thema),segs:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].map(s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().width:0;}),balk:r(balk),hero:r(".hero"),sheet:r(sheet),ctx:r(".seo-route-context"),plaatsnav:r(".seo-plaatsnav"),
     links,groepen,navLabel:paneel?paneel.getAttribute("aria-label"):"",knopTekst:knop?knop.textContent.replace(/\s+/g," ").trim():"",
     voetTekst:voet?voet.textContent.replace(/\s+/g," "):"",voetHrefs:voet?[...voet.querySelectorAll("a")].map(a=>a.getAttribute("href")):[],
     overflow:document.documentElement.scrollWidth-innerWidth,focus:document.activeElement?(document.activeElement.tagName+"."+(document.activeElement.className||"")):""};
@@ -148,7 +148,7 @@ async function loopGroepen(page,label,eis){
   /* Eerste-schermposities zonder menu (main 78e8d1fd): desktop moet exact gelijk blijven. */
   const DESKTOP_HERO={1024:221,1366:208,1440:211};
   try{
-    const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[481,900,"light","nl"],
+    const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
       [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
       /* aanraakscherm op desktopbreedte en een laag breed venster */
       [1024,768,"light","nl",true],[1920,1080,"light","nl",true],[1920,640,"light","nl"]];
@@ -231,6 +231,8 @@ async function loopGroepen(page,label,eis){
           if(w>=346)assert(Math.abs(m.knop.top-m.thema.top)<=2,`${label}: menuknop en Licht/Auto/Donker niet op één rij`);
           else assert(m.thema.top>=m.knop.bottom-1,`${label}: op ${w}px hoort de keuze onder de menuknop`);
           assert(m.thema.width>=242,`${label}: Licht/Auto/Donker te smal (${Math.round(m.thema.width)}px)`);
+          /* Contract indeling-browser.test.js: boven 430px ieder vakje minstens 86px. */
+          if(w>430)assert(m.segs.every(x=>x>=86),`${label}: vakjes Licht/Auto/Donker te smal: ${m.segs.map(Math.round).join("/")}`);
           if(w>=360&&w<=900)assert(m.hero.ptop<=380,`${label}: temperatuur pas op ${Math.round(m.hero.ptop)}px`);
           if(w<360)assert(m.hero.ptop<=560,`${label}: temperatuur pas op ${Math.round(m.hero.ptop)}px`);
           if(DESKTOP_HERO[w]&&!touch)assert(Math.abs(m.hero.ptop-DESKTOP_HERO[w])<=1,`${label}: temperatuur verschoven (${Math.round(m.hero.ptop)} tegen ${DESKTOP_HERO[w]}px)`);

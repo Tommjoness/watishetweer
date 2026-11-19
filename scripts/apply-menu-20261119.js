@@ -52,7 +52,7 @@ function groep(id,kop,links){
 }
 
 function menuHtml(vandaag){
-  return `<details class="wiw-menu" id="wiw-menu"><summary class="wiw-menu-knop"><span class="wiw-menu-icoon" aria-hidden="true">☰</span><span class="wiw-menu-tekst">Menu</span></summary>`+
+  return `<details class="wiw-menu" id="wiw-menu"><summary class="wiw-menu-knop"><span class="wiw-menu-icoon" aria-hidden="true"></span><span class="wiw-menu-tekst">Menu</span></summary>`+
     `<nav class="wiw-menu-paneel" aria-label="Menu">`+
     groep("weer","Weer en plaatsen",[{href:"/",naam:"Actueel weer"},{href:"/weer/",naam:"Weer per plaats"}])+
     groep("nacht","Sterren en nacht",[{href:"#nachtzicht",naam:"Nachtzicht vanavond"},{href:NZ.BASIS,naam:"Sterren kijken"},{href:NZ.MAAN,naam:"De maan vandaag"}])+
@@ -70,7 +70,9 @@ const CSS=`
 .wiw-menu>summary::marker{content:""}
 .wiw-menu>summary:hover{border-color:var(--ink-45)}
 .wiw-menu[open]>summary{border-color:var(--ink)}
-.wiw-menu-icoon{font-size:17px;line-height:1}
+/* Menu-icoon (drie streepjes) als randen, niet als tekstteken: geen onvertaalde tekst en ook zichtbaar in hoog-contrastmodus. */
+.wiw-menu-icoon{position:relative;display:inline-block;flex:0 0 auto;width:16px;height:12px;box-sizing:border-box;border-top:2px solid currentColor;border-bottom:2px solid currentColor}
+.wiw-menu-icoon::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:2px solid currentColor}
 .wiw-menu-paneel{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;display:block;padding:4px 16px;background:var(--sheet);border:1px solid var(--rule);max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow:auto;overscroll-behavior:contain;text-align:left}
 .wiw-menu-groep+.wiw-menu-groep{border-top:1px solid var(--rule)}
 .wiw-menu-kop{list-style:none;display:flex;align-items:center;gap:12px;min-height:46px;margin:0;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;line-height:1.35;text-transform:uppercase;color:var(--ink-70);-webkit-user-select:none;user-select:none}
@@ -88,8 +90,8 @@ const CSS=`
   /* Telefoon: menuknop naast Licht/Auto/Donker op één rij; de keuze vult de rest. */
   html body .wiw-bovenbalk .wiw-weergave-boven{flex:1 1 0%;min-width:0}
 }
-@media(max-width:419px),(min-width:481px) and (max-width:559px){
-  /* Waar Licht/Auto/Donker (met woorden minstens 242px) anders niet meer naast de knop past: alleen het symbool; "Menu" blijft de naam van de knop. */
+@media(max-width:559px){
+  /* Tot 559px alleen het icoon, zodat Licht/Auto/Donker zijn breedte houdt (vanaf 431px minstens 86px per vakje, indeling-browser.test.js); "Menu" blijft de naam van de knop. */
   .wiw-menu-tekst{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   .wiw-menu>summary{padding:0}
 }
@@ -102,9 +104,13 @@ const CSS=`
   .wiw-menu-paneel{right:auto;width:340px;max-width:calc(100vw - 48px)}
 }
 @media(min-width:481px) and (max-width:900px){
-  /* Menu, Nachtzicht en de keuze naast elkaar: de keuze mag tot 242px smaller worden. */
   .wiw-bovenbalk{column-gap:12px}
-  html body .wiw-bovenbalk #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:auto!important;min-width:242px!important;flex:0 1 276px}
+}
+@media(min-width:481px) and (max-width:559px){
+  /* Menu-icoon, Nachtzicht en de keuze naast elkaar: kleinere tussenruimte en de keuze mag tot 261px
+     smaller worden (drie vakjes van minstens 86px); op 481px precies passend (46+8+91+8+261 ≤ 415px). */
+  .wiw-bovenbalk{column-gap:8px}
+  html body .wiw-bovenbalk #thema.wiw-theme-control.wiw-theme-segmented-20260915{min-width:261px!important}
   html body .wiw-bovenbalk .wiw-weergave-boven{min-width:0;flex:0 1 auto}
 }
 @media(min-width:901px){
