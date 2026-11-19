@@ -46,9 +46,14 @@ function seizoenen(vandaag){
    pijltje), de links verschijnen pas na een klik (eigenaar 19 november).
    name="wiw-menu-groep" houdt in de browser één groep tegelijk open; de
    menulaag doet hetzelfde voor browsers zonder dat attribuut. */
+/* Zacht afbreekpunt in Nederlandse samenstellingen op -vakantie ("Voorjaars-/vakantie"):
+   onzichtbaar waar het woord past, nette afbreking waar het niet past (zijbalk van 136px).
+   De Engelse taallaag verwijdert zachte afbreekstreepjes vóór het vertalen (vertaalkern schoon()). */
+function zachtAfbreken(html){return html.replace(/([a-z])(vakantie)\b/gi,"$1&shy;$2");}
+
 function groep(id,kop,links){
   return `<details class="wiw-menu-groep" name="wiw-menu-groep"><summary class="wiw-menu-kop" id="wiw-menu-${id}">${esc(kop)}</summary><ul aria-labelledby="wiw-menu-${id}">`+
-    links.map(l=>`<li><a href="${esc(l.href)}">${esc(l.naam)}</a></li>`).join("")+`</ul></details>`;
+    links.map(l=>`<li><a href="${esc(l.href)}">${zachtAfbreken(esc(l.naam))}</a></li>`).join("")+`</ul></details>`;
 }
 
 function menuHtml(vandaag){
@@ -88,8 +93,10 @@ const CSS=`
 .wiw-menu-paneel a{display:flex;align-items:center;min-height:44px;color:var(--ink);text-decoration:none;font-family:var(--sans);font-size:15px;line-height:1.25;overflow-wrap:anywhere}
 .wiw-menu-paneel a:hover,.wiw-menu-paneel a:focus-visible{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:480px){
-  /* Telefoon: menuknop naast Licht/Auto/Donker op één rij; de keuze vult de rest. */
+  /* Telefoon: menuknop naast Licht/Auto/Donker op één rij; de keuze vult de rest. Vanaf 431px zet een
+     oudere laag (theme-mobile-session) flex:0 0 216px; dat wint anders van width:100% (bovenbalklaag). */
   html body .wiw-bovenbalk .wiw-weergave-boven{flex:1 1 0%;min-width:0}
+  html body .wiw-bovenbalk #thema.wiw-theme-control.wiw-theme-segmented-20260915{flex:1 1 auto!important}
 }
 @media(max-width:559px){
   /* Tot 559px alleen het icoon, zodat Licht/Auto/Donker zijn breedte houdt (vanaf 431px minstens 86px per vakje, indeling-browser.test.js); "Menu" blijft de naam van de knop. */
