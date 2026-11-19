@@ -9,7 +9,11 @@
      (CSS). De zijbalk staat vast bij het scrollen en schuift mee omhoog zodra
      het einde van het vel in beeld komt, zodat hij nooit over de plaatscontext
      of de populaire plaatsen eronder valt;
-   - bij het verkleinen van het venster onder 1904px gaat het menu weer dicht.
+   - bij het verkleinen van het venster onder 1904px gaat het menu weer dicht;
+   - de vier groepen zijn zelf ook <details> (titel klikbaar, links na een
+     klik); er staat er één tegelijk open (name-attribuut, met dezelfde regel
+     hier voor browsers zonder dat attribuut). In de zijbalk sluit Escape de
+     groep waar de focus in staat.
    Er is één menu in de pagina; de zijbalk is hetzelfde element. */
 (function(root){
 "use strict";
@@ -38,9 +42,19 @@ function init(){
     else if(html.classList.contains("wiw-menu-rail")){html.classList.remove("wiw-menu-rail");menu.open=false;}
     plaats();
   }
+  var groepen=Array.prototype.slice.call(menu.querySelectorAll(".wiw-menu-groep"));
+  groepen.forEach(function(g){
+    g.addEventListener("toggle",function(){
+      if(g.open)groepen.forEach(function(o){if(o!==g&&o.open)o.open=false;});
+      plan();
+    });
+  });
   if(knop)knop.addEventListener("click",function(e){if(rail())e.preventDefault();});
   doc.addEventListener("keydown",function(e){
-    if((e.key==="Escape"||e.key==="Esc")&&menu.open&&!rail()){menu.open=false;if(knop)knop.focus();}
+    if(e.key!=="Escape"&&e.key!=="Esc")return;
+    if(menu.open&&!rail()){menu.open=false;if(knop)knop.focus();return;}
+    var a=doc.activeElement,g=rail()&&a&&a.closest?a.closest(".wiw-menu-groep"):null;
+    if(g&&g.open){g.open=false;var k=g.querySelector("summary");if(k)k.focus();}
   });
   doc.addEventListener("click",function(e){
     if(!menu.open||rail())return;

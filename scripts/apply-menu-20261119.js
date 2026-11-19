@@ -42,9 +42,13 @@ function seizoenen(vandaag){
     .sort((a,b)=>a.r-b.r||a.i-b.i).map(({p})=>({href:`/${p.slug}/`,naam:p.naam}));
 }
 
+/* Iedere groep is een eigen <details>: de titel is zichtbaar en klikbaar (met
+   pijltje), de links verschijnen pas na een klik (eigenaar 19 november).
+   name="wiw-menu-groep" houdt in de browser één groep tegelijk open; de
+   menulaag doet hetzelfde voor browsers zonder dat attribuut. */
 function groep(id,kop,links){
-  return `<div class="wiw-menu-groep"><p class="wiw-menu-kop" id="wiw-menu-${id}">${esc(kop)}</p><ul aria-labelledby="wiw-menu-${id}">`+
-    links.map(l=>`<li><a href="${esc(l.href)}">${esc(l.naam)}</a></li>`).join("")+`</ul></div>`;
+  return `<details class="wiw-menu-groep" name="wiw-menu-groep"><summary class="wiw-menu-kop" id="wiw-menu-${id}">${esc(kop)}</summary><ul aria-labelledby="wiw-menu-${id}">`+
+    links.map(l=>`<li><a href="${esc(l.href)}">${esc(l.naam)}</a></li>`).join("")+`</ul></details>`;
 }
 
 function menuHtml(vandaag){
@@ -67,9 +71,17 @@ const CSS=`
 .wiw-menu>summary:hover{border-color:var(--ink-45)}
 .wiw-menu[open]>summary{border-color:var(--ink)}
 .wiw-menu-icoon{font-size:17px;line-height:1}
-.wiw-menu-paneel{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;display:grid;grid-template-columns:minmax(0,1fr);gap:16px 28px;padding:16px 18px 18px;background:var(--sheet);border:1px solid var(--rule);max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow:auto;overscroll-behavior:contain;text-align:left}
-.wiw-menu-kop{margin:0 0 4px;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-45)}
-.wiw-menu-paneel ul{list-style:none;margin:0;padding:0}
+.wiw-menu-paneel{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;display:block;padding:4px 16px;background:var(--sheet);border:1px solid var(--rule);max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow:auto;overscroll-behavior:contain;text-align:left}
+.wiw-menu-groep+.wiw-menu-groep{border-top:1px solid var(--rule)}
+.wiw-menu-kop{list-style:none;display:flex;align-items:center;gap:12px;min-height:46px;margin:0;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;line-height:1.35;text-transform:uppercase;color:var(--ink-70);-webkit-user-select:none;user-select:none}
+.wiw-menu-kop::-webkit-details-marker{display:none}
+.wiw-menu-kop::marker{content:""}
+/* Pijltje (getekend, geen tekst voor de schermlezer): wijst naar rechts als de groep dicht is, omlaag als hij open is. */
+.wiw-menu-kop::before{content:"";flex:0 0 auto;width:6px;height:6px;margin:0 2px 0 1px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s ease}
+.wiw-menu-groep[open]>.wiw-menu-kop::before{transform:translateY(-2px) rotate(45deg)}
+.wiw-menu-kop:hover,.wiw-menu-groep[open]>.wiw-menu-kop{color:var(--ink)}
+@media(prefers-reduced-motion:reduce){.wiw-menu-kop::before{transition:none}}
+.wiw-menu-paneel ul{list-style:none;margin:0;padding:0 0 8px 22px}
 .wiw-menu-paneel a{display:flex;align-items:center;min-height:44px;color:var(--ink);text-decoration:none;font-family:var(--sans);font-size:15px;line-height:1.25;overflow-wrap:anywhere}
 .wiw-menu-paneel a:hover,.wiw-menu-paneel a:focus-visible{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:480px){
@@ -86,7 +98,8 @@ const CSS=`
   html body .wiw-bovenbalk .wiw-weergave-boven{flex:1 1 100%}
 }
 @media(min-width:481px){
-  .wiw-menu-paneel{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* Eén kolom titels: het paneel hoeft niet breder dan de langste titel of link. */
+  .wiw-menu-paneel{right:auto;width:340px;max-width:calc(100vw - 48px)}
 }
 @media(min-width:481px) and (max-width:900px){
   /* Menu, Nachtzicht en de keuze naast elkaar: de keuze mag tot 242px smaller worden. */
@@ -98,25 +111,27 @@ const CSS=`
   /* Het uitklappaneel hangt onder de knop (niet onder de rand van het vel). */
   .wiw-menu{position:relative}
   .wiw-menu>summary{min-height:36px;height:36px}
-  .wiw-menu-paneel{right:auto;top:calc(100% + 4px);width:780px;max-width:calc(100vw - 48px);grid-template-columns:repeat(4,minmax(0,1fr))}
+  .wiw-menu-paneel{top:calc(100% + 4px);width:320px}
+  .wiw-menu-kop{min-height:38px}
   .wiw-menu-paneel a{min-height:34px}
 }
 @media(min-width:901px) and (pointer:coarse){
   /* Aanraakscherm op desktopbreedte: dezelfde 44px-doelen als Licht/Auto/Donker in de 48px-balk. */
   .wiw-menu>summary{min-height:44px;height:44px}
-  .wiw-menu-paneel a{min-height:44px}
+  .wiw-menu-kop,.wiw-menu-paneel a{min-height:44px}
 }
 @media(min-width:1904px){
   /* Zijbalk: hetzelfde menu, permanent open (wiw-menu-rail via de menulaag). */
   .wiw-menu>summary{display:none}
   html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:8px;right:auto;width:136px;display:block;padding:3px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
-  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{margin-top:22px}
-  html.wiw-menu-rail .wiw-menu-kop{font-size:12px;letter-spacing:.08em;line-height:1.35;margin-bottom:2px}
+  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:4px}
+  html.wiw-menu-rail .wiw-menu-kop{min-height:34px;gap:9px;font-size:12px;letter-spacing:.08em}
+  html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 6px 17px}
   html.wiw-menu-rail .wiw-menu-paneel a{min-height:30px;font-size:14px;color:var(--ink-70)}
   html.wiw-menu-rail .wiw-menu-paneel a:hover{color:var(--ink)}
 }
 @media(min-width:1904px) and (pointer:coarse){
-  html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
+  html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
 `;
 
