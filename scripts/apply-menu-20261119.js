@@ -122,7 +122,7 @@ const CSS=`
   .wiw-menu>summary{min-height:36px;height:36px}
   .wiw-menu-paneel{top:calc(100% + 4px);width:320px}
   .wiw-menu-kop{min-height:38px}
-  .wiw-menu-paneel a{min-height:34px}
+  .wiw-menu-paneel a{min-height:36px}
 }
 @media(min-width:901px) and (pointer:coarse){
   /* Aanraakscherm op desktopbreedte: dezelfde 44px-doelen als Licht/Auto/Donker in de 48px-balk. */
