@@ -5,6 +5,8 @@
    staan in één smalle balk boven de kop, buiten #app, op telefoon en desktop.
    Gecontroleerd per breedte, in licht en donker en in het Engels:
    - plaats: balk vóór de kop, #thema erin, geen Weergave-regel onder de footer;
+     sinds UI PR #2 (19 november) begint de balk met de menuknop (menu-browser.test.js
+     test het menu zelf); op telefoon vullen menuknop en keuze samen de balk;
      vanaf 901px op het papier boven het vel zonder dat de kop verschuift;
    - maat: link minstens 44px (aanraken, tot 900px) of 36px (muis), weergaverij
      volgens preview-responsive-visual-browser.js, geen afgeknipte tekst, geen overflow, link en keuze op één
@@ -77,7 +79,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         await sleep(800);
         const m=await page.evaluate(()=>{
           const r=e=>{if(typeof e==="string")e=document.querySelector(e);if(!e)return null;const b=e.getBoundingClientRect();return {top:b.top+scrollY,bottom:b.bottom+scrollY,left:b.left,right:b.right,width:b.width,height:b.height};};
-          const balk=document.querySelector(".wiw-bovenbalk"),thema=document.getElementById("thema"),link=document.querySelector(".wiw-snel-nachtzicht"),mast=document.querySelector(".mast");
+          const balk=document.querySelector(".wiw-bovenbalk"),thema=document.getElementById("thema"),link=document.querySelector(".wiw-snel-nachtzicht"),mast=document.querySelector(".mast"),menu=document.querySelector("#wiw-menu > summary");
           const knoppen=thema?[...thema.querySelectorAll("button")].map(b=>({naam:b.getAttribute("aria-label")||"",...r(b)})):[];
           const geknipt=[thema,...(thema?thema.querySelectorAll("*"):[]),link].filter(Boolean).filter(e=>!e.closest(".sr-only")&&e.getClientRects().length&&getComputedStyle(e).overflow!=="visible"&&e.scrollWidth>e.clientWidth+1).map(e=>e.id||e.className);
           const sheet=document.querySelector(".sheet");
@@ -86,7 +88,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
           const sh=getComputedStyle(sheet),shr=sheet.getBoundingClientRect();
           return {
             sheetTop:shr.top+scrollY,sheetBinnen:parseFloat(sh.paddingTop)+parseFloat(sh.borderTopWidth),sheetLinks:shr.left+parseFloat(sh.borderLeftWidth)+parseFloat(sh.paddingLeft),sheetRechts:shr.right-parseFloat(sh.borderRightWidth)-parseFloat(sh.paddingRight),
-            balk:r(balk),thema:r(thema),link:r(link),mast:r(mast),knoppen,geknipt,
+            balk:r(balk),thema:r(thema),link:r(link),mast:r(mast),menu:r(menu),balkGat:balk?parseFloat(getComputedStyle(balk).columnGap)||0:0,knoppen,geknipt,
             linkTekst:(link?.textContent||"").replace(/\s+/g," ").trim(),label:(balk?.querySelector(".wiw-weergave-label")?.textContent||"").trim(),
             groepNaam:thema?.getAttribute("aria-label")||"",
             themaInBalk:!!(thema&&balk&&balk.contains(thema)),balkVoorKop:!!(balk&&mast&&balk.compareDocumentPosition(mast)&Node.DOCUMENT_POSITION_FOLLOWING),
@@ -104,12 +106,16 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
            ≥43,5px tot 900px en ≥35,5px op desktop; de link minstens even hoog als een aanraakdoel (44px) of 36px met muis. */
         const minDoel=w<=900?44:36,minThema=w<=430?45.5:w<=900?43.5:35.5;
         assert(m.thema.height>=minThema,`${label}: weergaverij is ${m.thema.height}px hoog (minstens ${minThema}px)`);
-        /* Telefoon (tot en met 480px, eigenaar 18 november): alleen de weergavekeuze, over de volle breedte;
-           Nachtzicht via de bestaande snelnavigatie. Daarboven link en keuze naast elkaar. */
+        /* Telefoon (tot en met 480px, eigenaar 18 november): geen Nachtzicht-link (die zit in de snelnavigatie).
+           Sinds UI PR #2 (eigenaar 19 november) staat de menuknop vooraan en vult de keuze de rest van de rij;
+           op 320px (tot 345px) staat het menu op een eigen rij en vult de keuze de volle breedte.
+           Daarboven menu, link en keuze naast elkaar. */
         const telefoon=w<=480;
         if(telefoon){
           assert(!m.linkZichtbaar,`${label}: Nachtzicht-link staat op telefoon toch in de bovenbalk`);
-          assert(Math.abs(m.thema.width-m.balk.width)<=1,`${label}: weergavekeuze vult de breedte niet (${Math.round(m.thema.width)} van ${Math.round(m.balk.width)}px)`);
+          assert(m.menu&&Math.abs(m.menu.left-m.balk.left)<=1,`${label}: menuknop staat niet vooraan in de bovenbalk`);
+          if(w<=345)assert(Math.abs(m.thema.width-m.balk.width)<=1&&m.thema.top>=m.menu.bottom-1,`${label}: weergavekeuze vult op een eigen rij de breedte niet (${Math.round(m.thema.width)} van ${Math.round(m.balk.width)}px)`);
+          else assert(Math.abs(m.thema.top-m.menu.top)<=2&&Math.abs(m.thema.right-m.balk.right)<=1&&Math.abs(m.thema.width-(m.balk.width-m.menu.width-m.balkGat))<=1,`${label}: menuknop en weergavekeuze vullen samen de breedte niet (keuze ${Math.round(m.thema.width)}, knop ${Math.round(m.menu.width)}, balk ${Math.round(m.balk.width)}px)`);
           assert(m.nachtNav,`${label}: Nachtzicht is op telefoon niet bereikbaar via de snelnavigatie`);
         }else assert(m.link&&m.linkZichtbaar&&m.link.height>=minDoel&&m.link.width>=44,`${label}: Nachtzicht-link is geen ${minDoel}px-doel (${m.link&&Math.round(m.link.width)}x${m.link&&Math.round(m.link.height)})`);
         assert(m.knoppen.length>=2,`${label}: knoppen van de weergavekeuze ontbreken`);
@@ -120,7 +126,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
           /* Zonder balk begon de kop op 73px (901–1099px) of 81px (vanaf 1100px); dat blijft zo. */
           const kopZonderBalk=w>=1100?81:73;
           assert(Math.abs(m.mast.top-kopZonderBalk)<=1,`${label}: de kop verschuift door de balk (${Math.round(m.mast.top)} tegen ${kopZonderBalk}px)`);
-          assert(Math.abs(m.link.left-m.sheetLinks)<=1&&Math.abs(m.thema.right-m.sheetRechts)<=1,`${label}: balk lijnt niet uit met de inhoud (${Math.round(m.link.left)}/${Math.round(m.thema.right)} tegen ${Math.round(m.sheetLinks)}/${Math.round(m.sheetRechts)})`);
+          assert(m.menu&&Math.abs(m.menu.left-m.sheetLinks)<=1&&Math.abs(m.thema.right-m.sheetRechts)<=1&&m.link.left>=m.menu.right,`${label}: balk lijnt niet uit met de inhoud (${m.menu&&Math.round(m.menu.left)}/${Math.round(m.thema.right)} tegen ${Math.round(m.sheetLinks)}/${Math.round(m.sheetRechts)})`);
         }
         assert.deepEqual(m.geknipt,[],`${label}: tekst in de bovenbalk wordt afgeknipt: ${m.geknipt.join(", ")}`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
@@ -157,10 +163,10 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         await page.goto(root+"/weer/utrecht/"+(taal==="en"?"?taal=en":""),{waitUntil:"domcontentloaded"});
         await page.waitForFunction(()=>!document.getElementById("here")?.disabled,null,{timeout:10000});
         const volgorde=[];for(let i=0;i<5;i++){await page.keyboard.press("Tab");volgorde.push(await page.evaluate(()=>{const a=document.activeElement;return a.id||a.className||a.tagName;}));}
-        const iN=volgorde.indexOf("wiw-snel-nachtzicht"),iT=volgorde.findIndex(x=>x==="thema-auto"||x==="thema-switch"),iQ=volgorde.indexOf("q");
-        assert((telefoon||iN>=0&&iT>iN)&&iT>=0&&(iQ<0||iQ>iT),`${label}: toetsenbordvolgorde begint niet met de bovenbalk: ${volgorde.join(" → ")}`);
+        const iM=volgorde.indexOf("wiw-menu-knop"),iN=volgorde.indexOf("wiw-snel-nachtzicht"),iT=volgorde.findIndex(x=>x==="thema-auto"||x==="thema-switch"),iQ=volgorde.indexOf("q");
+        assert(iM>=0&&iT>iM&&(telefoon||iN>iM&&iT>iN)&&iT>=0&&(iQ<0||iQ>iT),`${label}: toetsenbordvolgorde begint niet met de bovenbalk: ${volgorde.join(" → ")}`);
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
-        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}, ${telefoon?"alleen weergave":"contrast link "+c.toFixed(1)+":1"}`);
+        regels.push(`${label}: balk op ${Math.round(m.balk.top)}px, hoogte ${Math.round(m.balk.height)}px, ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}, ${telefoon?"menu en weergave":"contrast link "+c.toFixed(1)+":1"}`);
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
