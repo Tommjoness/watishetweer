@@ -28,6 +28,11 @@ async function controleer(browserType,naam){
        serviceworker hier, zodat WebKit die requests niet buiten page.route om
        afhandelt; serviceworker-upgrade/offline heeft een eigen browsercontract. */
     const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:"block"});
+    /* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026). Deze test meet bewust
+       geen dataload; forecast en luchtkwaliteit gingen eerder live en kwamen meestal pas ná de meting binnen
+       (een race). Nu is Open-Meteo hier deterministisch onbereikbaar: dezelfde toestand zonder data, zonder
+       race en zonder netwerk. De geocoding-route hieronder is later geregistreerd en gaat voor. */
+    await page.route(/^https:\/\/([a-z-]+\.)?open-meteo\.com\//,route=>route.abort("failed"));
     await page.goto("http://127.0.0.1:"+server.address().port+"/",{waitUntil:"domcontentloaded"});
     const resultaat=await page.evaluate(()=>{
       const app=document.getElementById("app");
