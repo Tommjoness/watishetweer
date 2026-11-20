@@ -17,14 +17,18 @@
      standaard) en Q 4 met APPARENT=REFRACTED; zon Q 2,4;
    - geocentrisch (500@399): maan Q 1,2,10,13,14,15,17,20,24 en zon Q 2;
    - opkomst, doorgang en ondergang per locatie en venster: R_T_S_ONLY=GEO, stap 1 minuut
-     (Horizons: gebroken bovenrand op 0° boven de geometrische horizon; doorgang = middelpunt).
+     (Horizons: gebroken bovenrand op 0° boven de geometrische horizon; doorgang = middelpunt);
+   - validatie van die tijdstippen: voor de eerste opkomst en ondergang in twee vensters per locatie
+     de gebroken middelpunthoogte (Q4 REFRACTED) en de schijfdiameter (Q13) per 10 s, van 120 s
+     vóór tot 60 s ná het gerapporteerde tijdstip. Daaruit volgt waar de gebroken bovenrand
+     werkelijk door 0° gaat (de onzekerheid van de referentie zelf).
    Kolommen worden onder hun Horizons-kolomnaam bewaard; per aanvraag worden de exacte
    parameters vastgelegd, zodat iedere waarde reproduceerbaar is. */
 
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { LOCATIES, MOMENTEN, OPKOMST_VENSTERS } = require("./referentiekader.js");
+const { LOCATIES, MOMENTEN, OPKOMST_VENSTERS, VALIDATIE_VENSTERS } = require("./referentiekader.js");
 
 const API = "https://ssd.jpl.nasa.gov/api/horizons.api";
 const UIT = path.join(__dirname, "horizons-2026-2028.json");
@@ -97,7 +101,7 @@ async function main() {
     maan: perMoment(await horizons({ COMMAND: "'301'", CENTER: "'500@399'", TLIST: tlist, TLIST_TYPE: "'JD'", QUANTITIES: "'1,2,10,13,14,15,17,20,24'" }, "geocentrisch maan")),
     zon: perMoment(await horizons({ COMMAND: "'10'", CENTER: "'500@399'", TLIST: tlist, TLIST_TYPE: "'JD'", QUANTITIES: "'2'" }, "geocentrisch zon"))
   };
-  const topocentrisch = [], geocentrisch = [], opkomst = [];
+  const topocentrisch = [], geocentrisch = [], opkomst = [], validatie = [];
   for (const m of MOMENTEN) geocentrisch.push({ moment: m.id, utc: m.utc, maan: geo.maan[m.utc], zon: geo.zon[m.utc] });
   for (const l of LOCATIES) {
     const plaats = { CENTER: "'coord@399'", COORD_TYPE: "'GEODETIC'", SITE_COORD: `'${l.lon},${l.lat},${l.hoogteKm}'` };
@@ -119,10 +123,19 @@ async function main() {
         regel.zonderOpkomstOfOndergang = h.map(r => ({ utc: r.utc, gebrokenHoogte: r["Elevation_(r-app)"] }));
       }
       opkomst.push(regel);
+      if (VALIDATIE_VENSTERS.includes(v.id)) for (const soort of ["r", "s"]) {
+        const g = regel.gebeurtenissen.find(x => x.soort === soort);
+        if (!g) continue;
+        const t0 = Date.parse(g.utc.replace(" ", "T") + ":00Z"), stappen = [];
+        for (let sec = -120; sec <= 60; sec += 10) stappen.push(sec);
+        const rijen = await horizons({ ...plaats, COMMAND: "'301'", TLIST: "'" + stappen.map(sec => ((t0 + sec * 1000) / 86400000 + 2440587.5).toFixed(8)).join(" ") + "'", TLIST_TYPE: "'JD'", QUANTITIES: "'4,13'", APPARENT: "'REFRACTED'" }, `${l.id} validatie ${soort} ${g.utc}`);
+        if (rijen.length !== stappen.length) throw new Error(`${l.id} validatie ${g.utc}: ${rijen.length} van ${stappen.length} rijen`);
+        validatie.push({ locatie: l.id, venster: v.id, utc: g.utc, soort, monsters: stappen.map((sec, i) => ({ s: sec, gebrokenHoogte: rijen[i]["Elevation_(r-app)"], diameter: rijen[i]["Ang-diam"] })) });
+      }
     }
     console.log("klaar:", l.id);
   }
-  const inhoud = { locaties: LOCATIES, momenten: MOMENTEN, vensters: OPKOMST_VENSTERS, topocentrisch, geocentrisch, opkomst };
+  const inhoud = { locaties: LOCATIES, momenten: MOMENTEN, vensters: OPKOMST_VENSTERS, topocentrisch, geocentrisch, opkomst, opkomstValidatie: validatie };
   const meta = {
     bron: "NASA/JPL Horizons API (" + API + ")",
     documentatie: "https://ssd.jpl.nasa.gov/horizons/manual.html",
@@ -137,6 +150,7 @@ async function main() {
       refracted: "maanGebroken: Q4 met APPARENT=REFRACTED (Horizons-refractiemodel, 10 °C, 1010 mbar)",
       astrometrisch: "Q1: astrometrische ICRF-positie (lichttijd, geen aberratie/nutatie)",
       opkomstOndergang: "R_T_S_ONLY=GEO, stap 1 min: gebroken bovenrand op 0° boven de geometrische horizon (geen kimduiking); 't' = doorgang van het middelpunt; marker geldt voor de afgelopen stap (nauwkeurigheid ca. 1 min)",
+      opkomstValidatie: "Q4 REFRACTED + Q13 per 10 s rond het RTS-tijdstip: gebroken bovenrand = gebroken middelpunthoogte + halve schijfdiameter (benadering: verschil in refractie over de schijf verwaarloosd)",
       topocentrisch: "CENTER=coord@399, COORD_TYPE=GEODETIC, SITE_COORD=lon,lat,hoogte_km",
       geocentrisch: "CENTER=500@399",
       toekomst: "Voor momenten na de EOP-dekking (zie aardrotatie) gebruikt Horizons voorspelde of geen gemeten aardoriëntatie; het effect op topocentrische posities is hooguit enkele boogseconden (UT1-UTC < 1 s)"

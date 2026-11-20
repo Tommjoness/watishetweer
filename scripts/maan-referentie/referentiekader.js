@@ -77,4 +77,7 @@ const OPKOMST_VENSTERS = Object.freeze([
   ["2028-december", "2028-12-19 00:00", "2028-12-24 00:00"]
 ].map(([id, start, eind]) => Object.freeze({ id, start, eind })));
 
-module.exports = { LOCATIES, MOMENTEN, OPKOMST_VENSTERS };
+/* Validatie van de Horizons-opkomsttijden: eerste opkomst en ondergang in deze vensters, per locatie. */
+const VALIDATIE_VENSTERS = Object.freeze(["2026-klokwissel-voorjaar", "2027-december"]);
+
+module.exports = { LOCATIES, MOMENTEN, OPKOMST_VENSTERS, VALIDATIE_VENSTERS };
