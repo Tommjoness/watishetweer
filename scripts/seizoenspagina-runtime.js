@@ -126,6 +126,7 @@ function dagWaarden(data,iso,ochtendUur){
 function heeftSneeuwdek(w){return !!(w&&w.sneeuwdek!=null&&w.sneeuwdek>=1);}
 function sneeuwTekst(w){
   if(!w||(w.sneeuwdek==null&&w.sneeuwval==null&&w.neerslag==null))return "Geen gegevens";
+  if(w.sneeuwdek==null)return "Sneeuwdek onbekend";
   if(heeftSneeuwdek(w))return `Sneeuwdek, ${cm(w.sneeuwdek)}`;
   if(w.sneeuwval!=null&&w.sneeuwval>=0.1)return `Wat sneeuw (${cm(w.sneeuwval)}), geen sneeuwdek`;
   if(w.neerslag!=null&&w.neerslag>=0.2)return `Geen sneeuw, ${komma(w.neerslag,1)} mm regen`;
@@ -137,12 +138,19 @@ function samenvatting(t,resultaten,cfg){
   const officieel=resultaten.find(r=>r.plaats.officieel);
   if(!officieel)return "";
   const zichtbaar=t.dagen.filter(d=>d.zichtbaar);
-  const zonder=zichtbaar.find(d=>!heeftSneeuwdek(officieel.dagen[d.iso]));
+  /* Een bekende 0 cm betekent geen sneeuwdek. Ontbrekende data betekent onbekend. */
+  const zonder=zichtbaar.find(d=>{
+    const w=officieel.dagen[d.iso];
+    return w&&w.sneeuwdek!=null&&!heeftSneeuwdek(w);
+  });
   const plaats=officieel.plaats.naam;
   if(zonder)return vul(cfg.teksten.nietOp,{plaats,dag:klein(zonder.label)});
+  if(zichtbaar.some(d=>officieel.dagen[d.iso]?.sneeuwdek==null))return vul(cfg.teksten.onbekend,{plaats});
   if(zichtbaar.length===t.dagen.length)return vul(cfg.teksten.allemaal,{plaats});
   const volgende=t.dagen.find(d=>!d.zichtbaar&&d.over>0);
-  return vul(cfg.teksten.totNuToe,{plaats,dag:zichtbaar.map(d=>klein(d.label)).join(" en "),volgende:volgende?klein(volgende.label):"",datum:volgende?datumTekst(volgende.vanaf,false):""});
+  /* Op 26 december is 25 december niet meer zichtbaar: doe geen uitspraak over beide dagen. */
+  if(!volgende)return "";
+  return vul(cfg.teksten.totNuToe,{plaats,dag:zichtbaar.map(d=>klein(d.label)).join(" en "),volgende:klein(volgende.label),datum:datumTekst(volgende.vanaf,false)});
 }
 
 /* ---------- Soort "middernacht": één nacht, uur voor uur ---------- */
