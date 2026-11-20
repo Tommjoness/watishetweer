@@ -5,6 +5,10 @@ const path=require("path");
 const http=require("http");
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures}=require("./scripts/openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context krijgt voor
+   *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js; eigen routes gaan voor.
+   Deze test liet de app eerder ongemockt forecast en luchtkwaliteit ophalen (gevonden met de CI-bewaker). */
 
 const ROOT=__dirname;
 const PUBLIC=path.join(ROOT,"public");
@@ -82,7 +86,7 @@ async function cacheSleutels(page){return page.evaluate(()=>caches.keys());}
 (async()=>{
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const url=`http://127.0.0.1:${server.address().port}/`;
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}));
   const context=await browser.newContext({serviceWorkers:"allow"});
   const page=await context.newPage();
   const pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));

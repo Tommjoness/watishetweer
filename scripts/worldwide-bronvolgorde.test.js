@@ -106,26 +106,27 @@ async function faalt(belofte,patroon,melding){
     "const liveBronnen=await verzamelLiveBronnen({",
     "ontdek:locatie=>ontdekVolledigeForecastUrl(browser,locatie),",
     "controleerUrl:(sourceUrl,locatie)=>verifieerGeenPressureQuery(sourceUrl,locatie.naam),",
-    "return haalLiveForecast(sourceUrl,locatie.naam,locatie);",
+    "return bronFixture(sourceUrl,locatie.naam);",
     "pauzeMs:BRON_PACING_MS,"
   ])assert(monitor.includes(fragment),"wereldwijde monitor gebruikt de vaste bronvolgorde niet meer: "+fragment);
   assert(!/await slaap\(BRON_PACING_MS\)/.test(monitor),"de pauze tussen locaties hoort alleen nog in de ontdekkingsronde van worldwide-bronvolgorde.js");
   for(const [fragment,waarom] of [
     ['begrensdeMs("WORLDWIDE_SOURCE_PACING_MS",5000,1000,30000)',"de bestaande pauze tussen ontdekkingen blijft gelijk"],
-    ["for(let poging=1;poging<=3;poging++)","drie pogingen bij Open-Meteo blijven"],
-    ["if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging)","de bestaande backoff bij Open-Meteo blijft"],
-    ['const reserve=ROOT+"/api/forecast?"',"de reserveroute blijft"],
-    ["for(let poging=1;poging<=2;poging++)","twee pogingen op de reserveroute blijven"],
-    ["if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS)","de bestaande backoff op de reserveroute blijft"],
-    ["live bron niet bereikbaar","een onbereikbare bron blijft een fout"],
-    ["if(!isVolledigeBron(bron))","onvolledige brondata wordt bij het ophalen geweigerd"],
+    /* Sinds 20 november (Open-Meteo, ticket #235915): geen live Open-Meteo vanuit CI. De exacte productie-URL
+       krijgt het contractgetrouwe antwoord van openmeteo-fixture.js; live retries en de reserveroute als
+       bron vervallen, de volledigheids- en bronwaarheidscontroles blijven. */
+    ["const {status,json}=openMeteoAntwoord(url,{nu:Date.now(),tzVoor});","de exacte productie-URL krijgt de contractgetrouwe fixture"],
+    ["if(status!==200)throw new Error(","een ongeldige aanvraag van de pagina blijft een fout"],
+    ["if(!isVolledigeBron(json))throw new Error(","een onvolledige bron wordt geweigerd"],
+    ["const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor});","iedere context krijgt de fixture voor alle Open-Meteo-hosts"],
     ["return ingevuld(bron.current.temperature_2m)&&uren.filter(ingevuld).length>=24;","de volledigheidscontrole eist echte meetwaarden"],
-    ["assert(isVolledigeBron(bron),`${scherm.naam}/${locatie.naam}: live bronfixture ontbreekt`);","iedere browsercontrole eist opnieuw een volledige bron voor die locatie"],
+    ["assert(isVolledigeBron(bron),`${scherm.naam}/${locatie.naam}: bronfixture ontbreekt`);","iedere browsercontrole eist opnieuw een volledige bron voor die locatie"],
     ["const bron=liveBronnen.get(locatie.naam);","de browsercontrole gebruikt de bron van dezelfde locatie"],
     ["for(const scherm of schermen){","beide schermformaten blijven"],
     ["for(const locatie of locaties){","iedere locatie wordt per scherm gecontroleerd"],
-    ["verifieerBronwaarheid(bron,uit","de bronwaarheid blijft tegen de live respons gecontroleerd"]
+    ["verifieerBronwaarheid(bron,uit","de bronwaarheid blijft tegen exact het geleverde antwoord gecontroleerd"]
   ])assert(monitor.includes(fragment),"wereldwijde monitor: "+waarom);
+  assert(!/\bfetch\(/.test(monitor),"wereldwijde monitor mag zelf niets live ophalen (geen live Open-Meteo vanuit CI)");
 
-  console.log("worldwide-bronvolgorde: 11 locaties, eerst ontdekken met pauze en daarna achter elkaar ophalen, vaste koppeling locatie-URL-bron, fail-closed bij ontdek-, controle- en bronfouten, ongewijzigde retries, reserveroute en volledigheidscontrole.");
+  console.log("worldwide-bronvolgorde: 11 locaties, eerst ontdekken met pauze en daarna achter elkaar ophalen, vaste koppeling locatie-URL-bron, fail-closed bij ontdek-, controle- en bronfouten, contractgetrouwe fixture voor de exacte productie-URL zonder live ophaling, volledigheidscontrole.");
 })().catch(fout=>{console.error(fout&&fout.stack||fout);process.exit(1);});

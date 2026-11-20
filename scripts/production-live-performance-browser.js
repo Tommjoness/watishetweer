@@ -2,6 +2,10 @@
 
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {isAlleenGemeld,logAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 const {isProviderStoringBericht,beschrijf,beoordeelForecastHerkomst}=require("./provider-storing.js");
 
@@ -39,7 +43,7 @@ function isCloudflareAnalytics(url){return isAnalyticsScript(url)||isEigenRum(ur
 
 (async()=>{
   for(const profiel of profielen){
-    const browser=await profiel.type.launch({headless:true});
+    const browser=metOpenMeteoFixtures(await profiel.type.launch({headless:true}),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
     try{
       const context=await browser.newContext({...profiel.opties,locale:"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage(),requests=[],responses=[],mislukt=[],consoleErrors=[],pageErrors=[],providerStoringen=[];

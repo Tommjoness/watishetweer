@@ -4,6 +4,10 @@ const assert=require("assert");
 const {execFile}=require("child_process");
 const {promisify}=require("util");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 
 const ROOT=(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/+$/,"");
 const EXPECTED_SHA=String(process.env.EXPECTED_SHA||"").trim();
@@ -259,7 +263,7 @@ async function maakStaleCache(page,naam){
 }
 
 async function main(){
-  const browser=await chromium.launch({headless:HEADLESS});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:HEADLESS}),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
   try{
     if(NAVIGATION_INITIAL_COOLDOWN_MS>0){
       console.log(`Navigatiecontract: begrensde upstream-afkoeling ${NAVIGATION_INITIAL_COOLDOWN_MS} ms.`);

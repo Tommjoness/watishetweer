@@ -5,6 +5,10 @@ const path=require("path");
 const http=require("http");
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures}=require("./scripts/openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context krijgt voor
+   *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js (vangnet naast de eigen
+   fetch-fixture van deze test); eigen routes gaan voor. Gevonden met de CI-bewaker. */
 const {bouw}=require("./data.js");
 
 const ROOT=__dirname,PUBLIC=path.join(ROOT,"public");
@@ -143,13 +147,13 @@ function controleerTimerOwners(owners,fase){
 (async()=>{
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
-  const browser=await chromium.launch({
+  const browser=metOpenMeteoFixtures(await chromium.launch({
     // Chromium's headless delegate disables BFCache. CI runs this headed
     // browser under Xvfb so pageshow.persisted remains a real release gate.
     headless:false,
     ignoreDefaultArgs:["--disable-back-forward-cache"],
     args:["--enable-features=BackForwardCache"]
-  });
+  }));
   try{
     for(const route of ["/","/weer/amsterdam/"]){
       const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:"block"});

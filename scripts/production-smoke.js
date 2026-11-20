@@ -223,15 +223,13 @@ async function wachtOpExacteDeployment(){
     if(e&&e.name==="AssertionError")throw e;
     reserveRuw={fout:String(e&&e.message||e)};
   }
-  let openMeteoRuw;
-  try{
-    const om=await haal("https://api.open-meteo.com/v1/forecast?latitude=53.1244&longitude=5.9233&hourly=cloud_cover&forecast_days=1&timezone=Europe%2FAmsterdam",{accept:"application/json"});
-    let json=null;
-    try{json=JSON.parse(om.text);}catch(e){json=null;}
-    openMeteoRuw={status:om.response.status,json};
-  }catch(e){
-    openMeteoRuw={fout:String(e&&e.message||e)};
-  }
+  /* Open-Meteo zelf wordt hier bewust niet live aangeroepen: Open-Meteo vraagt om
+     in CI geen live API-aanroepen te doen (ticket #235915, 20 november 2026) en
+     deze smoke draait ieder uur op gedeelde GitHub-runners. De uitkomst blijft
+     daarom eerlijk "controle niet uitgevoerd" (geen volledige acceptatie); de
+     echte beschikbaarheid van Open-Meteo wordt buiten GitHub Actions bewaakt
+     (docs/open-meteo-monitoring.md). */
+  const openMeteoRuw={fout:"niet in CI gecontroleerd: live Open-Meteo is uit GitHub Actions gehaald; beschikbaarheid wordt buiten CI bewaakt"};
   const reserveUitkomst=bron.beoordeelReserve(reserveRuw),openMeteoUitkomst=bron.beoordeelOpenMeteo(openMeteoRuw);
   const bronOordeel=bron.samenvatting(openMeteoUitkomst,reserveUitkomst);
   console.log(`BRONBESCHIKBAARHEID PARK/VAKANTIE: ${bronOordeel.tekst}`);

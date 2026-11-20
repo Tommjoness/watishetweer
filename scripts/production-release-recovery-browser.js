@@ -2,6 +2,10 @@
 
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js
+   (vangnet naast de eigen fetch-fixture van dit script). Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {bouw}=require("../data.js");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 const {isProviderStoringBericht,beschrijf}=require("./provider-storing.js");
@@ -150,13 +154,13 @@ async function snap(page){return page.evaluate(()=>({
 }));}
 
 (async()=>{
-  const browser=await chromium.launch({
+  const browser=metOpenMeteoFixtures(await chromium.launch({
     // Headless Chromium reports BackForwardCacheDisabledForDelegate. The
     // production workflow supplies Xvfb for this real persisted=true gate.
     headless:false,
     ignoreDefaultArgs:["--disable-back-forward-cache"],
     args:["--enable-features=BackForwardCache"]
-  });
+  }),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
   try{
     /* No-JS op root én route: duidelijke uitleg, geen nepbediening, SEO-links blijven. */
     for(const route of ["/","/weer/amsterdam/"]){

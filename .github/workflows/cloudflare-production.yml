@@ -155,7 +155,17 @@ jobs:
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
+          # Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915): alleen deze stap (build en
+          # tests, zonder secrets) laadt de bewaker; de Cloudflare-stappen met tokens blijven ongemoeid.
+          NODE_OPTIONS: --require ${{ github.workspace }}/scripts/ci/geen-live-openmeteo.cjs
+          GEEN_LIVE_OPENMETEO_LOG: ${{ runner.temp }}/geen-live-openmeteo.jsonl
         run: npm run build:cloudflare
+
+      - name: Controle geen live Open-Meteo tijdens de build
+        if: always()
+        env:
+          GEEN_LIVE_OPENMETEO_LOG: ${{ runner.temp }}/geen-live-openmeteo.jsonl
+        run: node scripts/ci/geen-live-openmeteo-controle.js
 
       # Eerst exact hetzelfde artifact als releasekandidaat (Pages-preview) uitrollen
       # en volledig smoken. Pas als dat groen is, gaat hetzelfde public/ naar
