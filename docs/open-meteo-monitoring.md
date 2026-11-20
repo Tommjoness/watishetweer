@@ -8,6 +8,8 @@ Sinds 20 november 2026 doet GitHub Actions geen live aanroepen meer naar Open-Me
 - **Bewaker.** Iedere CI-job die bouwt, test of een browser start, laadt `scripts/ci/geen-live-openmeteo.cjs` via `NODE_OPTIONS`.
   - Open-Meteo is dan onbereikbaar: Node-DNS, `fetch` en `http(s)` worden geweigerd. Chromium krijgt een resolverregel, en iedere browsercontext krijgt een vangnetroute.
   - Elke poging wordt vastgelegd. De laatste stap van de job (`node scripts/ci/geen-live-openmeteo-controle.js`) faalt bij één poging, ook als een test die fout zelf wegving.
+  - Een stap met een eigen `NODE_OPTIONS` (zoals de Cloudflare Access-preload in de previewbrowserjobs) overschrijft de waarde uit `GITHUB_ENV`. Daar staat de bewaker daarom zelf als eerste `--require`. `geen-live-openmeteo.test.js` eist dat voor iedere `NODE_OPTIONS`-regel in een bewaakte job, en toetst de bewaker samen met de Access-preload.
+  - `cloudflare-preview-deploy.yml` draait via `workflow_run` altijd in de versie van `main`. Wijzigingen in die workflow werken daarom pas na de merge. Op een PR draaien wel de scripts van de PR zelf, maar met de workflowstappen van `main`.
 - **Contracttests.** `scripts/ci/geen-live-openmeteo.test.js` toetst de bewaker en eist de bewaker in alle relevante workflowjobs. Daarnaast verbiedt deze test Open-Meteo-hosts en live Open-Meteo-scripts in workflows. `scripts/history-fixture-synthetisch.test.js` toetst het fixturecontract.
 
 ## Wat uit CI is gehaald

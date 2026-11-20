@@ -215,7 +215,8 @@ jobs:
       - name: Bewaker tegen live Open-Meteo
         # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
         # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
-        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
         run: |
           echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
           echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
@@ -231,7 +232,7 @@ jobs:
         env:
           PREVIEW_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/preview-responsive-visual-browser.js
 
       - name: Bewaar responsive screenshotbewijs
@@ -250,7 +251,7 @@ jobs:
           # Zonder providersleutel in het previewproject: 503-contract en gecontroleerde geen-data-toestand, geen live
           # Visual Crossing-bewijs (zie scripts/ci/preview-providermodus.js). Het live bewijs blijft in de releasekandidaat.
           PREVIEW_PROVIDERMODUS: geen-sleutel
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/weatherapi-live-fallback-browser.js
 
       - name: Wereldwijde preview in mobiel en desktop
@@ -259,7 +260,7 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           WORLDWIDE_SOURCE_PACING_MS: 5000
           WORLDWIDE_SOURCE_RETRY_BACKOFF_MS: 5000
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/run-production-worldwide-browser.js
 
       - name: Finale locatie- en cold-loadacceptatie op deployed preview
@@ -274,7 +275,7 @@ jobs:
           HISTORY_SOURCE_INITIAL_COOLDOWN_MS: 30000
           HISTORY_SOURCE_PACING_MS: 15000
           HISTORY_SOURCE_RETRY_BACKOFF_MS: 10000
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/run-production-pre-sale-acceptance-browser.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -282,7 +283,7 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
       - name: Controle geen live Open-Meteo
         if: always()
@@ -312,7 +313,8 @@ jobs:
       - name: Bewaker tegen live Open-Meteo
         # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
         # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
-        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
         run: |
           echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
           echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
@@ -343,7 +345,7 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           HEADLESS: "false"
           NATIVE_BROWSER_RELOAD: "true"
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -351,7 +353,7 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
       - name: Controle geen live Open-Meteo
         if: always()
@@ -379,7 +381,8 @@ jobs:
       - name: Bewaker tegen live Open-Meteo
         # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
         # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
-        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
         run: |
           echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
           echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
@@ -391,7 +394,7 @@ jobs:
         env:
           CWV_ROOT: ${{ needs.preview.outputs.preview_url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cwv-desktop-recovery-browser.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -399,7 +402,7 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ needs.preview.outputs.preview_url }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
       - name: Bewaar deployed CWV-bewijs
         if: always()
@@ -408,13 +411,13 @@ jobs:
           name: preview-cwv-${{ env.SOURCE_SHA }}
           path: cwv-evidence/
           retention-days: 14
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   # Workflow_run-checks horen bij main, niet bij de PR. Deze job zet de uitkomst als
   # commitstatus op de PR-head, zodat de previewresultaten zichtbaar blijven. Een
   # overgeslagen of geannuleerde job telt nooit als geslaagd (REL-01).
-      - name: Controle geen live Open-Meteo
-        if: always()
-        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
   status:
     needs: [preview, preview-worldwide, preview-release-navigation, preview-cwv]
     if: always() && needs.preview.result != 'skipped'

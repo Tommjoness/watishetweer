@@ -112,6 +112,35 @@ const http=require("http");const {chromium}=require(${JSON.stringify(PW)});
   assert(!l.some(x=>/api\.open-meteo\.com\/v1\/forecast\?x=1/.test(x.doel)),"fixture van de test telt niet als poging");
 }
 
+/* 3b. Samen met de Cloudflare Access-preload, precies zoals de previewbrowserstappen hem laden
+   (NODE_OPTIONS van de stap, bewaker eerst, relatieve paden vanuit de repository). Beide werken:
+   Access patcht fetch en Playwright, de bewaker blijft Open-Meteo weigeren en vastleggen. */
+{
+  const log=path.join(map,"access.jsonl");
+  const r=draai(`
+const http=require("http");const {chromium}=require(${JSON.stringify(PW)});
+(async()=>{
+  const uit={accessFetch:!!globalThis.fetch.__wiwCloudflareAccessPatched,accessPw:!!chromium.__wiwCloudflareAccessPatched};
+  try{await fetch("https://api.open-meteo.com/v1/forecast?latitude=1&longitude=2");uit.fetch="bereikt";}catch(e){uit.fetch=e.cause&&e.cause.code;}
+  const s=http.createServer((q,a)=>{a.setHeader("content-type","text/html");a.end("<!doctype html><title>t</title>");});
+  await new Promise(r=>s.listen(0,"127.0.0.1",r));const root="http://127.0.0.1:"+s.address().port;
+  const browser=await chromium.launch({headless:true,executablePath:require(${JSON.stringify(VIND)}).vindBrowser()||undefined});
+  uit.accessBrowser=!!browser.__wiwCloudflareAccessPatched;
+  const c=await browser.newContext();const p=await c.newPage();
+  await p.goto(root+"/");
+  uit.browser=await p.evaluate(async()=>{try{await fetch("https://geocoding-api.open-meteo.com/v1/search?name=b");return "bereikt";}catch(e){return "fout";}});
+  await browser.close();s.close();
+  console.log(JSON.stringify(uit));
+})().catch(e=>{console.error(e);process.exit(1);});`,log,{
+    NODE_OPTIONS:"--require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs",
+    CF_ACCESS_CLIENT_ID:"proef-id.access",CF_ACCESS_CLIENT_SECRET:"proef-geheim"});
+  assert.equal(r.status,0,r.stderr);
+  const uit=JSON.parse(r.stdout.trim().split("\n").pop());
+  assert.deepEqual(uit,{accessFetch:true,accessPw:true,fetch:"ENOTFOUND",accessBrowser:true,browser:"fout"},"bewaker met Access-preload: "+JSON.stringify(uit));
+  const l=regels(log);
+  assert(l.some(x=>x.kanaal&&/api\.open-meteo\.com/.test(x.doel))&&l.some(x=>/geocoding-api\.open-meteo\.com/.test(x.doel)),"Node- en browserpoging vastgelegd naast de Access-preload: "+JSON.stringify(l));
+}
+
 /* 4. Workflows: iedere job die bouwt, test of een browser start, laadt de bewaker direct na de checkout en
    eindigt met de controle; geen workflow roept Open-Meteo (of een script dat Open-Meteo live aanroept) aan.
    Bewuste uitzondering, ter beslissing van de eigenaar: KNMI modelverificatie (kwartaal en handmatig) vergelijkt
@@ -121,7 +150,7 @@ const http=require("http");const {chromium}=require(${JSON.stringify(PW)});
   const UITZONDERING=new Set(["knmi-modelverificatie.yml"]);
   const LIVE_SCRIPTS=/openmeteo-daggrens-contract\.js|knmi-modelverificatie\.js(?!\S*test)/;
   const ZONDER_OPENMETEO=new Set(["cloudflare-web-analytics.yml","cloudflare-human-analytics-report.yml","meteoalarm-gebieden.yml","meteoalarm-verkenning.yml","sec06-a2-access-bewijs.yml"]);
-  let jobsGeteld=0;
+  let jobsGeteld=0,nodeOptiesGeteld=0;
   for(const naam of fs.readdirSync(WF).filter(n=>/\.ya?ml$/.test(n))){
     const tekst=fs.readFileSync(path.join(WF,naam),"utf8");
     const zonderCommentaar=tekst.split("\n").filter(l=>!/^\s*#/.test(l)).join("\n");
@@ -151,10 +180,20 @@ const http=require("http");const {chromium}=require(${JSON.stringify(PW)});
       assert(controle>bewaker&&stappenNaControle===0,naam+"/"+jobNaam+": controle is niet de laatste stap");
       assert(/if: always\(\)\n\s+run: NODE_OPTIONS= node scripts\/ci\/geen-live-openmeteo-controle\.js/.test(job.slice(controle)),naam+"/"+jobNaam+": controle draait niet altijd");
       assert(volgendeStap>0,naam+"/"+jobNaam+": bewaker zonder vervolgstappen");
+      /* Een NODE_OPTIONS van de job of een stap overschrijft de waarde uit GITHUB_ENV. Dan moet de bewaker daar
+         zelf als eerste --require staan (vóór een preload die Playwright of fetch patcht). */
+      for(const regel of job.split("\n").filter(r=>/\bNODE_OPTIONS\s*[:=]/.test(r))){
+        const toegestaan=regel.includes('echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"')
+          ||/run: NODE_OPTIONS= node scripts\/ci\/geen-live-openmeteo-controle\.js$/.test(regel)
+          ||/^\s+NODE_OPTIONS: --require=\.\/scripts\/ci\/geen-live-openmeteo\.cjs(\s|$)/.test(regel);
+        assert(toegestaan,naam+"/"+jobNaam+": NODE_OPTIONS overschrijft de bewaker: "+regel.trim());
+        nodeOptiesGeteld++;
+      }
     }
   }
   assert(jobsGeteld>=25,"te weinig CI-jobs gecontroleerd: "+jobsGeteld);
+  assert(nodeOptiesGeteld>=jobsGeteld*2,"te weinig NODE_OPTIONS-regels gecontroleerd: "+nodeOptiesGeteld);
 }
 
 fs.rmSync(map,{recursive:true,force:true});
-console.log("Bewaker geen live Open-Meteo: Node (fetch, DNS, https) en Playwright (zonder fixture, route.continue) geblokkeerd en vastgelegd; fixtures en andere hosts ongemoeid; controle faalt bij een poging; iedere bouw-, test- en browserjob in de workflows laadt de bewaker en geen workflow roept Open-Meteo live aan (uitzondering ter beslissing: KNMI modelverificatie).");
+console.log("Bewaker geen live Open-Meteo: Node (fetch, DNS, https) en Playwright (zonder fixture, route.continue) geblokkeerd en vastgelegd, ook samen met de Access-preload; fixtures en andere hosts ongemoeid; controle faalt bij een poging; iedere bouw-, test- en browserjob in de workflows laadt de bewaker (ook in stappen met een eigen NODE_OPTIONS) en geen workflow roept Open-Meteo live aan (uitzondering ter beslissing: KNMI modelverificatie).");
