@@ -103,6 +103,7 @@ assert.equal(R.sneeuwTekst({sneeuwdek:0,sneeuwval:0,neerslag:3.14}),"Geen sneeuw
 assert.equal(R.sneeuwTekst({sneeuwdek:0,sneeuwval:0,neerslag:0}),"Geen sneeuw, droog");
 assert.equal(R.sneeuwTekst({sneeuwdek:null,sneeuwval:null,neerslag:null}),"Geen gegevens","ontbrekende waarden worden niet stil 'droog'");
 assert.equal(R.sneeuwTekst(null),"Geen gegevens");
+assert.equal(R.sneeuwTekst({sneeuwdek:null,sneeuwval:0,neerslag:0}),"Sneeuwdek onbekend","ontbrekend sneeuwdek is niet hetzelfde als 0 cm");
 assert.equal(R.dagWaarden(wit,"2026-12-31",9),null,"dag buiten het antwoord geeft geen waarden");
 
 /* Samenvatting gaat over de officiële meetplaats (De Bilt). */
@@ -114,6 +115,16 @@ assert.equal(res.length,kerst.plaatsen.length);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.");
 res=R.verwerkAntwoord(kerst.plaatsen.map(()=>groen),t,kerst);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting wordt het geen officiële witte kerst: in De Bilt ligt op eerste kerstdag geen sneeuwdek.");
+const onvolledig=plaatsData({"2026-12-25":{diepte:null,val:0,nat:0,min:1,max:2},"2026-12-26":{diepte:0.03,val:1,nat:0,min:-2,max:0}});
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?onvolledig:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar.","ontbrekende sneeuwdekwaarde mag geen negatief oordeel geven");
+assert.equal(R.sneeuwTekst(res[0].dagen["2026-12-25"]),"Sneeuwdek onbekend","rij gebruikt geen droog of geen sneeuw bij ontbrekende sneeuwdekwaarde");
+const welNul=plaatsData({"2026-12-25":{diepte:null,val:0,nat:0,min:1,max:2},"2026-12-26":{diepte:0,val:0,nat:0,min:1,max:2}});
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?welNul:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting wordt het geen officiële witte kerst: in De Bilt ligt op tweede kerstdag geen sneeuwdek.","bekende nul op een van beide dagen blijft beslissend");
+t=R.toestand("2026-12-26",kerst);
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?wit:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"","op 26 december geen conclusie over een uit het venster gevallen eerste kerstdag");
 t=R.toestand("2026-12-19",kerst);
 res=R.verwerkAntwoord(lijst,t,kerst);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting ligt er op eerste kerstdag sneeuw in De Bilt. De verwachting voor tweede kerstdag verschijnt op 20 december.");
@@ -135,12 +146,16 @@ assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
 assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
+assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
 /* SEO-content blijft statisch, bronverifieerbaar en in het Engels volledig vertaald. */
 assert.equal(kerst.uitleg.vragen.length,2,"twee gerichte KNMI-vragen");
 assert(html.includes('<h2>'+kerst.uitleg.vragen[0].kop+'</h2>')&&html.includes("09:00 uur"),"officiële definitie met meetmoment");
 assert(html.includes("1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010")&&html.includes("2009 op eerste kerstdag 9 centimeter"),"KNMI-historie en sneeuwdiepte");
 assert(html.includes("https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"),"historische bron is zichtbaar");
 const vertalerKerst=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.match(vertalerKerst.vertaal(kerst.intro),/^Will we have a white Christmas\?/,"nieuwe intro wordt vertaald");
+assert.equal(vertalerKerst.vertaal("Sneeuwdek onbekend"),"Snow cover unknown");
+assert.equal(vertalerKerst.vertaal("Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar."),"An official white Christmas cannot yet be assessed: snow-cover data for De Bilt is not available for both Christmas days.");
 assert.equal(vertalerKerst.vertaal(kerst.uitleg.vragen[0].kop),"Why does snow at Christmas not always count as an official white Christmas?");
 assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[0].antwoord),/09:00 on both 25 and 26 December/);
 assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[1].antwoord),/nine centimetres|9 centimetres/);

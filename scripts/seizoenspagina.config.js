@@ -27,7 +27,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     dagen:[{maand:12,dag:25,label:"Eerste kerstdag"},{maand:12,dag:26,label:"Tweede kerstdag"}],
     titel:"Witte kerst {jaar}: kans op sneeuw met kerst",
     beschrijving:"Wordt het een witte kerst in {jaar}? Vanaf {datum} staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland.",
-    intro:"Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.",
+    intro:"Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.",
     uitleg:{
       kop:"Wanneer is het een witte kerst?",
       alineas:[
@@ -47,6 +47,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       aftellenVandaag:"Vandaag is het {dag}.",
       allemaal:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in {plaats}. Blijft dat zo, dan is het officieel een witte kerst.",
       nietOp:"Volgens de huidige verwachting wordt het geen officiële witte kerst: in {plaats} ligt op {dag} geen sneeuwdek.",
+      onbekend:"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor {plaats} zijn niet voor beide kerstdagen beschikbaar.",
       totNuToe:"Volgens de huidige verwachting ligt er op {dag} sneeuw in {plaats}. De verwachting voor {volgende} verschijnt op {datum}.",
       dagLater:"{dag}: de verwachting verschijnt op {datum}.",
       toelichting:"Sneeuwdek is de verwachte sneeuwhoogte in de ochtend. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",

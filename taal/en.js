@@ -798,8 +798,8 @@
     "De maan vandaag ›": "The moon today ›",
     "De maan vandaag": "The moon today",
     "Sterren kijken": "Stargazing",
-    "Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
-      "Will it be a white Christmas? Once Christmas falls within the 7-day forecast, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
+    "Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.":
+      "Will we have a white Christmas? While Christmas is beyond the 7-day forecast, it is not possible to make a reliable prediction. Once each Christmas day falls within that range, we show the forecast snow cover for De Bilt and six other places.",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
@@ -818,6 +818,7 @@
     "Verwachting laden…": "Loading forecast…",
     "Geen sneeuw, droog": "No snow, dry",
     "Geen gegevens": "No data",
+    "Sneeuwdek onbekend": "Snow cover unknown",
     "officiële meetplaats": "official measuring site",
     "Sneeuwdek is de verwachte sneeuwhoogte in de ochtend. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Snow cover is the expected snow depth in the morning. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
@@ -1246,6 +1247,8 @@
     [/^Vandaag is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
     [/^Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in (.+)\. Blijft dat zo, dan is het officieel een witte kerst\.$/,
       (m) => `According to the current forecast, there will be snow on the ground in ${plaats(m[1])} on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.`],
+    [/^Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor (.+) zijn niet voor beide kerstdagen beschikbaar\.$/,
+      (m) => `An official white Christmas cannot yet be assessed: snow-cover data for ${plaats(m[1])} is not available for both Christmas days.`],
     [/^Volgens de huidige verwachting wordt het geen officiële witte kerst: in (.+) ligt op (eerste kerstdag|tweede kerstdag) geen sneeuwdek\.$/,
       (m) => `According to the current forecast, it will not be an official white Christmas: there is no snow cover in ${plaats(m[1])} on ${KERSTDAG[m[2]]}.`],
     [/^Volgens de huidige verwachting ligt er op (eerste kerstdag|tweede kerstdag) sneeuw in (.+)\. De verwachting voor (eerste kerstdag|tweede kerstdag) verschijnt op (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
