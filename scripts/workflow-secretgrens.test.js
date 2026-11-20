@@ -61,7 +61,7 @@ const REPOSITORYSECRETS = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PRE
 const OUDE_REPOSITORYSECRETS = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ANALYTICS_API_TOKEN", "CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET", "KNMI_EDR_API_KEY", "METEOALARM_API_TOKEN"]);
 /* Jobs die de omgeving alleen voor secrets en de branchbeperking gebruiken en niets uitrollen: `deployment: false`.
    De echte deployjobs (productie en PR-preview) leggen wel een deployment vast. */
-const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken"]);
+const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken", "sec06-a2-access-bewijs.yml/access-bewijs"]);
 const MET_DEPLOYMENT = new Set(["cloudflare-production.yml/deploy-production", "cloudflare-preview-deploy.yml/preview"]);
 
 function ontleed(tekst) {
@@ -244,6 +244,17 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   /* De goede vormen geven geen schending. */
   assert.deepStrictEqual(controleerOmgevingen("meteoalarm-verkenning.yml", wf("name: x", "on:", "  workflow_dispatch:", "jobs:", "  verken:", "    runs-on: ubuntu-latest", "    environment:", "      name: provider-controles", "      deployment: false", "    steps:", "      - env:", "          T: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN }}", "        run: echo")), [], "de bedoelde vorm met deployment: false voldoet");
   assert.deepStrictEqual(controleerOmgevingen("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    steps:", "      - env:", "          T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}", "        run: echo")), [], "de bedoelde vorm van de productiedeploy voldoet");
+  /* SEC-06 A2: bewijsjob mag niets uitrollen en alleen vanaf main, met productieomgeving zonder deployment. */
+  const a2 = fs.readFileSync(path.join(workflowDir, "sec06-a2-access-bewijs.yml"), "utf8");
+  assert.deepStrictEqual([...ontleed(a2).triggers], ["workflow_dispatch"], "A2 mag alleen handmatig starten");
+  assert.match(a2, /if: github\.ref == 'refs\/heads\/main'/, "A2 uitsluitend vanaf main");
+  assert.deepStrictEqual(omgevingVan(ontleed(a2).jobs["access-bewijs"]),
+    { naam: "productie", deployment: false }, "A2 moet environment secrets zonder deployment gebruiken");
+  assert.match(a2, /persist-credentials: false/, "A2 mag geen checkout-token opslaan");
+  assert(!/wrangler|pages deploy|CLOUDFLARE_PRODUCTIE_API_TOKEN|CLOUDFLARE_PREVIEW_API_TOKEN/.test(a2),
+    "A2 mag geen deploy- of API-credentials gebruiken");
+  assert.match(a2, /node scripts\/ci\/sec06-a2-access-bewijs\.test\.js/,
+    "A2 zelftests moeten vooraf slagen");
   process.stdout.write("workflow-secretgrens: omgevingssecrets (SEC-02b) geslaagd\n");
 }
 
