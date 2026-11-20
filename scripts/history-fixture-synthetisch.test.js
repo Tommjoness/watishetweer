@@ -80,6 +80,17 @@ assert.equal(kathmandu.utc_offset_seconds, 20700, "Kathmandu: +05:45");
   assert(zon > "2026-10-24T08:00" && zon < "2026-10-24T08:45" && onder > "2026-10-24T18:05" && onder < "2026-10-24T18:45", `Amsterdam: zon op/onder plausibel (${zon} / ${onder})`);
 }
 
+/* Voorjaarsklokwissel (Amsterdam, 28 maart 2027) en zuidelijk halfrond (Sydney, 4 oktober 2026):
+   ook dan één vaste offset en een uurreeks zonder sprongen. */
+for (const [naam, tz, nuIso, offset] of [["Amsterdam", "Europe/Amsterdam", "2027-03-27T12:00:00Z", 3600], ["Sydney", "Australia/Sydney", "2026-10-03T02:00:00Z", 36000]]) {
+  const b = antwoord(url, { name: naam, tz }, Date.parse(nuIso));
+  assert.equal(b.utc_offset_seconds, offset, `${naam}: offset van nu`);
+  const ms = b.hourly.time.map(t => Date.parse(t + ":00Z"));
+  assert(ms.every((t, i) => i === 0 || t - ms[i - 1] === 3600000), `${naam}: geen dubbel of ontbrekend uur rond de klokwissel`);
+  assert.equal(new Set(b.hourly.time).size, b.hourly.time.length, `${naam}: geen dubbele tijden`);
+  assert.equal(b.daily.time.length, 7, `${naam}: zeven dagen`);
+}
+
 /* Poolgedrag zoals vastgesteld (production-source-truth.js) en GMT zonder bekende tijdzone. */
 {
   const zonUrl = "https://api.open-meteo.com/v1/forecast?latitude=78.2232&longitude=15.6469&daily=sunrise,sunset&forecast_days=2&timezone=auto";
@@ -91,6 +102,45 @@ assert.equal(kathmandu.utc_offset_seconds, 20700, "Kathmandu: +05:45");
   const zuidpool = F.openMeteoAntwoord(zonUrl.replace("latitude=78.2232&longitude=15.6469", "latitude=-90&longitude=0"), { nu: Date.parse("2026-12-20T12:00:00Z"), tzVoor: () => null }).json;
   assert.equal(zuidpool.timezone, "GMT"); assert.equal(zuidpool.utc_offset_seconds, 0);
   assert.equal(poolDaglichtStatus(zuidpool.daily, 0), "24 uur daglicht", "Zuidpool december: 24 uur daglicht");
+  const zuidpoolJuni = F.openMeteoAntwoord(zonUrl.replace("latitude=78.2232&longitude=15.6469", "latitude=-90&longitude=0"), { nu: Date.parse("2026-06-21T12:00:00Z"), tzVoor: () => null }).json;
+  assert.equal(poolDaglichtStatus(zuidpoolJuni.daily, 0), "poolnacht", "Zuidpool juni: poolnacht");
+  /* Overgang (Longyearbyen half april): iedere dag heeft een geldige volgorde, opkomst nooit na ondergang. */
+  const overgang = F.openMeteoAntwoord(zonUrl.replace("forecast_days=2", "forecast_days=10"), { nu: Date.parse("2026-04-12T12:00:00Z"), tzVoor: () => "Arctic/Longyearbyen" }).json;
+  overgang.daily.time.forEach((d, i) => {
+    const op = overgang.daily.sunrise[i], onder = overgang.daily.sunset[i];
+    assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(op) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(onder), `Longyearbyen ${d}: tijden in ISO-vorm`);
+    assert(op.slice(0, 10) === d && onder >= op, `Longyearbyen ${d}: opkomst op die dag en niet na de ondergang (${op} / ${onder})`);
+  });
+}
+
+/* Ontbrekende velden en parameters, buiten bereik en eenheden. */
+{
+  const nu = Date.parse("2026-11-20T12:00:00Z"), loc = { name: "Utrecht", tz: "Europe/Amsterdam" };
+  const alleenNu = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&current=temperature_2m&timezone=auto", loc, nu);
+  assert(alleenNu.current && !("hourly" in alleenNu) && !("daily" in alleenNu) && !("minutely_15" in alleenNu), "zonder hourly/daily ook geen hourly/daily in het antwoord");
+  const leeg = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&daily=&hourly=&timezone=auto", loc, nu);
+  assert(!("hourly" in leeg) && !("daily" in leeg) && leeg.timezone === "Europe/Amsterdam", "lege variabelenlijst: alleen de kop");
+  const standaard = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&daily=temperature_2m_max&hourly=temperature_2m&timezone=auto", loc, nu);
+  assert.equal(standaard.daily.time.length, 7, "zonder forecast_days: 7 dagen (standaard Open-Meteo)");
+  assert.equal(standaard.hourly.time.length, 7 * 24, "zonder forecast_hours: uren tot het einde van de laatste dag");
+  for (const [u, reden] of [
+    ["https://api.open-meteo.com/v1/forecast?longitude=5.12&current=temperature_2m", "breedtegraad ontbreekt"],
+    ["https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12,4.5&current=temperature_2m", "ongelijk aantal coördinaten"],
+    ["https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&daily=temperature_2m_max&forecast_days=17", "forecast_days buiten bereik"],
+    ["https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&hourly=temperature_2m&forecast_hours=-1", "negatief forecast_hours"],
+    ["https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&current=temperature_2m&timezone=Mars%2FOlympus", "onbekende tijdzone"],
+    ["https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&daily=uv_index", "uurveld als dagveld"],
+    ["https://air-quality-api.open-meteo.com/v1/air-quality?latitude=52.09&longitude=5.12&current=temperature_2m", "onbekend luchtveld"]
+  ]) {
+    const r = F.openMeteoAntwoord(u, { nu });
+    assert(r.status === 400 && r.json.error === true && typeof r.json.reason === "string" && r.json.reason.length > 5, `${reden}: HTTP 400 met reden (${r.status})`);
+  }
+  assert.equal(F.openMeteoAntwoord("https://api.open-meteo.com/v1/bestaatniet?latitude=1&longitude=2", { nu }).status, 404, "onbekend endpoint: 404");
+  assert.throws(() => F.openMeteoAntwoord("https://api.example.com/v1/forecast?latitude=1&longitude=2", { nu }), /geen Open-Meteo-URL/, "andere host wordt niet stil beantwoord");
+  const kmh = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&current=wind_speed_10m,wind_gusts_10m&timezone=auto", loc, nu);
+  const ms = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.09&longitude=5.12&current=wind_speed_10m,wind_gusts_10m&timezone=auto&wind_speed_unit=ms", loc, nu);
+  assert(kmh.current_units.wind_speed_10m === "km/h" && ms.current_units.wind_speed_10m === "m/s" && Math.abs(ms.current.wind_speed_10m - kmh.current.wind_speed_10m / 3.6) <= 0.06, "windeenheid m/s omgerekend en benoemd");
+  assert(kmh.current.wind_gusts_10m >= kmh.current.wind_speed_10m, "windstoten nooit lager dan de windsnelheid");
 }
 
 /* Meerdere coördinaten, past_days, onbekend veld, determinisme, overige endpoints. */

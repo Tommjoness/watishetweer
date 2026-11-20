@@ -77,21 +77,32 @@ function zonHoogte(ms,lat,lon){
 }
 const OPKOMST=-0.833;
 /* Zonsopkomst/-ondergang binnen een lokale dag (vaste offset), per minuut gezocht. */
+/* De ondergang hoort bij de opkomst van die dag: de eerste ondergang ná de opkomst,
+   ook als die na middernacht valt (vlak voor de pooldag). Een ondergang kort na
+   middernacht die nog bij de vorige avond hoort, telt dus niet als ondergang van
+   deze dag. */
 function zonDag(dagStartUtcMs,lat,lon,offsetMs){
-  let op=null,onder=null,vorige=zonHoogte(dagStartUtcMs,lat,lon),boven=vorige>OPKOMST?1:0,daglicht=0;
+  const lokaal=t=>iso(t+offsetMs),middernacht=iso(dagStartUtcMs+offsetMs),volgende=iso(dagStartUtcMs+DAG+offsetMs);
+  let op=null,eersteOnder=null,daglicht=0,vorige=zonHoogte(dagStartUtcMs,lat,lon);
   for(let m=1;m<=1440;m++){
     const t=dagStartUtcMs+m*60000,h=zonHoogte(t,lat,lon);
-    if(vorige<=OPKOMST&&h>OPKOMST&&op===null)op=t;
-    if(vorige>OPKOMST&&h<=OPKOMST&&onder===null)onder=t;
+    if(op===null&&vorige<=OPKOMST&&h>OPKOMST)op=t;
+    if(eersteOnder===null&&vorige>OPKOMST&&h<=OPKOMST)eersteOnder=t;
     if(h>OPKOMST)daglicht+=60;
     vorige=h;
   }
-  const lokaal=t=>iso(t+offsetMs),middernacht=iso(dagStartUtcMs+offsetMs);
-  if(op===null&&onder===null){
-    if(boven)return {sunrise:middernacht,sunset:iso(dagStartUtcMs+DAG+offsetMs),daylight:86400};
-    return {sunrise:middernacht,sunset:middernacht,daylight:0};
+  if(op===null){
+    if(daglicht>=86400)return {sunrise:middernacht,sunset:volgende,daylight:86400};   /* 24 uur daglicht */
+    if(daglicht===0)return {sunrise:middernacht,sunset:middernacht,daylight:0};        /* poolnacht */
+    return {sunrise:middernacht,sunset:lokaal(eersteOnder),daylight:daglicht};       /* zon op sinds gisteren, gaat vandaag onder */
   }
-  return {sunrise:op===null?middernacht:lokaal(op),sunset:onder===null?iso(dagStartUtcMs+DAG+offsetMs):lokaal(onder),daylight:daglicht};
+  let onder=null;vorige=zonHoogte(op,lat,lon);
+  for(let m=1;m<=36*60;m++){
+    const t=op+m*60000,h=zonHoogte(t,lat,lon);
+    if(vorige>OPKOMST&&h<=OPKOMST){onder=t;break;}
+    vorige=h;
+  }
+  return {sunrise:lokaal(op),sunset:onder===null?volgende:lokaal(onder),daylight:daglicht};
 }
 
 /* ---------- weer per uur (deterministisch) ---------- */

@@ -28,7 +28,18 @@ Sinds 20 november 2026 doet GitHub Actions geen live aanroepen meer naar Open-Me
 
 Dat zijn providervragen. Die horen bij de monitoring hieronder.
 
-**Nog live in GitHub Actions:** alleen `knmi-modelverificatie.yml`. Die draait per kwartaal en handmatig, en vergelijkt historische modeldata van Open-Meteo met KNMI-metingen. Dat kan per definitie niet met een fixture. Of deze workflow uit GitHub Actions moet, is een besluit van de eigenaar.
+**Nog live in GitHub Actions:** alleen `knmi-modelverificatie.yml`. Die draait per kwartaal en handmatig, en vergelijkt historische modeldata van Open-Meteo met KNMI-metingen. Het is een wetenschappelijke kwartaalcontrole en geen PR-CI-test, en een fixture kan die meting per definitie niet vervangen.
+
+De eigenaar besloot op 20 november 2026: voorlopig ongewijzigd laten, en niet verwijderen zonder een werkend alternatief. De eerstvolgende geplande run is op 5 januari 2027. Mogelijke routes buiten gedeelde GitHub-runners, van licht naar zwaar:
+
+| Route | Wat er nodig is | Afweging |
+|---|---|---|
+| A. Open-Meteo om akkoord vragen (ticket #235915) voor deze ene kwartaalrun | Eén bericht | Geen werk. Bij akkoord kan de workflow blijven; bij nee een van de routes hieronder |
+| B. Handmatig lokaal draaien door de eigenaar | Node 22, de KNMI-sleutel lokaal, `DAGEN=28 UITVOER=… SAMENVATTING=… node scripts/knmi-modelverificatie.js`; de samenvatting met de hand in het resultatenissue zetten | Eigen IP, geen nieuwe infrastructuur; vergt vier keer per jaar een handeling |
+| C. Self-hosted runner (eigen machine of VPS) alleen voor deze workflow | Runner installeren, `runs-on` aanpassen, secret en issuemelding blijven werken | Vast eigen IP en de automatisering blijft. Bij een openbare repository raadt GitHub self-hosted runners af; dit vraagt strikte beperking tot deze ene workflow zonder PR-trigger |
+| D. Geplande Cloudflare Worker | Script porten, KNMI-sleutel als Worker-secret, uitkomst via een eigen GitHub-token naar het issue | Het meeste werk en nieuwe secrets; alleen zinvol als B en C afvallen |
+
+Advies: eerst A. Bij een nee wordt B de standaard en C optioneel. Pas wanneer het gekozen alternatief één keer aantoonbaar heeft gewerkt, kan de geplande trigger uit de workflow.
 
 ## Monitoringstrategie buiten GitHub Actions (ontwerp, nog niet ingericht)
 
