@@ -2,14 +2,14 @@
 
 /* Gedeelde logica voor de gesharde testketen (P3-4, PR B).
 
-   De bestaande keten blijft `npm test`: één lange `&&`-keten van 285 `node`-commando's in package.json. Dit bestand leidt daar een
+   De bestaande keten blijft `npm test`: één lange `&&`-keten van 286 `node`-commando's in package.json. Dit bestand leidt daar een
    fase-indeling uit af, zonder een tweede lijst bij te houden:
      - bouwfase: alle commando's tot en met het laatste commando dat public/ muteert (apply-*, build-weather, platform-output-cleanup, enz.).
        Daarin staan ook de fase-gebonden tests: 8 tests van `test:built` (basisartifact) en de 14 smoke-browsertests en verify-*-scripts die tegen
        een tussentoestand van het artifact draaien en op het definitieve artifact bewezen falen (zie docs/gesharde-testketen.md). Die blijven dus
        in dezelfde volgorde in de bouwfase.
      - shardfase: alle commando's ná het laatste muterende commando. Die draaien al tegen het definitieve artifact en worden verdeeld over shards.
-   Niets wordt hier aangepast of overgeslagen: elk van de 285 commando's hoort in precies één fase en wordt per testfamilie precies één keer
+   Niets wordt hier aangepast of overgeslagen: elk van de 286 commando's hoort in precies één fase en wordt per testfamilie precies één keer
    uitgevoerd (verifieer-dekking.js bewijst dat vooraf en achteraf). */
 
 const fs = require("fs");
