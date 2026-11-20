@@ -308,4 +308,58 @@ function metOpenMeteoFixtures(browser,opties={}){
   return browser;
 }
 
-module.exports={openMeteoAntwoord,eenForecast,installeerOpenMeteoFixtures,metOpenMeteoFixtures,standaardTz,tzUitLijst,offsetSeconden,zonDag,PLAATSEN,ROUTE};
+/* Contractvergelijking: een echt Open-Meteo-antwoord tegen de fixture voor exact
+   dezelfde aanvraag. Vergelijkt de vorm, niet de waarden: kopvelden, tijdzone en
+   offset, welke blokken er zijn (current, minutely_15, hourly, daily), welke
+   variabelen per blok, de eenheden, de lengtes, het tijdformaat en de tijdstap,
+   en per variabele het waardetype (getal, tekst, of null). Een verschil betekent
+   dat Open-Meteo het contract heeft gewijzigd of dat de fixture afwijkt; beide
+   moeten dan bewust worden bekeken. Doet zelf geen netwerkverzoek: het echte
+   antwoord wordt buiten CI opgehaald (zie docs/open-meteo-monitoring.md). */
+const KOPVELDEN=["latitude","longitude","generationtime_ms","utc_offset_seconds","timezone","timezone_abbreviation","elevation"];
+const TIJDVORM={current:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,minutely_15:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,hourly:/^\d{4}-\d{2}-\d{2}T\d{2}:00$/,daily:/^\d{4}-\d{2}-\d{2}$/};
+const STAP={minutely_15:900000,hourly:3600000,daily:86400000};
+function soortVan(v){return v===null?"null":Array.isArray(v)?"lijst":typeof v;}
+function vergelijkContract(echt,fixture,pad=""){
+  const v=[];
+  if(Array.isArray(echt)||Array.isArray(fixture)){
+    if(!Array.isArray(echt)||!Array.isArray(fixture)||echt.length!==fixture.length)return [`${pad||"antwoord"}: lijst met ${Array.isArray(echt)?echt.length:"geen"} plaatsen tegen ${Array.isArray(fixture)?fixture.length:"geen"}`];
+    echt.forEach((e,i)=>v.push(...vergelijkContract(e,fixture[i],`[${i}]`)));
+    return v;
+  }
+  const p=n=>(pad?pad+".":"")+n;
+  for(const k of KOPVELDEN)if((k in echt)!==(k in fixture))v.push(`${p(k)}: ${k in echt?"alleen in het echte antwoord":"ontbreekt in het echte antwoord"}`);
+  for(const k of ["timezone","utc_offset_seconds"])if(echt[k]!==fixture[k])v.push(`${p(k)}: echt ${JSON.stringify(echt[k])}, fixture ${JSON.stringify(fixture[k])}`);
+  const onbekend=Object.keys(echt).filter(k=>!KOPVELDEN.includes(k)&&!/^(current|minutely_15|hourly|daily)(_units)?$/.test(k));
+  if(onbekend.length)v.push(`${pad||"antwoord"}: onbekende velden in het echte antwoord: ${onbekend.join(", ")}`);
+  for(const blok of ["current","minutely_15","hourly","daily"]){
+    const e=echt[blok],f=fixture[blok],eu=echt[blok+"_units"],fu=fixture[blok+"_units"];
+    if(!e&&!f)continue;
+    if(!e||!f){v.push(`${p(blok)}: ${e?"alleen in het echte antwoord":"ontbreekt in het echte antwoord"}`);continue;}
+    const ek=Object.keys(e).sort(),fk=Object.keys(f).sort();
+    if(ek.join()!==fk.join())v.push(`${p(blok)}: variabelen echt [${ek.join(",")}], fixture [${fk.join(",")}]`);
+    if(!eu||!fu)v.push(`${p(blok+"_units")}: ${eu?"ontbreekt in de fixture":"ontbreekt in het echte antwoord"}`);
+    else for(const k of new Set([...Object.keys(eu),...Object.keys(fu)]))if(eu[k]!==fu[k])v.push(`${p(blok+"_units."+k)}: echt ${JSON.stringify(eu[k])}, fixture ${JSON.stringify(fu[k])}`);
+    if(blok==="current"){
+      if(!TIJDVORM.current.test(String(e.time)))v.push(`${p("current.time")}: onverwachte vorm ${JSON.stringify(e.time)}`);
+      if(e.interval!==f.interval)v.push(`${p("current.interval")}: echt ${e.interval}, fixture ${f.interval}`);
+      for(const k of ek.filter(k=>k!=="time"&&k!=="interval"&&k in f))if(!["number","null"].includes(soortVan(e[k]))||soortVan(f[k])!=="number")v.push(`${p("current."+k)}: waardetype echt ${soortVan(e[k])}, fixture ${soortVan(f[k])}`);
+      continue;
+    }
+    if(!Array.isArray(e.time)||!Array.isArray(f.time)){v.push(`${p(blok+".time")}: geen lijst`);continue;}
+    if(e.time.length!==f.time.length)v.push(`${p(blok)}: ${e.time.length} tijdstappen echt, ${f.time.length} in de fixture`);
+    if(e.time[0]!==f.time[0])v.push(`${p(blok)}: begint echt op ${e.time[0]}, fixture op ${f.time[0]}`);
+    if(!e.time.every(t=>TIJDVORM[blok].test(String(t))))v.push(`${p(blok+".time")}: onverwachte tijdvorm`);
+    const ms=e.time.map(t=>Date.parse(String(t).length===10?t+"T00:00Z":t+":00Z"));
+    if(STAP[blok]&&ms.some((t,i)=>i>0&&t-ms[i-1]!==STAP[blok]))v.push(`${p(blok+".time")}: tijdstap is niet overal ${STAP[blok]/60000} minuten (vaste offset)`);
+    for(const k of ek.filter(k=>k!=="time"&&k in f)){
+      if(!Array.isArray(e[k])||e[k].length!==e.time.length){v.push(`${p(blok+"."+k)}: lengte past niet bij time`);continue;}
+      const soorten=new Set(e[k].map(soortVan)),fsoorten=new Set(f[k].map(soortVan));
+      const toegestaan=fsoorten.has("string")?["string","null"]:["number","null"];
+      if([...soorten].some(s=>!toegestaan.includes(s)))v.push(`${p(blok+"."+k)}: waardetypes echt [${[...soorten].join(",")}], fixture [${[...fsoorten].join(",")}]`);
+    }
+  }
+  return v;
+}
+
+module.exports={vergelijkContract,openMeteoAntwoord,eenForecast,installeerOpenMeteoFixtures,metOpenMeteoFixtures,standaardTz,tzUitLijst,offsetSeconden,zonDag,PLAATSEN,ROUTE};

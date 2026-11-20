@@ -164,6 +164,61 @@ for (const [naam, tz, nuIso, offset] of [["Amsterdam", "Europe/Amsterdam", "2027
   assert.equal(F.openMeteoAntwoord("https://api.open-meteo.com/v1/elevation?latitude=52.1&longitude=5.1").json.elevation.length, 1, "hoogte: één waarde per coördinaat");
 }
 
+/* Dagvelden volgen het vastgestelde Open-Meteo-venster: de tijdstempels 00:00-23:00 van de datum
+   (scripts/openmeteo-daggrens-contract.js stelde dat live vast voor precipitation_probability_max;
+   de app rekent zelf met de uren 00-24 en gebruikt het dagveld alleen als terugval). */
+{
+  const nu = Date.parse("2026-11-20T09:00:00Z");
+  const b = antwoord("https://api.open-meteo.com/v1/forecast?latitude=52.37&longitude=4.89&hourly=precipitation_probability,precipitation&daily=precipitation_probability_max,precipitation_sum&timezone=auto&forecast_days=7", { name: "Amsterdam", tz: "Europe/Amsterdam" }, nu);
+  b.daily.time.forEach((datum, di) => {
+    const uren = b.hourly.time.map((t, i) => (t.startsWith(datum) ? i : -1)).filter(i => i >= 0);
+    assert.equal(uren.length, 24, `${datum}: 24 tijdstempels 00:00-23:00`);
+    assert.equal(b.daily.precipitation_probability_max[di], Math.max(...uren.map(i => b.hourly.precipitation_probability[i])), `${datum}: precipitation_probability_max = maximum over de tijdstempels 00:00-23:00`);
+    assert(Math.abs(b.daily.precipitation_sum[di] - uren.reduce((s, i) => s + b.hourly.precipitation[i], 0)) < 0.051, `${datum}: precipitation_sum = som over dezelfde tijdstempels`);
+  });
+}
+
+/* Contractvergelijking (vergelijkContract): vindt iedere vormwijziging tussen een echt antwoord en de
+   fixture. Een echt antwoord met null-waarden is toegestaan; een gewijzigd contract niet. */
+{
+  const nu = Date.parse("2026-11-20T09:00:00Z"), loc = { name: "Amsterdam", tz: "Europe/Amsterdam" };
+  const appUrl = url.replace("latitude=27.7172&longitude=85.324", "latitude=52.37&longitude=4.89");
+  const fix = antwoord(appUrl, loc, nu), kopie = () => JSON.parse(JSON.stringify(fix));
+  assert.deepEqual(F.vergelijkContract(kopie(), fix), [], "identiek antwoord: geen verschillen");
+  const metNull = kopie(); metNull.hourly.uv_index[3] = null; metNull.current.weather_code = null; metNull.daily.sunshine_duration[6] = null;
+  assert.deepEqual(F.vergelijkContract(metNull, fix), [], "null-waarden in het echte antwoord zijn toegestaan");
+  for (const [naam, wijzig, verwacht] of [
+    ["hernoemd uurveld", e => { e.hourly.precip = e.hourly.precipitation; delete e.hourly.precipitation; }, /hourly: variabelen/],
+    ["andere eenheid", e => { e.hourly_units.temperature_2m = "°F"; }, /hourly_units\.temperature_2m/],
+    ["andere lengte", e => { for (const k of Object.keys(e.hourly)) e.hourly[k].pop(); }, /tijdstappen echt/],
+    ["ander begin", e => { e.daily.time[0] = "2026-11-19"; }, /daily: begint echt/],
+    ["andere offset", e => { e.utc_offset_seconds = 7200; }, /utc_offset_seconds/],
+    ["ander kwartierinterval", e => { e.current.interval = 3600; }, /current\.interval/],
+    ["ontbrekend blok", e => { delete e.minutely_15; delete e.minutely_15_units; }, /minutely_15: ontbreekt in het echte antwoord/],
+    ["nieuw kopveld", e => { e.model_run = "x"; }, /onbekende velden/],
+    ["tekst in plaats van getal", e => { e.hourly.temperature_2m[0] = "12"; }, /hourly\.temperature_2m: waardetypes/],
+    ["ander tijdformaat", e => { e.hourly.time = e.hourly.time.map(t => t + ":00"); }, /hourly\.time: onverwachte tijdvorm/],
+    ["sprong in de uurreeks", e => { e.hourly.time[10] = e.hourly.time[11]; }, /tijdstap is niet overal/],
+    ["meerdere plaatsen tegen één", e => [e, e], /lijst met 2 plaatsen/]
+  ]) {
+    const e = kopie(), uit = wijzig(e) || e;
+    const verschillen = F.vergelijkContract(uit, fix);
+    assert(verschillen.some(v => verwacht.test(v)), `contractvergelijking mist: ${naam} (${JSON.stringify(verschillen)})`);
+  }
+  /* Alleen lokaal of in de monitoring buiten CI: een echt Open-Meteo-antwoord dat daar is opgehaald
+     (niet in de repository), met de URL en het moment van ophalen. Geen netwerk in deze test. */
+  if (process.env.WIW_ECHTE_OPENMETEO) {
+    const echt = JSON.parse(fs.readFileSync(process.env.WIW_ECHTE_OPENMETEO, "utf8"));
+    const echtUrl = process.env.WIW_ECHTE_OPENMETEO_URL, echtNu = Date.parse(process.env.WIW_ECHTE_OPENMETEO_NU || "");
+    assert(echtUrl && Number.isFinite(echtNu), "WIW_ECHTE_OPENMETEO_URL en WIW_ECHTE_OPENMETEO_NU (ISO-moment van ophalen) zijn nodig");
+    const tz = Array.isArray(echt) ? null : echt.timezone;
+    const r = F.openMeteoAntwoord(echtUrl, { nu: echtNu, tzVoor: () => tz });
+    const verschillen = F.vergelijkContract(echt, r.json);
+    assert.deepEqual(verschillen, [], "echt Open-Meteo-antwoord wijkt af van de fixture:\n" + verschillen.join("\n"));
+    console.log("Echt Open-Meteo-antwoord en fixture hebben hetzelfde contract.");
+  }
+}
+
 /* De runners gebruiken de fixture en halen niets live op. */
 for (const bestand of ["run-production-pre-sale-acceptance-browser.js", "production-pre-sale-acceptance-browser.js"]) {
   const bron = fs.readFileSync(path.join(__dirname, bestand), "utf8");
