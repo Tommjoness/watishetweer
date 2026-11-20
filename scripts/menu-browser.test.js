@@ -1,7 +1,7 @@
 "use strict";
 
 /* Menu en zijbalk (UI PR #2, eigenaar 19 november) op het finale artifact, met
-   de echte runtime. Gecontroleerd op 320, 360, 390, 430, 481, 768, 1024, 1366,
+   de echte runtime. Gecontroleerd op 320, 360, 390, 430, 450, 481, 559, 560, 768, 1024, 1366,
    1440 en 1920px (licht en donker, NL en EN):
    - één menu als <details> vooraan in de bovenbalk; Licht/Auto/Donker staat
      ernaast op dezelfde plek als zonder menu, nooit in het menu;
@@ -23,6 +23,9 @@
      zijbalk en uitklapmenu;
    - footer: bronnen, disclaimer, Over, Privacy, technische gegevens en contact
      blijven; seizoens- en nachtlinks staan er niet meer in.
+   - (20 november) geen menuwoord dat midden afbreekt, NL en EN, op iedere
+     breedte en in de zijbalk; Licht/Auto/Donker niet afgeknipt en boven 430px
+     minstens 86px per vakje, ook op 431–480px.
 
    Draait na: npm test of npm run build:cloudflare */
 
@@ -114,10 +117,27 @@ const meet=()=>{
   const voet=document.querySelector("footer"),sheet=document.querySelector(".sheet");
   return {aantalMenus:document.querySelectorAll("#wiw-menu,.wiw-menu").length,inBalk:!!(balk&&menu&&balk.firstElementChild===menu),themaInMenu:!!(menu&&thema&&menu.contains(thema)),themaInBalk:!!(balk&&thema&&balk.contains(thema)),
     open:!!(menu&&menu.open),rail:document.documentElement.classList.contains("wiw-menu-rail"),knop:zie(knop)?r(knop):null,paneel:r(paneel),paneelZicht:zie(paneel),
+    themaGeknipt:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].some(s=>{const e=document.querySelector(s);return !!e&&e.scrollWidth>e.clientWidth+1;}),
     thema:r(thema),segs:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].map(s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().width:0;}),balk:r(balk),hero:r(".hero"),sheet:r(sheet),ctx:r(".seo-route-context"),plaatsnav:r(".seo-plaatsnav"),
     links,groepen,navLabel:paneel?paneel.getAttribute("aria-label"):"",knopTekst:knop?knop.textContent.replace(/\s+/g," ").trim():"",icoon:(()=>{const i=knop&&knop.querySelector(".wiw-menu-icoon");if(!zie(i))return null;const b=i.getBoundingClientRect();return {w:b.width,h:b.height};})(),
     voetTekst:voet?voet.textContent.replace(/\s+/g," "):"",voetHrefs:voet?[...voet.querySelectorAll("a")].map(a=>a.getAttribute("href")):[],
     overflow:document.documentElement.scrollWidth-innerWidth,focus:document.activeElement?(document.activeElement.tagName+"."+(document.activeElement.className||"")):""};
+};
+/* Geen woord breekt midden af: ieder woord (gescheiden door spaties of zachte afbreekstreepjes)
+   van iedere groepstitel en menulink past op zijn eigen regel. Opent kort alle groepen en zet de staat terug. */
+const woordbreuk=async()=>{
+  const menu=document.getElementById("wiw-menu"),was=menu.open,groepen=[...document.querySelectorAll(".wiw-menu-paneel > .wiw-menu-groep")],open=groepen.map(g=>g.open);
+  menu.open=true;const fout=[];
+  for(const g of groepen){g.open=true;await new Promise(r=>setTimeout(r,30));
+    for(const e of [g.querySelector("summary"),...g.querySelectorAll("a")]){
+      const cs=getComputedStyle(e);let ruimte=e.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+      if(e.tagName==="SUMMARY"){const v=getComputedStyle(e,"::before");ruimte-=parseFloat(v.width)+parseFloat(v.marginLeft)+parseFloat(v.marginRight)+(parseFloat(cs.columnGap)||0);}
+      const m=document.createElement("span");m.style.cssText=`position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing};text-transform:${cs.textTransform}`;document.body.appendChild(m);
+      for(const w of e.textContent.trim().split(/[\s\u00ad]+/)){m.textContent=w;const b=m.getBoundingClientRect().width;if(b>ruimte+0.5)fout.push(`${w} ${b.toFixed(1)}>${ruimte.toFixed(1)}px`);}
+      m.remove();}
+    g.open=false;}
+  groepen.forEach((g,i)=>{g.open=open[i];});menu.open=was;
+  return fout;
 };
 const KOP=i=>`.wiw-menu-paneel > .wiw-menu-groep:nth-of-type(${i+1}) > summary`;
 
@@ -149,7 +169,7 @@ async function loopGroepen(page,label,eis){
   /* Eerste-schermposities zonder menu (main 78e8d1fd): desktop moet exact gelijk blijven. */
   const DESKTOP_HERO={1024:221,1366:208,1440:211};
   try{
-    const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
+    const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[450,900,"light","nl"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
       [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
       /* aanraakscherm op desktopbreedte en een laag breed venster */
       [1024,768,"light","nl",true],[1920,1080,"light","nl",true],[1920,640,"light","nl"]];
@@ -167,6 +187,9 @@ async function loopGroepen(page,label,eis){
         for(const l of m.links)assert(bestaat(l.href),`${label}: bestemming bestaat niet: ${l.href}`);
         assert.equal(new Set(m.links.map(l=>l.href)).size,m.links.length,`${label}: dubbele bestemming in het menu`);
         assert.equal(m.links.length,15,`${label}: verwacht 15 bestemmingen`);
+        assert(!m.themaGeknipt,`${label}: woord in Licht/Auto/Donker afgeknipt`);
+        const wb=await page.evaluate(woordbreuk);
+        assert.deepEqual(wb,[],`${label}: menuwoord breekt midden af: ${wb.join(", ")}`);
         if(taal==="en")assert.deepEqual(m.groepen.map(g=>g.kop),["Weather and places","Stars and night","Seasons and holidays","About and information"],`${label}: groepen niet vertaald`);
         else assert.deepEqual(m.groepen.map(g=>g.kop),["Weer en plaatsen","Sterren en nacht","Seizoenen en feestdagen","Over en informatie"],`${label}: groepskoppen gewijzigd`);
         /* Footer: verplichte onderdelen blijven, seizoens- en nachtlinks weg; plaatscontext en populaire plaatsen blijven. */
