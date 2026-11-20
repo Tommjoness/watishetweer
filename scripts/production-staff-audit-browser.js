@@ -2,6 +2,10 @@
 
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {bouw}=require("../data.js");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 
@@ -80,7 +84,7 @@ async function installeerDeterministischeData(context){
     }
     if(u.origin===ROOT&&u.pathname==="/api/neerslag")return jsonFulfill(route,{beschikbaar:false,provider:"knmi",reden:"niet beschikbaar"});
     if(u.origin===ROOT&&u.pathname==="/api/plaatsnaam")return jsonFulfill(route,{naam:null,land:null,bron:"productie-interactiefixture"});
-    return route.continue();
+    return route.fallback();
   });
 }
 
@@ -140,7 +144,7 @@ async function kiesZoekresultaat(page,naam){
 }
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor:tzUitLijst([{lat:-33.8688,lon:151.2093,tz:"Australia/Sydney"}])});
   try{
     const context=await browser.newContext({viewport:{width:390,height:844},locale:"nl-NL",serviceWorkers:"block"});
     await installeerDeterministischeData(context);

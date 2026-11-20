@@ -1,4 +1,4 @@
-# Shadow-testketen (P3-4, PR B): dezelfde 284 testcommando's als `npm test`, maar de bouwfase één keer per testfamily en de 72 tests ná de laatste
+# Shadow-testketen (P3-4, PR B): dezelfde 285 testcommando's als `npm test`, maar de bouwfase één keer per testfamily en de 72 tests ná de laatste
 # artifact-mutatie verdeeld over vier shards op eigen runners. Dit is een AANVULLENDE, NIET-VERPLICHTE controle naast de bestaande jobs:
 # `test` (ci-interpretatie-v2.yml) en `checkpoint-npm-test` (checkpoint-eindronde.yml) blijven ongewijzigd en blijven de vereiste checks.
 # De jobnamen hier beginnen bewust met `shadow-`, zodat ze nooit met een vereiste check verward worden.
@@ -37,16 +37,26 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           package-manager-cache: false
       - name: Eenheidstests van de shardlogica (fail-closed aggregatie, artifact, gevoelige gegevens)
         run: node scripts/ci/testketen.test.js
-      - name: Dekkingsbewijs vooraf (284 commando's, precies één keer, volgorde)
+      - name: Dekkingsbewijs vooraf (285 commando's, precies één keer, volgorde)
         run: node scripts/ci/verifieer-dekking.js plan
 
   # ---------- Testfamily "test": gewone ubuntu-latest, systeem-Chrome ----------
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
   shadow-test-bouw:
     name: shadow-test-bouw
     needs: shadow-plan
@@ -56,6 +66,13 @@ jobs:
       CI_FAMILIE: test
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -86,6 +103,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   shadow-test-shards:
     name: shadow-test-shard
@@ -100,6 +120,13 @@ jobs:
       CI_FAMILIE: test
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -128,6 +155,9 @@ jobs:
           retention-days: 3
 
   # ---------- Testfamily "checkpoint": Playwright-container, Chromium + WebKit ----------
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
   shadow-checkpoint-bouw:
     name: shadow-checkpoint-bouw
     needs: shadow-plan
@@ -140,6 +170,13 @@ jobs:
       CI_FAMILIE: checkpoint
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -177,6 +214,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   shadow-checkpoint-shards:
     name: shadow-checkpoint-shard
@@ -194,6 +234,13 @@ jobs:
       CI_FAMILIE: checkpoint
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -229,6 +276,9 @@ jobs:
           retention-days: 3
 
   # De twee extra stappen van `checkpoint-npm-test`, ongewijzigd, op een eigen runner (performance-isolatie) tegen het gedownloade artifact.
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
   shadow-checkpoint-extra:
     name: shadow-checkpoint-extra
     needs: shadow-checkpoint-bouw
@@ -241,6 +291,13 @@ jobs:
       CI_FAMILIE: checkpoint
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -274,7 +331,10 @@ jobs:
             exit "$code"
           fi
 
-  # Fail-closed aggregatie: draait altijd; alleen groen als ALLE jobs `success` zijn en alle 284 commando's per testfamily precies één keer zijn uitgevoerd.
+  # Fail-closed aggregatie: draait altijd; alleen groen als ALLE jobs `success` zijn en alle 285 commando's per testfamily precies één keer zijn uitgevoerd.
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
   shadow-aggregatie:
     name: shadow-aggregatie
     if: always()

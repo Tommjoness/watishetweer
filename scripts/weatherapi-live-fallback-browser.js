@@ -2,6 +2,10 @@
 
 const assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
 const {MODI,leesModus,beoordeelZonderSleutel}=require("./ci/preview-providermodus.js");
 
@@ -55,7 +59,7 @@ function verwachteForecast503(msg){
 
 (async()=>{
   assert(EXPECTED_SHA,"EXPECTED_SHA ontbreekt voor Visual Crossing live-fallbackbewijs");
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
   try{
     const context=await browser.newContext({
       serviceWorkers:"block",

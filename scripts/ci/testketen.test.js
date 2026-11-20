@@ -1,6 +1,6 @@
 "use strict";
 
-/* Eenheidstests voor de gesharde testketen: dekking van de 284 commando's, volgorde, verdeling, het artifact (manifest, wijzigingen, gevoelige
+/* Eenheidstests voor de gesharde testketen: dekking van de 285 commando's, volgorde, verdeling, het artifact (manifest, wijzigingen, gevoelige
    gegevens) en vooral de fail-closed aggregatie bij ontbrekende, dubbele, onafgeronde, mislukte, overgeslagen of geannuleerde resultaten. */
 
 const assert = require("assert");
@@ -16,10 +16,10 @@ const gelijk = (a, b, m) => { assert.deepStrictEqual(a, b, m); n++; };
 
 /* ---------- Plan ---------- */
 const p = T.plan();
-gelijk(p.alle.length, 284, "de oorspronkelijke keten telt 284 commando's");
-gelijk(new Set(p.alle).size, 284, "alle commando's zijn uniek");
+gelijk(p.alle.length, 285, "de oorspronkelijke keten telt 285 commando's");
+gelijk(new Set(p.alle).size, 285, "alle commando's zijn uniek");
 ok(p.alle.every(T.eenvoudig), "alle commando's zijn eenvoudige node-commando's");
-const geteld = new Array(284).fill(0);
+const geteld = new Array(285).fill(0);
 p.bouw.forEach(i => geteld[i]++);
 p.shards.forEach(s => s.indexen.forEach(i => geteld[i]++));
 ok(geteld.every(x => x === 1), "elk commando zit in precies één fase of shard");
@@ -28,7 +28,7 @@ ok(p.shardbaar.every(i => !T.isMutator(p.alle[i])), "geen muterend commando in d
 ok(T.isMutator(p.alle[p.laatsteMutator]), "het laatste muterende commando is een mutator");
 gelijk(p.shards.length, 4, "vier shards");
 ok(p.shards.every(s => s.indexen.length > 0), "geen lege shard");
-gelijk(p.bouw.length + p.shardbaar.length, 284, "bouw en shardbaar tellen op tot 284");
+gelijk(p.bouw.length + p.shardbaar.length, 285, "bouw en shardbaar tellen op tot 285");
 ok(p.alle.slice(0, p.laatsteMutator + 1).some(c => /run-prelaunch-isolated/.test(c)), "run-prelaunch-isolated (herstelt public/ tijdelijk) zit in de bouwfase");
 for (const c of ["node scripts/platform-output-cleanup.js", "node scripts/apply-voet.js", "node scripts/apply-kleur-20261012.js runtime", "node build-weather.js"]) ok(T.isMutator(c), `${c} is een mutator`);
 for (const c of ["node scripts/apply-voet.test.js", "node scripts/verify-final-27.js", "node browser-final-desktop-ui-20260902.test.js"]) ok(!T.isMutator(c), `${c} is geen mutator`);
@@ -158,4 +158,4 @@ try {
 const schoonCli = spawnSync("node", [path.join(__dirname, "run-fase.js"), "schoon"], { cwd: path.join(__dirname, "..", ".."), encoding: "utf8" });
 ok([0, 1].includes(schoonCli.status), "run-fase schoon draait (0 = schoon, 1 = er staan wijzigingen in de werkmap)");
 
-console.log(`Gesharde testketen: ${n} controles geslaagd (plan van 284 commando's, volgorde, verdeling, artifact, gevoelige gegevens, fail-closed aggregatie).`);
+console.log(`Gesharde testketen: ${n} controles geslaagd (plan van 285 commando's, volgorde, verdeling, artifact, gevoelige gegevens, fail-closed aggregatie).`);

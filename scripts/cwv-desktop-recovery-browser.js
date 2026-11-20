@@ -4,6 +4,10 @@
 // provider traffic: this isolates layout/render work from provider availability.
 const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {bouw}=require("../data.js");
 const OUT=path.join(__dirname,"..","public");
 const REPORT=path.join(__dirname,"..","cwv-evidence");
@@ -79,7 +83,7 @@ async function run(){
   const root=String(process.env.CWV_ROOT||("http://127.0.0.1:"+server.address().port)).replace(/\/$/,"");
   const expected=String(process.env.EXPECTED_SHA||"");
   if(process.env.CWV_ROOT&&!/^[0-9a-f]{40}$/.test(expected))throw new Error("Live CWV-verificatie vereist exacte EXPECTED_SHA");
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
   const reports=[];
   try{
     for(const width of [390,1024,1100,1366,1660,1920])for(const route of ([390,1660].includes(width)?routes:[routes[5]])){
@@ -98,7 +102,7 @@ async function run(){
         if(u.pathname==="/api/neerslag")return r.fulfill({json:{nowcast:null,actueel:null,bron:"test"}});
         if(u.pathname==="/api/luchtkwaliteit")return r.fulfill({json:{beschikbaar:false,provider:"luchtmeetnet",reden:"testfixture gebruikt CAMS voor pollen"}});
         if(u.pathname==="/api/plaatsnaam")return r.fulfill({json:{beschikbaar:false}});
-        if(u.origin!==root)return process.env.CWV_ROOT?r.continue():r.fulfill({json:{}});
+        if(u.origin!==root)return process.env.CWV_ROOT?r.fallback():r.fulfill({json:{}});
         return r.continue();
       });
       for(const scenario of ["cold","reload"]){

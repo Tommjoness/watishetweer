@@ -1,0 +1,41 @@
+# Open-Meteo: CI zonder live aanroepen, beschikbaarheid buiten CI
+
+Sinds 20 november 2026 doet GitHub Actions geen live aanroepen meer naar Open-Meteo. Open-Meteo (Patrick Zippenfenig, ticket #235915) bevestigde dat IP-adressen bij misbruik agressief worden geblokkeerd en beperkt, en vroeg om in CI mocktests te gebruiken in plaats van live API-aanroepen. GitHub-runners delen hun IP-adressen met veel andere gebruikers.
+
+## Wat CI nu doet
+
+- **Deterministische fixtures.** Browserchecks tegen preview en productie laden de echte site. Voor `*.open-meteo.com` (forecast, luchtkwaliteit, geocoding, hoogte) krijgen ze een contractgetrouw antwoord van `scripts/openmeteo-fixture.js`. Dat antwoord wordt opgebouwd uit de aanvraag van de pagina zelf: dezelfde velden, lengtes en tijdzone, één vaste UTC-offset, poolnacht en 24 uur daglicht zoals Open-Meteo ze levert, en HTTP 400 bij een onbekend veld. De bestaande controles (bronwaarheid, SHA, layout, toegankelijkheid, prestaties van de eigen site) blijven ongewijzigd.
+- **Bewaker.** Iedere CI-job die bouwt, test of een browser start, laadt `scripts/ci/geen-live-openmeteo.cjs` via `NODE_OPTIONS`.
+  - Open-Meteo is dan onbereikbaar: Node-DNS, `fetch` en `http(s)` worden geweigerd. Chromium krijgt een resolverregel, en iedere browsercontext krijgt een vangnetroute.
+  - Elke poging wordt vastgelegd. De laatste stap van de job (`node scripts/ci/geen-live-openmeteo-controle.js`) faalt bij één poging, ook als een test die fout zelf wegving.
+- **Contracttests.** `scripts/ci/geen-live-openmeteo.test.js` toetst de bewaker en eist de bewaker in alle relevante workflowjobs. Daarnaast verbiedt deze test Open-Meteo-hosts en live Open-Meteo-scripts in workflows. `scripts/history-fixture-synthetisch.test.js` toetst het fixturecontract.
+
+## Wat uit CI is gehaald
+
+| Was in CI | Nu |
+|---|---|
+| `production-smoke.js`: elk uur een live Open-Meteo-aanvraag als bronbeschikbaarheid | Uitkomst "controle niet uitgevoerd" (eerlijk: geen volledige acceptatie); de reserveroute wordt nog wel bewezen |
+| `netwerkdiagnostiek.js https://api.open-meteo.com` bij een mislukte finale-releasejob | Alleen de eigen site |
+| `openmeteo-daggrens-contract.js` (providercontract dagwaarden) bij iedere PR | Handmatig of periodiek buiten CI (zie hieronder) |
+| Wereldwijde, finale-release- en pre-salemonitors: de exacte productie-URL live ophalen (met retries, afkoeling en pacing) en als fixture teruggeven | Dezelfde exacte URL, beantwoord met de contractgetrouwe fixture |
+| Browserchecks zonder mock (week, mobiele CLS, live-performance, release-recovery, navigatie, WeatherAPI-reserve, preview-responsive, CWV, staff-audit) | Fixture voor alle Open-Meteo-hosts |
+
+**Dekkingsverschuiving (bewust).** CI bewijst nu dat de site met een geldig Open-Meteo-antwoord goed werkt. Dat geldt voor iedere build, voor productie en voor alle 11+ locaties. CI bewijst niet meer:
+
+- dat Open-Meteo op dit moment bereikbaar is;
+- dat de live respons nog hetzelfde contract volgt;
+- hoe snel Open-Meteo antwoordt.
+
+Dat zijn providervragen. Die horen bij de monitoring hieronder.
+
+**Nog live in GitHub Actions:** alleen `knmi-modelverificatie.yml`. Die draait per kwartaal en handmatig, en vergelijkt historische modeldata van Open-Meteo met KNMI-metingen. Dat kan per definitie niet met een fixture. Of deze workflow uit GitHub Actions moet, is een besluit van de eigenaar.
+
+## Monitoringstrategie buiten GitHub Actions (ontwerp, nog niet ingericht)
+
+1. **Echte bezoekers als primaire bron, zonder extra verzoeken.** PostHog krijgt al `weather_view_ready` (met laadduurband) en `weather_view_failed` (met fouttype). Cloudflare ziet aan de reserveroute `/api/forecast` (header `x-wiw-weather-source`) hoe vaak Open-Meteo bij bezoekers faalt. Voorstel: een alarm wanneer het aandeel `weather_view_failed` of het gebruik van de reserveroute duidelijk boven het normale niveau komt. De drempel bepalen we pas na een week meten.
+2. **Eén lichte synthetische controle, vanaf een eigen, niet-gedeeld adres.** Een kleine geplande taak buiten GitHub Actions doet hooguit één minimale aanvraag per 30 tot 60 minuten, met een eigen User-Agent.
+   - Een tijdelijke fout krijgt geen herhaling; een 429 wordt gerespecteerd.
+   - Een melding volgt pas na drie opeenvolgende fouten.
+   - Waar dit draait (eigen server of een geplande Cloudflare Worker) en wie de melding krijgt, beslist de eigenaar.
+3. **Providercontracten periodiek met de hand.** `node scripts/openmeteo-daggrens-contract.js` (hooguit wekelijks) en de KNMI-modelverificatie draaien lokaal of op de monitoringplek, nooit in CI. Een afwijking wordt een gewone issue of PR.
+4. **Scheiding blijft hard.** Monitoringscripts horen niet in `npm test` of in een workflow. De bewaker en de workflowcontrole in `geen-live-openmeteo.test.js` houden dat afgedwongen.

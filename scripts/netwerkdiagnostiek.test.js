@@ -104,23 +104,20 @@ function klokMet(...tijden){let i=0;return()=>tijden[Math.min(i++,tijden.length-
   const vrij=net.createServer();await new Promise(klaar=>vrij.listen(0,"127.0.0.1",klaar));const vrijePoort=vrij.address().port;await new Promise(klaar=>vrij.close(klaar));
   assert.match(await echteFout(`http://127.0.0.1:${vrijePoort}/`),/^fetch failed \[oorzaak=ECONNREFUSED \(Error\); na=\d+ms\]$/);
 
-  /* Koppeling: de vijf live-bronlussen gebruiken de helper en gooien de oorzaak niet meer weg */
+  /* Sinds 20 november (Open-Meteo, ticket #235915): geen live Open-Meteo vanuit CI. De vier browsermonitors
+     die eerder live bronnen ophaalden, beantwoorden de exacte productie-URL nu met de contractgetrouwe fixture
+     en halen zelf niets op; er is dus geen live-bronlus meer die een foutoorzaak kan wegwerpen. */
   const scripts=bestand=>fs.readFileSync(path.join(__dirname,bestand),"utf8");
-  for(const [bestand,aantal] of [
-    ["production-final-release-browser.js",1],
-    ["production-worldwide-browser.js",2],
-    ["production-pre-sale-acceptance-browser.js",1],
-    ["run-production-pre-sale-acceptance-browser.js",1]
-  ]){
+  for(const bestand of ["production-final-release-browser.js","production-worldwide-browser.js","production-pre-sale-acceptance-browser.js","run-production-pre-sale-acceptance-browser.js"]){
     const bron=scripts(bestand);
-    assert.equal(bron.split("Fout=beschrijfFetchFout(e,Date.now()-begin);").length-1,aantal,`${bestand}: verwacht ${aantal} lus(sen) met beschrijfFetchFout`);
-    assert(!/(laatsteFout|reserveFout)=String\(e&&e\.message\|\|e\)/.test(bron),`${bestand}: een live-bronlus gooit de foutoorzaak nog weg`);
-    assert(bron.includes('require("./netwerkdiagnostiek.js")'),`${bestand}: helper niet geladen`);
+    assert(bron.includes('require("./openmeteo-fixture.js")'),`${bestand}: Open-Meteo-fixture niet geladen`);
+    assert(!/\bfetch\(/.test(bron),`${bestand}: haalt nog zelf iets live op`);
+    assert(!/https:\/\/[a-z-]*\.?open-meteo\.com\/v1\/[a-z_-]+\?/.test(bron),`${bestand}: bevat nog een live Open-Meteo-aanvraag`);
   }
   const workflow=fs.readFileSync(path.join(__dirname,"..",".github","workflows","production-smoke.yml"),"utf8");
   const finaleJob=workflow.slice(workflow.indexOf("\n  final-release-browser:"),workflow.indexOf("\n  cwv-layout-browser:"));
-  assert(finaleJob.includes("node scripts/netwerkdiagnostiek.js https://watishetweer.nl")&&finaleJob.includes("node scripts/netwerkdiagnostiek.js https://api.open-meteo.com"),"finale releasejob mist de diagnostiek van site of Open-Meteo");
-  assert(/aanvullende aanwijzing, geen equivalent van de forecastaanvraag/.test(finaleJob),"de Open-Meteo-meting moet als aanvullende aanwijzing gelabeld zijn");
+  assert(finaleJob.includes("node scripts/netwerkdiagnostiek.js https://watishetweer.nl"),"finale releasejob mist de diagnostiek van de site");
+  assert(!/open-meteo\.com/.test(workflow),"production-smoke mag Open-Meteo niet vanuit CI meten (ook niet als diagnostiek)");
 
-  console.log("Netwerkdiagnostiek: colo-herkenning, witgelijste logregel zonder gevoelige gegevens, foutpad, time-out, CLI (exit 0), foutoorzaak per poging en koppeling in de vijf live-bronlussen OK.");
+  console.log("Netwerkdiagnostiek: colo-herkenning, witgelijste logregel zonder gevoelige gegevens, foutpad, time-out, CLI (exit 0), foutoorzaak per poging; browsermonitors zonder live Open-Meteo en zonder Open-Meteo-diagnostiek in CI OK.");
 })().catch(e=>{console.error(e);process.exit(1);});
