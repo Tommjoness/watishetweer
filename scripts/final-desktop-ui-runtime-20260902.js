@@ -81,7 +81,14 @@ function regenVelden(a,isNat){
   return velden;
 }
 
-if(typeof module!=="undefined"&&module.exports)module.exports={uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,MAX_TABEL_UREN,regenVelden,formatTemp,formatPct,formatMm,hhmm,dagLabel};
+/* De zichtbare 0%-aanduiding is afgerond; de verwachte mm-waarde is onafhankelijk. */
+function toontNulKansMetNeerslag(rijen){
+  return Array.isArray(rijen)&&rijen.some(r=>{
+    const kans=num(r&&r.kans),mm=num(r&&r.hoeveelheid);
+    return kans!==null&&mm!==null&&kans>=0&&kans<0.5&&mm>0;
+  });
+}
+if(typeof module!=="undefined"&&module.exports)module.exports={uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,MAX_TABEL_UREN,regenVelden,formatTemp,formatPct,formatMm,hhmm,dagLabel,toontNulKansMetNeerslag};
 if(typeof document==="undefined")return;
 
 function voegStijlToe(){
@@ -103,6 +110,11 @@ function voegStijlToe(){
 .wiw-hour-panel h3{font-family:var(--serif);font-weight:400;font-size:20px;line-height:1.2;margin:4px 0 10px;color:var(--ink)}
 .wiw-hour-table-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);outline-offset:3px}
 .wiw-hour-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--sans);font-size:12.5px;font-variant-numeric:tabular-nums}
+.wiw-hour-precip-context{margin:8px 0;font-size:12px;line-height:1.5;color:var(--ink-70)}
+.wiw-hour-precip-context[hidden]{display:none!important}
+.wiw-hour-precip-context>summary{cursor:pointer;list-style:revert}
+.wiw-hour-precip-context>summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wiw-hour-precip-context>p{margin:6px 0}
 .wiw-hour-table caption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .wiw-hour-table th,.wiw-hour-table td{padding:8px 7px;border-bottom:1px solid var(--rule-soft);text-align:right;vertical-align:middle}
 .wiw-hour-table th:first-child,.wiw-hour-table td:first-child{text-align:left}
@@ -222,7 +234,12 @@ function maakUurPaneel(){
   const scroll=document.createElement("div");scroll.className="wiw-hour-table-scroll";scroll.id="wiw-hour-scroll";scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Temperatuur en neerslag per uur");
   const table=document.createElement("table");table.className="wiw-hour-table";table.id="wiw-hour-table";
   table.innerHTML='<caption>Temperatuur, neerslagkans en neerslaghoeveelheid per uur voor de uren in de grafiek</caption><thead><tr><th scope="col">Tijd</th><th scope="col">Temperatuur</th><th scope="col">Kans</th><th scope="col">Neerslag</th></tr></thead><tbody></tbody>';
-  scroll.appendChild(table);
+  /* De toelichting staat binnen het scrollpaneel en verandert de uitlijning met de grafiek niet. */
+  const uitleg=document.createElement("details");uitleg.id="wiw-hour-precip-context";uitleg.className="wiw-hour-precip-context";uitleg.hidden=true;
+  const uitlegKop=document.createElement("summary");uitlegKop.textContent="Waarom 0% kans bij neerslag?";
+  const uitlegTekst=document.createElement("p");uitlegTekst.textContent="Neerslagkans en verwachte hoeveelheid zijn afzonderlijke modelwaarden. Ze kunnen verschillen; 0% is geen garantie dat het droog blijft.";
+  uitleg.append(uitlegKop,uitlegTekst);
+  scroll.append(uitleg,table);
   paneel.append(h,scroll);
   dagmod.parentNode.insertBefore(grid,dagmod);main.appendChild(dagmod);grid.append(main,paneel);
   return paneel;
@@ -448,6 +465,12 @@ function werkUurTabelBij(){
       const t=document.createElement("td");t.textContent=formatTemp(r.temp);const k=document.createElement("td");k.textContent=formatPct(r.kans)||"–";const mm=document.createElement("td");mm.textContent=num(r.hoeveelheid)===0&&(num(r.kans)===null||num(r.kans)<=0)?"–":formatMm(r.hoeveelheid)||"–";tr.append(tijd,t,k,mm);
     }
     tbody.appendChild(tr);
+  }
+  const uitleg=document.getElementById("wiw-hour-precip-context");
+  if(uitleg){
+    const nodig=toontNulKansMetNeerslag(rijen);
+    if(uitleg.hidden===nodig)uitleg.hidden=!nodig;
+    if(!nodig&&uitleg.open)uitleg.open=false;
   }
   vindVolledigeGrafiekTabel();syncHoogte();planHoogteSync();
   koppelUurKlik(tbody);markeerUur();

@@ -1,6 +1,6 @@
 "use strict";
 const assert=require("assert");
-const {uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,regenVelden,formatTemp}=require("./final-desktop-ui-runtime-20260902.js");
+const {uurRijenUitGeo,komendeUurRijen,MAX_DESKTOP_UREN,regenVelden,formatTemp,toontNulKansMetNeerslag}=require("./final-desktop-ui-runtime-20260902.js");
 const {RUNTIME,herstelDrukOwnerRuntime,PRESSURE_OLD}=require("./apply-final-desktop-ui-20260902.js");
 const TI=Array.from({length:24},(_,i)=>i<11?`2026-09-02T${String(i+13).padStart(2,"0")}:00`:`2026-09-03T${String(i-11).padStart(2,"0")}:00`);
 const T=TI.map((_,i)=>-8.5+i*.7),A=TI.map((_,i)=>-14.2+i*.55);
@@ -24,6 +24,19 @@ assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoog
 v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
 v=regenVelden({genoeg:true,kans:0,hoeveelheid:0,soort:"regen"},false);assert.deepEqual(v,[{label:"Huidige status",waarde:"Droog"}],"volledig droog toont geen irrelevante 0% of 0,0 mm");
 v=regenVelden({genoeg:true,kans:25,hoeveelheid:0,soort:"regen"},false);assert.equal(v.some(x=>x.label==="Hoogste neerslagkans"&&x.waarde==="25%"),true,"echte niet-nul kans blijft zichtbaar");assert.equal(v.some(x=>x.label==="Verwachte totale hoeveelheid"&&x.waarde==="0,0 mm"),true,"bekende 0,0 mm blijft relevant naast een niet-nul kans");
+/* De modelwaarden blijven onveranderd; alleen bij weergegeven nul-kans en positieve mm verschijnt uitleg. */
+assert.equal(toontNulKansMetNeerslag([{kans:0,hoeveelheid:0.2}]),true);
+assert.equal(toontNulKansMetNeerslag([{kans:0.4,hoeveelheid:0.1}]),true,"afgeronde 0% krijgt uitleg");
+assert.equal(toontNulKansMetNeerslag([{kans:0.5,hoeveelheid:0.1}]),false,"afgeronde 1% krijgt geen nul-kansuitleg");
+assert.equal(toontNulKansMetNeerslag([{kans:0,hoeveelheid:0}]),false,"droog uur krijgt geen uitleg");
+assert.equal(toontNulKansMetNeerslag([{kans:null,hoeveelheid:0.2}]),false,"ontbrekende kans wordt niet 0%");
+assert.equal(toontNulKansMetNeerslag([{kans:0,hoeveelheid:null}]),false,"ontbrekende hoeveelheid wordt niet 0 mm");
+assert.equal(toontNulKansMetNeerslag([{kans:-1,hoeveelheid:0.2}]),false,"ongeldige kans wordt genegeerd");
+assert.equal(toontNulKansMetNeerslag([{kans:0,hoeveelheid:0},{kans:0,hoeveelheid:0.2}]),true,"minstens één afwijkend uur");
+assert.equal(toontNulKansMetNeerslag([]),false);
+const vertaler=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.equal(vertaler.vertaal("Waarom 0% kans bij neerslag?"),"Why 0% chance despite predicted precipitation?");
+assert.equal(vertaler.vertaal("Neerslagkans en verwachte hoeveelheid zijn afzonderlijke modelwaarden. Ze kunnen verschillen; 0% is geen garantie dat het droog blijft."),"The chance and expected amount of precipitation are separate model estimates. They can differ; 0% does not guarantee dry weather.");
 assert.ok(RUNTIME.includes('diag=document.createElement("div");diag.id="wiw-pressure-diagnostic"'),"ontbrekende diagnostische container moet vóór verwijdering opnieuw worden aangemaakt");
 assert.ok(RUNTIME.includes('const veiligVerplaatst=!!(stat&&diag&&diag.contains(stat))'),"drukowner mag pas verdwijnen nadat #pres aantoonbaar veilig is verplaatst");
 assert.ok(RUNTIME.includes('else if(details){details.hidden=true;details.setAttribute("aria-hidden","true");}'),"bij mislukte verplaatsing moet de sectie onzichtbaar blijven zonder #pres te vernietigen");
