@@ -120,7 +120,7 @@ const EXTRA_STIJL = `
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 `;
 
-function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
+function kop({ titel, beschrijving, canonical, extra = "", breed = false, paginaClass = "" }) {
   const structured = [
     { "@context": "https://schema.org", "@type": "WebSite", name: SEO.siteName, url: SEO.canonical },
     { "@context": "https://schema.org", "@type": "WebPage", name: titel, url: canonical, isPartOf: { "@type": "WebSite", name: SEO.siteName, url: SEO.canonical } }
@@ -150,7 +150,7 @@ function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
 ${THEMA_SCRIPT}
 ${STIJL.replace("</style>", EXTRA_STIJL + "</style>")}
 ${extra}</head>
-<body><main class="kaart${breed ? " breed" : ""}">
+<body><main class="kaart${breed ? " breed" : ""}${paginaClass ? " " + esc(paginaClass) : ""}">
 `;
 }
 function staart(config, kern) {
@@ -232,9 +232,14 @@ function maanPagina(kern, nuMs) {
   const berekendOp = new Date(nuMs).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   const tijdenMoment = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0] + " " + x[1]).join(", ") || "geen opkomst of ondergang op deze dag";
   const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
-  return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
+  return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<div class="nz-maan-bovenbalk">
+<a class="nz-maan-merk" href="/" translate="no">watishetweer.nl</a>
+<nav aria-label="Navigatie"><a href="/">Het weer</a><a href="${BASIS}">Sterren kijken</a></nav>
+<div class="nz-maan-thema" role="group" aria-label="Weergave"><button type="button" data-maan-thema="licht" aria-pressed="false">Licht</button><button type="button" data-maan-thema="auto" aria-pressed="false">Auto</button><button type="button" data-maan-thema="donker" aria-pressed="false">Donker</button></div>
+</div>
+<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
-<p>Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
+<p class="nz-maan-inleiding">Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
 <div class="nz-maan-raster">
 <div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
@@ -247,7 +252,8 @@ function maanPagina(kern, nuMs) {
 <noscript><p class="klein">De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):</p><ul>${fasenMoment}</ul></noscript>
 </div>
 </div>
-<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
+<p class="nz-maan-tijdregel">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats.</p>
+<details class="nz-maan-uitleg"><summary>Over de berekening en de afbeelding</summary><p>De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p></details>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
 ` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
