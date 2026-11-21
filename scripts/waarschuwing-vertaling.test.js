@@ -8,6 +8,16 @@ const enabled={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"FAKE_KEY_NOT_FOR_NETWO
 (async()=>{
   assert.equal(t.WAARSCHUWINGVERTALING_VRIJGEGEVEN,false,
     "geen automatische waarschuwingvertaling zonder onafhankelijke review");
+  assert.equal(t.brontaal({taal:"fr-FR"},base.bron),"FR");
+  assert.equal(t.brontaal({taal:"<script>"},base.bron),null);
+  assert.equal(t.brontaal({},"National Weather Service"),"EN");
+  assert(t.veilig(source,value),"zelfde cijfers en eenheden");
+  assert(!t.veilig("75-90 km/h","76-90 km/h"),"gewijzigde getallen geweigerd");
+  assert(!t.veilig("75-90 km/h","75-90 mph"),"gewijzigde eenheid geweigerd");
+  assert(!t.veilig("−5 °C","5 °C"),"verdwenen minteken is een veiligheidsfout");
+  assert(!t.veilig("+5 °C","5 °C"),"verdwenen plusteken is een veiligheidsfout");
+  assert(t.veilig("Van 75–90 km/h","Van 75-90 km/u"),"typografisch streepje is geen gewijzigd bereik");
+  assert(!t.veilig("10 mm","<b>10 mm</b>"),"HTML is niet toegestaan");
   const provider=()=>{throw Error("DeepL mag niet worden aangeroepen");};
   for(const env of [
     enabled,null,{}, {DEEPL_TRANSLATE_ENABLED:"0",DEEPL_API_KEY:"TEST"},
