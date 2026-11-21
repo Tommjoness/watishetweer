@@ -5,7 +5,7 @@
 html body .wiw-hour-value .wiw-hour-secondary:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
 html body .wiw-hour-time .wiw-hour-date:not(#wiw-leesbaarheid){font-size:12px!important}
 html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:var(--wiw-t-data)!important}
-html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.45!important}
+html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:16px!important;line-height:1.55!important}
 html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:var(--wiw-t-link)!important}
 html body #chartdata p.chartdata-scrollhint:not(#wiw-leesbaarheid){font-size:13px!important}
 html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nachtzichtregel:not(#wiw-leesbaarheid),html body .nachtmaan .nachtmaanregel:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.4!important}
@@ -245,4 +245,29 @@ html body #nights .nachtmaanregel:not(#wiw-leesbaarheid){font-size:var(--wiw-t-m
   html body #wiw-hour-panel:not(#wiw-leesbaarheid){padding-left:8px!important}
   html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
   html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){padding-left:1px!important;padding-right:1px!important}
+}
+
+/* De alternatieve grafiektabel blijft toetsenbord- en schermlezertoegankelijk,
+   maar toont geen permanente link onder de grafiek. Bij focus of openstand
+   verschijnt de native samenvatting weer als bedienbaar 44px-doel. */
+html body #chartdata{position:relative}
+html body #chartdata:not([open])>summary:not(:focus){
+  position:absolute!important;width:1px!important;height:1px!important;
+  min-width:0!important;min-height:0!important;margin:-1px!important;
+  padding:0!important;border:0!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;white-space:nowrap!important
+}
+html body #chartdata>summary:focus,html body #chartdata[open]>summary{
+  position:static!important;width:auto!important;height:auto!important;
+  min-height:44px!important;margin:0!important;
+  padding:10px 0!important;overflow:visible!important;
+  clip-path:none!important;white-space:normal!important
+}
+
+/* De uitleg onder de zes bovenste weertegels moet op desktop leesbaar zijn;
+   uitsluitend beschrijvende zinnen, niet de krappe labels of hoofdwaarden. */
+@media(min-width:1100px){
+  html body #app .final-top-grid>.stats .stat .ssub:not(#wiw-leesbaarheid){
+    font-size:16px!important;line-height:1.5!important
+  }
 }

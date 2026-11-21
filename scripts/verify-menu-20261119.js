@@ -15,7 +15,7 @@ const NZ=require("./nachtzicht.config.js");
    crawlbare links; de seizoens- en nachtlinks staan niet meer in de footer,
    terwijl bronnen, disclaimer, Over, Privacy, technische gegevens en contact
    er wel blijven; de menuruntime zit in de gedeelde app-bundle. */
-const DOELEN=["/","/weer/","#nachtzicht",NZ.BASIS,NZ.MAAN,"/over/","/privacy","mailto:support@watishetweer.nl",...SEIZOENSPAGINAS.map(p=>`/${p.slug}/`)];
+const DOELEN=["/","/weer/","#nachtzicht",NZ.BASIS,NZ.MAAN,"/over/","/privacy","/contact/",...SEIZOENSPAGINAS.map(p=>`/${p.slug}/`)];
 let gezien=0;const bundels=new Set();
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
@@ -50,4 +50,22 @@ assert(gezien>=100,"te weinig weerpagina's met het menu: "+gezien);
 assert.equal(bundels.size,1,"weerpagina's delen niet één app-bundle: "+[...bundels].join(", "));
 const bundel=fs.readFileSync(path.join(OUT,[...bundels][0]),"utf8");
 assert(bundel.includes("wiw-menu-rail")&&bundel.includes("wiw-menu"),"menuruntime ontbreekt in de app-bundle");
+/* De menulink mag niet langer op een niet-ingestelde mailhandler vertrouwen:
+   de gepubliceerde contactroute moet daadwerkelijk bestaan en handmatig bruikbaar zijn. */
+const contactPad=path.join(OUT,"contact","index.html");
+assert(fs.existsSync(contactPad),"Contact-menu verwijst naar een ontbrekende /contact/-pagina");
+const contact=fs.readFileSync(contactPad,"utf8");
+for(const a of ['<h1>Contact</h1>','id="contact-adres"','mailto:support@watishetweer.nl','id="kopieer-adres"','id="kopie-status"'])
+  assert(contact.includes(a),"Contact-pagina mist noodzakelijk onderdeel: "+a);
+/* Het pre-paintthemascript wordt tijdens de publicatie geëxternaliseerd naar een
+   gehashte early-*.js. Controleer daarom de echte delivery-referentie én asset,
+   niet de onbewerkte inline broncode. */
+const themascript=contact.match(/<script\b[^>]*\bsrc="\/(early-[^"]+\.js)"[^>]*><\/script>/);
+assert(themascript,"Contact-pagina mist de externe vroege themabootstrap");
+const themaPad=path.join(OUT,themascript[1]);
+assert(fs.existsSync(themaPad),"Contact-pagina verwijst naar een ontbrekend themascript");
+const themaBron=fs.readFileSync(themaPad,"utf8");
+assert(themaBron.includes("weerbriefing.thema.sessie")&&themaBron.includes("weerbriefing.thema"),
+  "Contact-themascript bewaart sessie- en lokale themakeuze");
+assert(!/<form\b/i.test(contact),"Contact blijft bewust e-mailgebaseerd zonder ongeverifieerde backend");
 console.log(`Menu geverifieerd op ${gezien} weerpagina's: één menu vooraan in de bovenbalk met vier uitklapbare groepen en ${DOELEN.length} bestemmingen, footer zonder seizoens- en nachtlinks, runtime in ${[...bundels][0]}.`);
