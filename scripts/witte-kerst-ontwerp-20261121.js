@@ -91,7 +91,7 @@ const HEADER=String.raw`
 <input type="radio" name="wk-thema" id="wk-donker" value="donker"><label for="wk-donker">Donker</label>
 </div>
 </header>`;
-const FOOTER=String.raw`<footer class="wk-footer"><span>© <span translate="no">watishetweer.nl</span></span><nav aria-label="Informatie"><a href="/over/">Over deze site</a> <span aria-hidden="true">·</span> <a href="/privacy">Privacy &amp; gegevens</a></nav></footer>`;
+const FOOTER=String.raw`<footer class="wk-footer"><span translate="no">© watishetweer.nl</span><nav aria-label="Informatie"><a href="/over/">Over deze site</a> <span aria-hidden="true">·</span> <a href="/privacy">Privacy &amp; gegevens</a></nav></footer>`;
 const THEMA_SCRIPT=String.raw`<script>
 /* De bestaande sessievoorkeur is leidend; alleen deze pagina toont de aanvullende bediening. */
 (()=>{try{
