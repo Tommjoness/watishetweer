@@ -794,6 +794,8 @@
 
     /* Seizoenspagina witte kerst (vaste teksten) */
     "Witte kerst": "White Christmas",
+    "Verwachtingsstatus": "Forecast status",
+    "Verder ontdekken": "Keep exploring",
     "Sterren kijken in de Nationale Parken ›": "Stargazing in the Dutch national parks ›",
     "De maan vandaag ›": "The moon today ›",
     "De maan vandaag": "The moon today",
