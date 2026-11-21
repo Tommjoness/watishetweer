@@ -143,6 +143,15 @@ const html=pagina(kerst,"2026-10-05");
 assert(html.includes("<title>Witte kerst 2026: kans op sneeuw met kerst | watishetweer.nl</title>"));
 assert(html.includes('<link rel="canonical" href="https://watishetweer.nl/witte-kerst/">'));
 assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
+/* Ontwerp uitsluitend voor Witte kerst; broncontracten, taal en runtime blijven intact. */
+assert(html.includes('<main class="kaart breed wk-page">'),"Witte kerst gebruikt de geïsoleerde ontwerplaag");
+assert(html.includes('id="wk-licht"')&&html.includes('id="wk-auto"')&&html.includes('id="wk-donker"'),"zichtbare themabediening Licht/Auto/Donker");
+assert(html.includes('class="wk-hero"')&&html.includes('class="wk-cards"')&&html.includes('class="wk-footer"'),"hero, uitleg en footer bestaan");
+assert.equal((html.match(/id="seizoen-melding"/g)||[]).length,1,"exact één bericht voor de bestaande runtime");
+assert.equal((html.match(/id="seizoen-verwachting"/g)||[]).length,1,"één data- en foutcontainer");
+assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige ontwerpstudie'),"geen slogan of ontwerpnotities");
+assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
+
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
 assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
@@ -154,6 +163,8 @@ assert(html.includes("1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010")&&html.i
 assert(html.includes("https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"),"historische bron is zichtbaar");
 const vertalerKerst=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
 assert.match(vertalerKerst.vertaal(kerst.intro),/^Will we have a white Christmas\?/,"nieuwe intro wordt vertaald");
+assert.equal(vertalerKerst.vertaal("Verwachtingsstatus"),"Forecast status");
+assert.equal(vertalerKerst.vertaal("Verder ontdekken"),"Keep exploring");
 assert.equal(vertalerKerst.vertaal("Sneeuwdek onbekend"),"Snow cover unknown");
 assert.equal(vertalerKerst.vertaal("Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar."),"An official white Christmas cannot yet be assessed: snow-cover data for De Bilt is not available for both Christmas days.");
 assert.equal(vertalerKerst.vertaal(kerst.uitleg.vragen[0].kop),"Why does snow at Christmas not always count as an official white Christmas?");
