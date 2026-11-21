@@ -149,14 +149,15 @@ const CSS=`
 @media(min-width:1904px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
-/* Houd 192px zijbalk + 8px lucht naast het inhoudsvel.
-   .sheet is content-box: tel ook 128px padding en borders mee.
-   Boven 2160px wordt de oorspronkelijke contentmax 1600px weer bereikt. */
+/* De desktop-premium-laag gebruikt :not(#wiw-desktop-premium) en
+   !important; match die specificiteit voor de rail-correctie.
+   De .sheet is border-box. Reserveer per kant 208px: 192px
+   zijbalk, 8px tussenruimte en 8px vanaf de vensterrand. */
 @media(min-width:1904px){
-  html.wiw-menu-rail body>.sheet,
-  html.wiw-menu-rail body .seo-plaatsnav-inner,
-  html.wiw-menu-rail body .seo-route-context{
-    max-width:min(1600px,calc(100vw - 560px))!important
+  html.wiw-menu-rail body>.sheet:not(#wiw-desktop-premium),
+  html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium),
+  html.wiw-menu-rail body .seo-route-context:not(#wiw-desktop-premium){
+    max-width:min(1600px,calc(100vw - 416px))!important
   }
 }
 `;
