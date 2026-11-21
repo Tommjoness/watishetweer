@@ -141,9 +141,22 @@ main.nz-maan-pagina{max-width:1140px;padding:36px clamp(20px,4vw,48px) 48px}
 .nz-maan-pagina .nz-maan-uitleg p{font-size:15px;line-height:1.6}
 @media(max-width:760px){main.nz-maan-pagina{padding:24px 20px 36px}.nz-maan-bovenbalk{gap:8px 12px}.nz-maan-bovenbalk nav{order:3;flex-basis:100%}.nz-maan-thema{margin-left:auto}.nz-maan-pagina .nz-maan-raster{display:block}.nz-maan-pagina .nz-maan-raster>div+div{margin-top:24px}.nz-maan-pagina .nz-maan-inleiding{font-size:16px}}
 @media(max-width:380px){.nz-maan-merk{font-size:14px}.nz-maan-thema button{min-width:43px;padding:7px}.nz-maan-pagina .nz-maan{gap:12px}}
+
+/* Landmarks staan buiten de hoofdinhoud, maar behouden dezelfde contentbreedte. */
+header.nz-maan-bovenbalk{max-width:1140px;margin:0 auto 18px;padding:18px clamp(20px,4vw,48px);background:var(--sheet);border:1px solid var(--rule)}
+footer.nz-maan-footer{max-width:1140px;margin:16px auto 0;padding:12px clamp(20px,4vw,48px);border-top:1px solid var(--rule)}
+.nz-maan-footer nav{display:flex;gap:8px 24px;align-items:center;flex-wrap:wrap}
+.nz-maan-footer a{display:inline-flex;align-items:center;min-height:44px;font-size:14px;color:var(--ink-70)}
+.nz-maan-footer a:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media(max-width:760px){header.nz-maan-bovenbalk{padding:14px 20px;margin-bottom:14px}footer.nz-maan-footer{padding:12px 20px}}
 `;
 
 function kop({ titel, beschrijving, canonical, extra = "", breed = false, paginaClass = "" }) {
+  const maanHeader = paginaClass === "nz-maan-pagina" ? `<header class="nz-maan-bovenbalk">
+<a class="nz-maan-merk" href="/" translate="no">watishetweer.nl</a>
+<nav aria-label="Navigatie"><a href="/">Het weer</a><a href="${BASIS}">Sterren kijken</a></nav>
+<div class="nz-maan-thema" role="group" aria-label="Weergave"><button type="button" data-maan-thema="licht" aria-pressed="false">Licht</button><button type="button" data-maan-thema="auto" aria-pressed="false">Auto</button><button type="button" data-maan-thema="donker" aria-pressed="false">Donker</button></div>
+</header>` : "";
   const structured = [
     { "@context": "https://schema.org", "@type": "WebSite", name: SEO.siteName, url: SEO.canonical },
     { "@context": "https://schema.org", "@type": "WebPage", name: titel, url: canonical, isPartOf: { "@type": "WebSite", name: SEO.siteName, url: SEO.canonical } }
@@ -173,11 +186,12 @@ function kop({ titel, beschrijving, canonical, extra = "", breed = false, pagina
 ${THEMA_SCRIPT}
 ${STIJL.replace("</style>", EXTRA_STIJL + "</style>")}
 ${extra}</head>
-<body><main class="kaart${breed ? " breed" : ""}${paginaClass ? " " + esc(paginaClass) : ""}">
+<body>${maanHeader}<main class="kaart${breed ? " breed" : ""}${paginaClass ? " " + esc(paginaClass) : ""}">
 `;
 }
 function staart(config, kern) {
-  return `</main>
+  const maanFooter = config.soort === "maan" ? `<footer class="nz-maan-footer"><nav aria-label="Informatie"><a href="/over/">Over deze site</a><a href="/privacy.html">Privacy &amp; gegevens</a><a href="/">Terug naar het weer</a></nav></footer>` : "";
+  return `</main>${maanFooter}
 <script type="application/json" id="nz-config">${jsonInHtml(config)}</script>
 <script>
 ${kern}
@@ -257,12 +271,7 @@ function maanPagina(kern, nuMs) {
   const berekendOp = new Date(nuMs).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   const tijdenMoment = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0] + " " + x[1]).join(", ") || "geen opkomst of ondergang op deze dag";
   const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
-  return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<div class="nz-maan-bovenbalk">
-<a class="nz-maan-merk" href="/" translate="no">watishetweer.nl</a>
-<nav aria-label="Navigatie"><a href="/">Het weer</a><a href="${BASIS}">Sterren kijken</a></nav>
-<div class="nz-maan-thema" role="group" aria-label="Weergave"><button type="button" data-maan-thema="licht" aria-pressed="false">Licht</button><button type="button" data-maan-thema="auto" aria-pressed="false">Auto</button><button type="button" data-maan-thema="donker" aria-pressed="false">Donker</button></div>
-</div>
-<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
+  return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
 <p class="nz-maan-inleiding">Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
 <div class="nz-maan-raster">
