@@ -225,7 +225,7 @@ if(!html.includes('dagMm===0?"0,0 mm":hoeveelheidTekst(dagMm)'))
   throw new Error("Vandaag-presenteerder borgt bekende 0,0 mm niet.");
 if(!html.includes('mm===0&&k!==null&&k>0'))
   throw new Error("Q1-presenteerder onderscheidt 0% droog niet van niet-nul kans bij 0,0 mm.");
-if(!html.includes(':"De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";'))
+if(!html.includes(':"De temperatuur blijft de komende uren rond "+String(t.van)+"\\u00a0°C.";'))
   throw new Error("Gelijke temperatuurtrend wordt niet als stabiele temperatuur gepresenteerd.");
 if(html.includes('De temperatuur verandert de komende uren nauwelijks.'))
   throw new Error("Oude vage copy voor gelijke temperatuurtrend staat nog in de artifact.");
