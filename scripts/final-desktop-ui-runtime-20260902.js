@@ -239,6 +239,8 @@ function maakUurPaneel(){
   const uitlegKop=document.createElement("summary");uitlegKop.textContent="Waarom 0% kans bij neerslag?";
   const uitlegTekst=document.createElement("p");uitlegTekst.textContent="Neerslagkans en verwachte hoeveelheid zijn afzonderlijke modelwaarden. Ze kunnen verschillen; 0% is geen garantie dat het droog blijft.";
   uitleg.append(uitlegKop,uitlegTekst);
+  /* Desktop: openen of sluiten verandert de hoogte boven de rijen; bouw de rijen dan opnieuw op, zodat geen uur onder het paneel uitsteekt. */
+  uitleg.addEventListener("toggle",()=>{if(window.innerWidth>=1100)werkUurTabelBij();});
   scroll.append(uitleg,table);
   paneel.append(h,scroll);
   dagmod.parentNode.insertBefore(grid,dagmod);main.appendChild(dagmod);grid.append(main,paneel);
