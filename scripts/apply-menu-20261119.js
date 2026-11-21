@@ -149,15 +149,21 @@ const CSS=`
 @media(min-width:1904px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
-/* De desktop-premium-laag gebruikt :not(#wiw-desktop-premium) en
-   !important; match die specificiteit voor de rail-correctie.
-   De .sheet is border-box. Reserveer per kant 208px: 192px
-   zijbalk, 8px tussenruimte en 8px vanaf de vensterrand. */
+/* Op brede schermen blijven de 1600px-premiumkolom en de
+   496px-uurtabel intact. Tussen 1904 en 2016px schuift het
+   hoofdvlak iets naar rechts om links 192px zijbalk + 8px
+   tussenruimte te reserveren; vanaf 2016px staat het weer
+   vanzelf gecentreerd. Desktop body heeft 30px zijpadding. */
 @media(min-width:1904px){
   html.wiw-menu-rail body>.sheet:not(#wiw-desktop-premium),
-  html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium),
-  html.wiw-menu-rail body .seo-route-context:not(#wiw-desktop-premium){
-    max-width:min(1600px,calc(100vw - 416px))!important
+  html.wiw-menu-rail body>.seo-plaatsnav:not(#wiw-desktop-premium),
+  html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){
+    max-width:1600px!important;
+    margin-left:max(178px,calc((100vw - 1660px)/2))!important;
+    margin-right:auto!important
+  }
+  html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium){
+    max-width:1600px!important
   }
 }
 `;
