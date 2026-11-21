@@ -916,6 +916,8 @@
     "De op- en ondergangstijden worden geladen.": "Loading moonrise and moonset times.",
     "De maanopkomst en maanondergang worden bij het openen berekend.": "Moonrise and moonset times are calculated when the page opens.",
     "Het weer": "Weather",
+    "Informatie": "Information",
+    "Terug naar het weer": "Back to the weather",
     "Navigatie": "Navigation",
     "De komende fasen": "The coming phases",
     "Over de berekening en de afbeelding": "About the calculation and the image",
