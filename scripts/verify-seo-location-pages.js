@@ -15,6 +15,7 @@ const rootPath=path.join(OUT,"index.html"),hubPath=path.join(OUT,"weer","index.h
 for(const p of [rootPath,hubPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-plaatsartifact ontbreekt: "+p);
 
 const root=fs.readFileSync(rootPath,"utf8");
+if(tel(root,'<h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>')!==1)throw new Error("Homepage moet de neutrale plaatskop behouden zolang er geen locatie gekozen is.");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,SKIPLINK)!==1||tel(root,'class="skiplink"')!==1)throw new Error("Homepage moet de skiplink exact één keer in een data-nosnippet-omhulsel houden.");
 if(tel(root,MARKER_NAV)!==1)throw new Error("Homepage moet exact één crawlbare plaatsnavigatie bevatten.");
@@ -59,6 +60,10 @@ for(const loc of LOCATIES){
   if(!html.includes(`\"slug\":\"${loc.slug}\"`)||!html.includes(`\"name\":\"${loc.naam.replace(/"/g,'\\"')}\"`))throw new Error(`${loc.slug}: routebootstrap bevat niet de bewezen plaatsidentiteit.`);
   if(!html.includes("load(route.lat,route.lon,route.name,false,false,normLand(route.country));"))throw new Error(`${loc.slug}: runtime start niet via de bestaande load-keten.`);
   if(!html.includes(`<h2 id="seo-route-title">Weer in ${loc.naam}</h2>`))throw new Error(`${loc.slug}: zichtbare prerendercontext ontbreekt.`);
+  /* Fysiek zichtbaar én toegankelijk vanaf eerste HTML, ook zonder JavaScript. */
+  const naamHtml=loc.naam.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const vroegeKop=`<h2 id="place" aria-label="${naamHtml}">${naamHtml}<span id="plaatstijd" aria-hidden="true"></span></h2>`;
+  if(tel(html,vroegeKop)!==1)throw new Error(`${loc.slug}: statische plaatskop mist juiste zichtbare naam of toegankelijkheidslabel.`);
   if(/<link rel="canonical" href="https:\/\/watishetweer\.nl\/">/.test(html))throw new Error(`${loc.slug}: homepage-canonical lekt naar plaatsroute.`);
   /* Alleen actuele informatie op de site (eigenaar, 1 oktober): geen klimaatblok. */
   if(html.includes("seo-klimaat"))throw new Error(`${loc.slug}: het klimaatblok is verwijderd en hoort niet meer op de plaatspagina.`);
