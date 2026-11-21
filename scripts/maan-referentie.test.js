@@ -153,9 +153,10 @@ const valid = { normaal: [], schampend: [] };
      waarnemer extra ziet; het hoort bij de vraag welke grootheid de app zou moeten tonen (Moon 2.0, M1), niet bij een
      fout in de huidige berekening. Alleen gerapporteerd.
    Opkomst/ondergang: kern en Horizons beschrijven hetzelfde event (gebroken bovenrand op de geometrische horizon;
-   de kern via de standaardhoogte +0,125° voor het middelpunt, Meeus). Het verschil wordt ook uitgedrukt als
-   hoogte-equivalent (tijdsverschil x hoogteverandering per minuut), omdat een schampende maan een kleine
-   hoogteafwijking in een groot tijdsverschil omzet. */
+   de kern via de standaardhoogte +0,125° voor het middelpunt, Meeus). Het tijdsverschil wordt buiten het
+   referentie-interval gemeten en ook uitgedrukt als hoogte-equivalent: tijdsverschil x lokale
+   horizonpassagesnelheid volgens het kernmodel (dh/dt over +-5 min). Dat is een lineaire benadering, niet een
+   gemeten hoogteafwijking; bij een schampende maan (kleine, snel veranderende dh/dt) is ze onbetrouwbaar. */
 const INDEX = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const ctx = { Math, Date }; vm.createContext(ctx);
 vm.runInContext(zonMaanBron(INDEX) + ";this.__k={maan,maanHoogte,opOnder};", ctx);

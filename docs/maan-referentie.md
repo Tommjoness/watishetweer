@@ -86,9 +86,16 @@ Steeds apart gemeten, zodat definitieverschillen niet als kernfout gelden:
 | Hoogte (°) | 0,51 / 1,35 / 1,65 | 0,99 (parallax) | 2,49 | 1,7 / 2,5 |
 | Randstand bij 5–95% verlichting (°) | 0,38 / 0,91 / 1,11 | 1,77 | 2,46 | 1,2 / 2,5 |
 
-**Opkomst en ondergang:**
-- Gemeten als afstand tot het referentie-interval: de Horizons-minuut van 90 s ervoor tot 30 s erna.
-- Ook uitgedrukt als **hoogte-equivalent** (tijdsverschil × hoogteverandering per minuut).
+**Opkomst en ondergang**: vier zaken worden apart gehouden.
+
+| Begrip | Wat het is | Hoe het in deze meting zit |
+|---|---|---|
+| Horizondefinitie | Welke gebeurtenis "opkomst" heet | Gelijk: de gebroken bovenrand op de geometrische horizon. De kern benadert dat met een vaste h0 = +0,125° (zie de definitietabel) |
+| Referentie-onzekerheid | Hoe precies het Horizons-tijdstip is | Gemeten: de kruising ligt −68 tot +19 s rond de gerapporteerde minuut. Daarom telt alleen het tijdsverschil **buiten** het interval van 90 s ervoor tot 30 s erna |
+| Tijdsafwijking | Het gemeten tijdsverschil tussen kern en referentie (minuten) | Zie de tabel hieronder |
+| Hoogteafwijking | Het hoogteverschil waarmee de kern de horizon op een ander moment "ziet" | **Niet rechtstreeks gemeten** op de gebeurtenismomenten. Alleen als **hoogte-equivalent** benaderd: Δh ≈ Δt × \|dh/dt\|, met dh/dt de lokale horizonpassagesnelheid volgens het kernmodel (verschil over ±5 min rond het moment) |
+
+Het hoogte-equivalent is een lineaire benadering. Die is redelijk bij een duidelijke passagesnelheid, maar onbetrouwbaar bij een schampende maan: daar is dh/dt klein en verandert hij snel, zodat een kleine hoogteafwijking een groot en niet-lineair tijdsverschil geeft.
 
 | Groep | Tijd (mediaan / p95 / max) | Hoogte-equivalent (max) | Gemist | Grenzen |
 |---|---|---|---|---|
@@ -96,7 +103,14 @@ Steeds apart gemeten, zodat definitieverschillen niet als kernfout gelden:
 | Schampend, < 0,05°/min (n=30, Longyearbyen) | 7,9 / 28,2 / 33,9 min | 1,27° | 1 | 35 min, 1,3°, ≤ 1 gemist |
 
 **Toelichting:**
-- Het hoogte-equivalent van de opkomstverschillen (max 1,65°) is even groot als de modelafwijking in de hoogte (max 1,65°). De minutenverschillen komen dus uit de vereenvoudigde maanpositie van de kern, versterkt door schuine of schampende maanbanen. Ze komen niet uit een andere horizondefinitie.
+- **Wat is aangetoond:** de horizondefinities beschrijven dezelfde gebeurtenis, en de onzekerheid van de referentie (−68 tot +19 s) is uit de tijdsverschillen gehaald. De resterende tijdsverschillen zijn dus geen artefact van de Horizons-resolutie.
+- **Wat aannemelijk is, maar niet per gebeurtenis bewezen:** het hoogte-equivalent (max 1,65°, niet schampend) ligt in dezelfde orde als de gemeten modelafwijking van de kernhoogte op de 30 vaste momenten (max 1,65°, p95 1,35°). Dat past bij de vereenvoudigde maanpositie als **belangrijkste** bijdrage. Het gelijke maximum is geen bewijs van een één-op-één relatie: de hoogteafwijking is niet op de gebeurtenismomenten zelf gemeten, en het hoogte-equivalent rust op de modelsnelheid van de kern.
+- **Andere bijdragen, niet afzonderlijk gemeten:**
+  - de vaste h0 (de werkelijke parallax varieert ongeveer ±0,04°);
+  - het refractiemodel (vast 34′ tegenover het Horizons-model; bij de horizon onzeker tot ±0,3°);
+  - de geodetische breedte die rechtstreeks in de bolformule gaat.
+- **Schampende gebeurtenissen (Longyearbyen):** de lage passagesnelheid (< 0,05°/min) vergroot elke kleine hoogteafwijking, uit welke bron ook, tot een groot tijdsverschil (tot 33,9 min). Dat tijdsverschil is vooral een gevolg van de geometrie, geen maat voor de grootte van de rekenfout. De hoogte-equivalenten (max 1,27°) zijn daar met extra voorbehoud te lezen.
+- Voor een strikte scheiding per gebeurtenis (M1) zijn per gebeurtenis Horizons-hoogtes nodig (geocentrisch en topocentrisch, airless en gebroken) op het kernmoment en het referentiemoment.
 - Buiten 5–95% verlichting is de randstand slecht bepaald; de modelafwijking is daar max 5,55°. Dat wordt gerapporteerd, maar niet begrensd.
 - In vijf vensters zonder opkomst of ondergang (Longyearbyen) vindt de kern ook geen gebeurtenis.
 - De grenzen beschrijven de **bestaande** kern: een wijziging die hem slechter maakt, faalt. Het zijn geen eisen voor Moon 2.0; die volgen in M1.
