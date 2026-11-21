@@ -60,7 +60,7 @@ for(const a of ['<h1>Contact</h1>','id="contact-adres"','mailto:support@watishet
 /* Het pre-paintthemascript wordt tijdens de publicatie geëxternaliseerd naar een
    gehashte early-*.js. Controleer daarom de echte delivery-referentie én asset,
    niet de onbewerkte inline broncode. */
-const themascript=contact.match(/<script\\b[^>]*\\bsrc="\\/(early-[^"]+\\.js)"[^>]*><\\/script>/);
+const themascript=contact.match(/<script\b[^>]*\bsrc="\/(early-[^"]+\.js)"[^>]*><\/script>/);
 assert(themascript,"Contact-pagina mist de externe vroege themabootstrap");
 const themaPad=path.join(OUT,themascript[1]);
 assert(fs.existsSync(themaPad),"Contact-pagina verwijst naar een ontbrekend themascript");
