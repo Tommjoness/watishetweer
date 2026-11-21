@@ -748,6 +748,8 @@
       "Read how watishetweer.nl brings together current weather information and model forecasts, and which sources are used.",
     "Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag, bezoekstatistieken en externe databronnen.":
       "Read how watishetweer.nl handles location data, local storage, visitor statistics and external data sources.",
+    "Vragen of feedback over watishetweer.nl? Vind hier het contactadres en kopieer het eenvoudig.":
+      "Questions or feedback about watishetweer.nl? Find the contact email address here and copy it easily.",
     "Sterren kijken in Nederland: nationale parken": "Stargazing in the Netherlands: national parks",
     "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.":
       "Compare estimated light pollution and tonight's conditions in selected Dutch national parks.",
