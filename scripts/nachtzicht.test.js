@@ -132,6 +132,8 @@ const maan = maanPagina(kern, Date.UTC(2026, 9, 6, 12));
 assert(maan.includes(`<link rel="canonical" href="https://watishetweer.nl${MAAN}">`) && maan.includes('id="nz-maan-fasen"'), "maanpagina");
 assert(maan.includes("Hoe staat de maan vandaag? Bekijk de actuele maanfase"),"zoekintentie direct in de inleiding");
 assert(maan.includes('class="kaart breed nz-maan-pagina"'),"alleen de maanpagina krijgt de nieuwe brede opmaak");
+assert(/<header class="nz-maan-bovenbalk">[\s\S]*<\/header><main class="kaart breed nz-maan-pagina">/.test(maan),"maanheader is buiten het hoofdlandmark geplaatst");
+assert(/<\/main><footer class="nz-maan-footer">[\s\S]*<\/footer>/.test(maan),"maanfooter heeft een eigen landmark");
 assert.equal((maan.match(/class="nz-maan-thema"/g)||[]).length,1,"maanpagina toont precies één themabediening");
 assert.equal((maan.match(/data-maan-thema=/g)||[]).length,3,"drie themaknoppen zijn aanwezig");
 assert(maan.includes('class="nz-maan-uitleg"')&&maan.includes("<summary>Over de berekening en de afbeelding</summary>"),"wetenschappelijke toelichting blijft toegankelijk in een uitklap");
