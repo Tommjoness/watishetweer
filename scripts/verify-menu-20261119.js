@@ -50,4 +50,12 @@ assert(gezien>=100,"te weinig weerpagina's met het menu: "+gezien);
 assert.equal(bundels.size,1,"weerpagina's delen niet één app-bundle: "+[...bundels].join(", "));
 const bundel=fs.readFileSync(path.join(OUT,[...bundels][0]),"utf8");
 assert(bundel.includes("wiw-menu-rail")&&bundel.includes("wiw-menu"),"menuruntime ontbreekt in de app-bundle");
+/* De menulink mag niet langer op een niet-ingestelde mailhandler vertrouwen:
+   de gepubliceerde contactroute moet daadwerkelijk bestaan en handmatig bruikbaar zijn. */
+const contactPad=path.join(OUT,"contact","index.html");
+assert(fs.existsSync(contactPad),"Contact-menu verwijst naar een ontbrekende /contact/-pagina");
+const contact=fs.readFileSync(contactPad,"utf8");
+for(const a of ['<h1>Contact</h1>','id="contact-adres"','mailto:support@watishetweer.nl','id="kopieer-adres"','id="kopie-status"','weerbriefing.thema.sessie'])
+  assert(contact.includes(a),"Contact-pagina mist noodzakelijk onderdeel: "+a);
+assert(!/<form\b/i.test(contact),"Contact blijft bewust e-mailgebaseerd zonder ongeverifieerde backend");
 console.log(`Menu geverifieerd op ${gezien} weerpagina's: één menu vooraan in de bovenbalk met vier uitklapbare groepen en ${DOELEN.length} bestemmingen, footer zonder seizoens- en nachtlinks, runtime in ${[...bundels][0]}.`);
