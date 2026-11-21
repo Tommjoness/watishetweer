@@ -73,12 +73,12 @@ const Q1_DAG_MM_NIEUW=`  const hoeveelheid=mm!==null&&(mm>=MM_MEETBAAR||(mm===0&
    pijl: stijgend ↗, dalend ↘ en gelijkblijvend →. Voor gelijke temperatuur
    blijft de begeleidende tekst expliciet "rond" de getoonde waarde. */
 const TEMP_TREND_OUD=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
-  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
+  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur verandert de komende uren nauwelijks.";`;
 const TEMP_TREND_NIEUW=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
-  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
+  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";`;

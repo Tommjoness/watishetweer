@@ -32,7 +32,7 @@ ok(html.includes('g.M?" De belangrijkste regenperioden zijn gelabeld; de overige
 ok(html.includes('horizontaal.setAttribute("aria-label",q4PeriodeTijdvak(g,p)+" · "+q4Mm(p.som)+" mm")'),"iedere regenbracket houdt ongeacht zichtbare labelfilter zijn volledige aria-detail");
 
 ok(html.includes('const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";'),"de temperatuurtrend kiest de juiste pijl voor stijgen, dalen en gelijk");
-ok(html.includes('waarde.innerHTML=String(t.van)+" <span aria-hidden=\\"true\\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";'),"de temperatuurtrend toont de pijl met behoud van de getoonde waarden");
+ok(html.includes('waarde.innerHTML=String(t.van)+" <span aria-hidden=\\"true\\" translate=\\"no\\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";'),"de temperatuurtrend toont de pijl met behoud van de getoonde waarden");
 ok(html.includes(':"De temperatuur blijft de komende uren rond "+String(t.van)+"\\u00a0°C.";'),"gelijkblijvende temperatuur krijgt een expliciete toelichting");
 ok(!html.includes('De temperatuur verandert de komende uren nauwelijks.'),"oude vage copy voor gelijke temperatuurtrend is verwijderd");
 

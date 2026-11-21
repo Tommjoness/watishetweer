@@ -256,8 +256,11 @@ async function controleer(page, naam, modus) {
   assert.equal(resultaat.uvSub, "Verwachte UV-piek rond 15:00 · hoog.", `${naam} ${modus}: UV-piek van morgen blijft expliciet modelverwachting en volgt dezelfde afgeronde grens`);
   assert.equal(resultaat.pressureRetired, true, `${naam} ${modus}: luchtdrukfeature is volledig uit de finale consumenten-UI verwijderd`);
   assert.equal(resultaat.trendKop, "Temperatuur komende 3 uur", `${naam} ${modus}: trendhorizon staat altijd in de tegelkop`);
-  assert.match(resultaat.trend, /^-?\d+\s*→\s*-?\d+\s*°C$/, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
-  assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(resultaat.trendSub), `${naam} ${modus}: temperatuurtrend gebruikt één natuurlijke richtingstekst`);
+  const trendMatch=/^(-?\d+)\s*([↗↘→])\s*(-?\d+)\s*°C$/.exec(resultaat.trend);
+  assert(trendMatch, `${naam} ${modus}: temperatuurtrend toont uitsluitend huidige en toekomstige temperatuur`);
+  const trendRichting=resultaat.trendSub==="Het wordt de komende uren warmer."?"↗":resultaat.trendSub==="Het wordt de komende uren koeler."?"↘":/^De temperatuur blijft de komende uren rond -?\d+\s*°C\.$/.test(resultaat.trendSub)?"→":null;
+  assert(trendRichting, `${naam} ${modus}: temperatuurtrend gebruikt een natuurlijke richtingstekst`);
+  assert.equal(trendMatch[2],trendRichting, `${naam} ${modus}: pijl en richtingstekst zijn consistent`);
   assert.ok(!/neerslag|wind|gevoel/i.test(resultaat.trend+" "+resultaat.trendSub), `${naam} ${modus}: temperatuurtrend bevat geen andere weerinformatie`);
   assert.equal(resultaat.neerslagSectieZichtbaar, false, `${naam} ${modus}: het oude twee-uurspaneel blijft niet zichtbaar`);
 

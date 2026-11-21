@@ -359,7 +359,7 @@ function renderTemperatuurTrend(){
   const t=temperatuurTrend(S.d,trendNuMs());
   if(!t.genoeg){waarde.textContent="–";sub.textContent="Er is niet genoeg data voor een betrouwbare trend.";return;}
   const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
-  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
+  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur verandert de komende uren nauwelijks.";

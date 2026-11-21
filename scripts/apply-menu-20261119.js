@@ -149,6 +149,16 @@ const CSS=`
 @media(min-width:1904px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
+/* Houd de brede zijbalk naast het inhoudsvel, ook op 1904-2032px.
+   Beide kanten blijven gecentreerd; de oorspronkelijke 1600px-keuze keert
+   vanzelf terug wanneer het venster er ruim genoeg voor is. */
+@media(min-width:1904px){
+  html.wiw-menu-rail body>.sheet,
+  html.wiw-menu-rail body .seo-plaatsnav-inner,
+  html.wiw-menu-rail body .seo-route-context{
+    max-width:min(1600px,calc(100vw - 432px))!important
+  }
+}
 `;
 
 function eenmaal(html,deel,rel,naam){const n=html.split(deel).length-1;if(n!==1)throw new Error(`${rel}: ${naam} komt ${n} keer voor (verwacht 1).`);}

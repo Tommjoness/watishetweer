@@ -170,7 +170,7 @@ async function loopGroepen(page,label,eis){
   const DESKTOP_HERO={1024:221,1366:208,1440:211};
   try{
     const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[450,900,"light","nl"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
-      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
+      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1904,1080,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
       /* aanraakscherm op desktopbreedte en een laag breed venster */
       [1024,768,"light","nl",true],[1920,1080,"light","nl",true],[1920,640,"light","nl"]];
     for(const [w,h,schema,taal,aanraak] of gevallen){
