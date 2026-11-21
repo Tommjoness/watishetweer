@@ -15,7 +15,7 @@ const NZ=require("./nachtzicht.config.js");
    crawlbare links; de seizoens- en nachtlinks staan niet meer in de footer,
    terwijl bronnen, disclaimer, Over, Privacy, technische gegevens en contact
    er wel blijven; de menuruntime zit in de gedeelde app-bundle. */
-const DOELEN=["/","/weer/","#nachtzicht",NZ.BASIS,NZ.MAAN,"/over/","/privacy","mailto:support@watishetweer.nl",...SEIZOENSPAGINAS.map(p=>`/${p.slug}/`)];
+const DOELEN=["/","/weer/","#nachtzicht",NZ.BASIS,NZ.MAAN,"/over/","/privacy","/contact/",...SEIZOENSPAGINAS.map(p=>`/${p.slug}/`)];
 let gezien=0;const bundels=new Set();
 for(const p of htmlBestanden(OUT)){
   const html=fs.readFileSync(p,"utf8");
