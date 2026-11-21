@@ -190,6 +190,43 @@ server.listen(0, async () => {
       await ctx.close();
     }
     console.log("Maanbeeld: stand, op- en ondergang en tijdzone voor de eigen plaats uit de app, wereldwijd; anders De Bilt.");
+    /* De nieuwe vormgeving is een laag boven de onveranderde maankern.
+       Verifieer vier breedtes, sessiethema, systeem-Auto en bereikbare disclosure. */
+    for(const width of [320,390,768,1366]){
+      const ctx=await browser.newContext({viewport:{width,height:900},colorScheme:"light",serviceWorkers:"block"});
+      const page=await ctx.newPage(),fouten=[];
+      page.on("pageerror",e=>fouten.push(String(e)));
+      await page.goto(`http://127.0.0.1:${port}/maan/`,{waitUntil:"load"});
+      const first=await page.evaluate(()=>({
+        buttons:document.querySelectorAll("[data-maan-thema]").length,
+        main:document.querySelectorAll("main.nz-maan-pagina").length,
+        uitleg:!!document.querySelector("details.nz-maan-uitleg > summary"),
+        overflow:document.documentElement.scrollWidth-innerWidth,
+        auto:document.querySelector('[data-maan-thema="auto"]')?.getAttribute("aria-pressed")
+      }));
+      assert.strictEqual(first.buttons,3,`${width}px: precies drie themaknoppen`);
+      assert.strictEqual(first.main,1,`${width}px: precies één maanhoofdinhoud`);
+      assert(first.uitleg,`${width}px: technische toelichting blijft bereikbaar`);
+      assert(first.overflow<=1,`${width}px: geen horizontale paginaoverflow (${first.overflow}px)`);
+      assert.strictEqual(first.auto,"true",`${width}px: nieuwe bezoeker kiest Auto`);
+      await page.locator('[data-maan-thema="donker"]').click();
+      await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="donker");
+      assert.strictEqual(await page.locator('[data-maan-thema="donker"]').getAttribute("aria-pressed"),"true",`${width}px: Donker is geselecteerd`);
+      await page.locator('[data-maan-thema="licht"]').click();
+      await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="licht");
+      assert.strictEqual(await page.locator('[data-maan-thema="licht"]').getAttribute("aria-pressed"),"true",`${width}px: Licht is geselecteerd`);
+      await page.locator('[data-maan-thema="auto"]').click();
+      await page.waitForFunction(()=>!document.documentElement.hasAttribute("data-thema"));
+      await page.emulateMedia({colorScheme:"dark"});
+      await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="donker");
+      await page.locator(".nz-maan-uitleg > summary").focus();
+      await page.keyboard.press("Enter");
+      assert(await page.locator(".nz-maan-uitleg").evaluate(el=>el.open),`${width}px: disclosure opent met Enter`);
+      assert.deepStrictEqual(fouten,[],`${width}px: geen JS-fouten`);
+      await ctx.close();
+    }
+    console.log("Maanpagina UX: vier breedtes, themakeuze, systeem-Auto, disclosure, overflow en foutvrij geslaagd.");
+
   } finally {
     await browser.close();
     server.close();
