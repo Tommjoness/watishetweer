@@ -185,12 +185,74 @@ async function engels(browserType,label,base){
   }finally{await browser.close();}
 }
 
+
+/* Afgebakende UI-verificatie voor de Witte-kerst ontwerplaag; weer- en KNMI-testmatrix hierboven blijft intact. */
+async function controleerOntwerp(browserType,label,base){
+  const browser=await browserType.launch({headless:true});
+  try{
+    for(const breedte of [320,390,768,1366]){
+      const context=await browser.newContext({viewport:{width:breedte,height:844},colorScheme:"light"});
+      const page=await context.newPage();
+      const fouten=[];page.on("pageerror",e=>fouten.push(e.message));
+      await page.clock.setFixedTime(new Date("2026-11-21T10:00:00Z"));
+      await page.route(/posthog|googletagmanager|google-analytics|cloudflareinsights/,route=>route.abort());
+      await page.goto(base+PAD,{waitUntil:"networkidle"});
+      const id=`${label} ontwerp ${breedte}px`;
+      assert.equal(await page.locator(".wk-page").count(),1,id+": geïsoleerde kerstpagina");
+      assert.equal(await page.getByRole("banner").count(),1,id+": siteheader is een eigen landmark");
+      assert.equal(await page.getByRole("main").count(),1,id+": één hoofdlandmark");
+      assert.equal(await page.getByRole("contentinfo").count(),1,id+": sitefooter is een eigen landmark");
+      assert.equal(await page.getByRole("region",{name:"Witte kerst 2026",exact:true}).count(),1,id+": één regio met de paginanaam");
+      assert.equal(await page.locator("#seizoen-melding").count(),1,id+": één runtimebericht");
+      assert.equal(await page.locator("#seizoen-melding").locator('xpath=ancestor::*[@aria-live="polite"][1]').count(),1,id+": statusbericht heeft beleefde live-aankondiging");
+      assert.equal(await page.locator(".wk-cards article").count(),2,id+": twee KNMI-uitlegkaarten");
+      assert.equal(await page.locator(".wk-note .wk-dot").count(),0,id+": geen nulachtig statusicoon");
+      assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
+      const maat=await page.locator(".wk-theme label").evaluateAll(a=>a.map(x=>x.getBoundingClientRect().height));
+      assert(maat.every(x=>x>=44),id+": alle themadoelen minstens 44px");
+      await page.locator(".wk-menu > summary").click();
+      assert(await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu open");
+      await page.locator(".wk-menu > summary").click();
+      assert(!await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu dicht");
+      await page.locator('label[for="wk-donker"]').click();
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": donker werkt");
+      assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"donker",id+": keuze opgeslagen");
+      await page.locator('label[for="wk-licht"]').click();
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"licht",id+": licht werkt");
+      await page.locator('label[for="wk-auto"]').click();
+      assert(await page.locator("#wk-auto").isChecked(),id+": auto geselecteerd");
+      assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"auto",id+": auto opgeslagen");
+      /* Systeemthema wisselt na handmatige keuze: beide themahulpjes mogen elkaar niet overschrijven. */
+      await page.locator('label[for="wk-donker"]').click();
+      await page.emulateMedia({colorScheme:"dark"});
+      await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+      await page.emulateMedia({colorScheme:"light"});
+      await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": handmatig Donker overleeft systeemwissel");
+      await page.locator('label[for="wk-licht"]').click();
+      await page.emulateMedia({colorScheme:"dark"});
+      await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"licht",id+": handmatig Licht overleeft systeemwissel");
+      await page.locator('label[for="wk-auto"]').click();
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": Auto volgt donker systeem");
+      await page.emulateMedia({colorScheme:"light"});
+      await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+      assert.equal(await page.locator("html").getAttribute("data-thema"),null,id+": Auto volgt licht systeem");
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+": geen horizontale overflow");
+      assert.deepEqual(fouten,[],id+": geen JavaScript-fouten");
+      await context.close();
+    }
+  }finally{await browser.close();}
+}
+
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const base=`http://127.0.0.1:${server.address().port}`;
   try{
     await controleer(chromium,"Chromium",base);
     await controleer(webkit,"WebKit",base);
+    await controleerOntwerp(chromium,"Chromium",base);
+    await controleerOntwerp(webkit,"WebKit",base);
     await engels(chromium,"Chromium",base);
     await engels(webkit,"WebKit",base);
   }finally{server.close();}
