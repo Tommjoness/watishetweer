@@ -100,7 +100,7 @@ server.listen(0, async () => {
       const reserve = await page.evaluate(() => { S.d.provider = "visualcrossing"; stempel(); const t = document.getElementById("stamp").textContent; S.d.provider = "weatherapi"; stempel(); return [t, document.getElementById("stamp").textContent]; });
       assert(reserve[0].endsWith(" · reservebron Visual Crossing") && reserve[1].endsWith(" · reservebron WeatherAPI"), "reservebron niet zichtbaar: " + reserve);
 
-      /* F10: zichtbare link onder de grafiek; de tabel blijft dicht tot een klik. */
+      /* F10: geen permanente grafieklink; de native tabel blijft via focus en Enter bereikbaar. */
       const link = await page.evaluate(() => {
         const d = document.getElementById("chartdata"), s = d && d.querySelector(":scope > summary");
         s.scrollIntoView({ block: "center" });
@@ -109,9 +109,12 @@ server.listen(0, async () => {
       });
       assert.strictEqual(link.open, false, "grafiektabel moet standaard dicht blijven");
       assert.strictEqual(link.tekst, "Grafiekgegevens als tabel");
-      assert(link.b > 40 && link.h >= 24 && link.links >= 0 && link.rechts <= breedte && link.zicht === "visible" && link.klik !== "none" && link.hit, `${breedte}px: tabel-link is niet zichtbaar of klikbaar: ${JSON.stringify(link)}`);
-      await page.click("#chartdata > summary");
-      assert(await page.evaluate(() => document.getElementById("chartdata").open), "klik op de link opent de grafiektabel");
+      assert(link.b <= 2 && link.h <= 2, `${breedte}px: ongewenste grafieklink blijft zichtbaar: ${JSON.stringify(link)}`);
+      await page.locator("#chartdata > summary").focus();
+      const focusBreedte=await page.locator("#chartdata > summary").evaluate(s=>s.getBoundingClientRect().width);
+      assert(focusBreedte > 40, `${breedte}px: focus maakt de toegankelijke tabelbediening niet zichtbaar`);
+      await page.keyboard.press("Enter");
+      assert(await page.evaluate(() => document.getElementById("chartdata").open), "Enter opent de toegankelijke grafiektabel");
 
       assert.deepStrictEqual(fouten, [], "paginafouten: " + fouten.join(" | "));
       await ctx.close();
