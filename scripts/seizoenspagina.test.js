@@ -148,6 +148,7 @@ assert(html.includes('<main class="kaart breed wk-page">'),"Witte kerst gebruikt
 assert(html.includes('id="wk-licht"')&&html.includes('id="wk-auto"')&&html.includes('id="wk-donker"'),"zichtbare themabediening Licht/Auto/Donker");
 assert(html.includes('class="wk-hero"')&&html.includes('class="wk-cards"')&&html.includes('class="wk-footer"'),"hero, uitleg en footer bestaan");
 assert.equal((html.match(/id="seizoen-melding"/g)||[]).length,1,"exact één bericht voor de bestaande runtime");
+assert(html.includes('class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"'),"dynamische status blijft een live regio voor schermlezers");
 assert.equal((html.match(/id="seizoen-verwachting"/g)||[]).length,1,"één data- en foutcontainer");
 assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige ontwerpstudie'),"geen slogan of ontwerpnotities");
 assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
