@@ -119,6 +119,20 @@ async function controleer(browser,root,route,w){
       assert(/average \d+%/.test(park.tekst)&&/Cloud cover per hour/.test(park.tekst),`park ${w}px: feiten en grafiek niet in het Engels`);
       assert.equal(vanGogh.h1,"Stargazing in Van Gogh National Park",`Van Gogh ${w}px: parknaam met "Nationaal Park" achteraan`);
     }
+    /* No-JS: een gebruiker krijgt alleen duidelijk gedateerde maanwaarden, nooit ongemerkt "vandaag". */
+    for(const w of [390,1366]){
+      const ctx=await browser.newContext({viewport:{width:w,height:844},javaScriptEnabled:false});
+      try{
+        const page=await ctx.newPage();
+        await page.goto(root+"/maan/",{waitUntil:"load"});
+        const html=await page.locator("main").innerText();
+        assert(/momentopname van \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/.test(html),`/maan/ no-JS ${w}px: berekeningsdatum ontbreekt`);
+        assert(/Voor De Bilt op \d{4}-\d{2}-\d{2}:/.test(html),`/maan/ no-JS ${w}px: plaats en datum ontbreken`);
+        assert(html.includes("De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):"),`/maan/ no-JS ${w}px: fasen niet uitgelegd`);
+        assert.equal(await page.locator("noscript ul li").count(),4,`/maan/ no-JS ${w}px: vier berekende hoofdfasen`);
+        assert.equal(await page.locator("h1").textContent(),"De maan vandaag",`/maan/ no-JS ${w}px: kop`);
+      }finally{await ctx.close();}
+    }
     /* Laad- en foutteksten (de runtime schrijft ze alleen bij een trage of mislukte verwachting). */
     const kern=require("../taal/vertaalkern.js"),en=require("../taal/en.js"),v=kern.maakVertaler(en);
     for(const [nl,eng] of [
