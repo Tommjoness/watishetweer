@@ -5,7 +5,7 @@
 html body .wiw-hour-value .wiw-hour-secondary:not(#wiw-leesbaarheid){font-size:12px!important;line-height:1.25!important}
 html body .wiw-hour-time .wiw-hour-date:not(#wiw-leesbaarheid){font-size:12px!important}
 html body .drain .wiw-vanaf-nu:not(#wiw-leesbaarheid){font-size:var(--wiw-t-data)!important}
-html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.45!important}
+html body #final-rain-summary:not(#wiw-leesbaarheid){font-size:16px!important;line-height:1.55!important}
 html body #chartdata summary.wiw-chartdata-summary:not(#wiw-leesbaarheid){font-size:var(--wiw-t-link)!important}
 html body #chartdata p.chartdata-scrollhint:not(#wiw-leesbaarheid){font-size:13px!important}
 html body .nmeta .nachtvenster:not(#wiw-leesbaarheid),html body .nachtmaan .nachtzichtregel:not(#wiw-leesbaarheid),html body .nachtmaan .nachtmaanregel:not(#wiw-leesbaarheid){font-size:13px!important;line-height:1.4!important}
