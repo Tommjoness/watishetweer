@@ -118,6 +118,29 @@ const EXTRA_STIJL = `
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
 #nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}.nz-maan-beeld{flex:none;display:block;width:26px;height:26px}canvas.nz-maan-svg{display:block}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
+
+/* Afzonderlijke, gedempte maanpresentatie; Nachtzicht en parken ongewijzigd. */
+main.nz-maan-pagina{max-width:1140px;padding:36px clamp(20px,4vw,48px) 48px}
+.nz-maan-bovenbalk{display:flex;align-items:center;flex-wrap:wrap;gap:12px 24px;padding:0 0 20px;margin:0 0 22px;border-bottom:1px solid var(--rule)}
+.nz-maan-merk{font-size:16px;font-weight:700;color:var(--ink);text-decoration:none;white-space:nowrap}
+.nz-maan-bovenbalk nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-right:auto}
+.nz-maan-bovenbalk nav a{font-size:15px;min-height:44px;display:inline-flex;align-items:center}
+.nz-maan-thema{display:flex;gap:2px;padding:3px;border:1px solid var(--rule);border-radius:5px}
+.nz-maan-thema button{min-width:54px;min-height:42px;font:500 14px/1.2 "Instrument Sans",sans-serif;padding:9px;color:var(--ink-70);background:transparent;border:0;border-radius:3px;cursor:pointer}
+.nz-maan-thema button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule);font-weight:700}
+.nz-maan-thema button:focus-visible,.nz-maan-bovenbalk a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.nz-maan-pagina>h1{font-size:clamp(38px,4vw,60px);line-height:1.08}
+.nz-maan-pagina .nz-maan-inleiding{font-size:18px;line-height:1.65;max-width:56rem}
+.nz-maan-pagina .nz-maan-raster{margin-top:28px;padding-top:28px;gap:24px}
+.nz-maan-pagina .nz-maan .groot{font-size:clamp(24px,2.6vw,32px);line-height:1.25}
+.nz-maan-pagina #nz-maan-tijden{font-size:16px;line-height:1.55;color:var(--ink-70)}
+.nz-maan-pagina #nz-maan-fasen li{min-height:52px;border-bottom:1px solid var(--rule);padding:9px 0;font-size:16px;line-height:1.5}
+.nz-maan-pagina .nz-maan-tijdregel{font-size:15px;line-height:1.6;max-width:60rem;margin-top:24px}
+.nz-maan-pagina .nz-maan-uitleg{margin-top:18px;max-width:60rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6px 0}
+.nz-maan-pagina .nz-maan-uitleg summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:15px;font-weight:600}
+.nz-maan-pagina .nz-maan-uitleg p{font-size:15px;line-height:1.6}
+@media(max-width:760px){main.nz-maan-pagina{padding:24px 20px 36px}.nz-maan-bovenbalk{gap:8px 12px}.nz-maan-bovenbalk nav{order:3;flex-basis:100%}.nz-maan-thema{margin-left:auto}.nz-maan-pagina .nz-maan-raster{display:block}.nz-maan-pagina .nz-maan-raster>div+div{margin-top:24px}.nz-maan-pagina .nz-maan-inleiding{font-size:16px}}
+@media(max-width:380px){.nz-maan-merk{font-size:14px}.nz-maan-thema button{min-width:43px;padding:7px}.nz-maan-pagina .nz-maan{gap:12px}}
 `;
 
 function kop({ titel, beschrijving, canonical, extra = "", breed = false, paginaClass = "" }) {
@@ -221,6 +244,8 @@ ${BRONNEN}
 ` + staart({ soort: "overzicht", tz: TIJDZONE, parken: parken.map(p => ({ slug: p.slug, lat: p.lat, lon: p.lon })) }, kern);
 }
 
+const MAAN_THEME_SCRIPT="<script>\n(()=>{\"use strict\";\n  const buttons=[...document.querySelectorAll(\"[data-maan-thema]\")];\n  const lees=(opslag,sleutel)=>{try{const raw=opslag.getItem(sleutel);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};\n  const sessie=lees(sessionStorage,\"weerbriefing.thema.sessie\");\n  const lokaal=lees(localStorage,\"weerbriefing.thema\");\n  let keuze=[\"auto\",\"licht\",\"donker\"].includes(sessie)?sessie:[\"licht\",\"donker\"].includes(lokaal)?lokaal:\"auto\";\n  for(const button of buttons){\n    const modus=button.getAttribute(\"data-maan-thema\");\n    button.setAttribute(\"aria-pressed\",String(modus===keuze));\n    button.addEventListener(\"click\",()=>{\n      if(modus===keuze)return;\n      try{sessionStorage.setItem(\"weerbriefing.thema.sessie\",JSON.stringify(modus));location.reload();}\n      catch(e){\n        keuze=modus;\n        const dark=modus===\"donker\"||(modus===\"auto\"&&matchMedia(\"(prefers-color-scheme: dark)\").matches);\n        document.documentElement.setAttribute(\"data-thema\",dark?\"donker\":\"licht\");\n        for(const k of buttons)k.setAttribute(\"aria-pressed\",String(k===button));\n      }\n    });\n  }\n})();\n</script>";
+
 function maanPagina(kern, nuMs) {
   const canonical = `https://watishetweer.nl${MAAN}`;
   const titel = "De maan vandaag: fase, opkomst en ondergang";
@@ -256,7 +281,7 @@ function maanPagina(kern, nuMs) {
 <details class="nz-maan-uitleg"><summary>Over de berekening en de afbeelding</summary><p>De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p></details>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
-` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
+` + MAAN_THEME_SCRIPT + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
 }
 
 function voegToeAanSitemap(urls) {
