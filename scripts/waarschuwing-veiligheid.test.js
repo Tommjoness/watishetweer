@@ -76,27 +76,32 @@ assert(!t.veilig("Avoid travel.","Reizen is toegestaan.","EN"),
 assert(t.veilig("Avoid travel.","Vermijd reizen.","EN"),
   "herkenbare vermijdingsinstructie blijft toegestaan");
 
+/* De structurele heuristiek accepteert aantoonbaar een tegenovergesteld gebod.
+   Dit is bewust een onderzoeksassertie, geen goedkeuring van de vertaling. */
+const bronInstructie=voorbeelden[0].bron;
+const verkeerdeInstructie="Reis niet tussen 18:00 en 21:00 UTC. Windstoten tot 90 km/u.\nGa naar buiten totdat de storm voorbij is.";
+assert(t.veilig(bronInstructie,verkeerdeInstructie,"EN"),
+  "regressie: de heuristiek mist semantische omkering");
+assert.equal(t.WAARSCHUWINGVERTALING_VRIJGEGEVEN,false,"geen ongereviewde publicatie");
+
 (async()=>{
   const env={DEEPL_TRANSLATE_ENABLED:"1",DEEPL_API_KEY:"TEST_ONLY"};
   let calls=0;
-  const voorbeeld=voorbeelden[0];
-  const data={bron:"National Weather Service",dekking:true,lijst:[{taal:"en-US",tekst:voorbeeld.bron,titel:"High Wind Warning"}]};
-  const fetcher=async()=>{calls++;return {ok:true,json:async()=>({translations:[{text:voorbeeld.nl,detected_source_language:"EN"}]})};};
-  const uit=await t.vertaalWaarschuwingen(data,env,{fetcher,cache:null});
-  assert.equal(calls,1,"synthetische stub wordt precies eenmaal aangeroepen");
-  assert.equal(uit.lijst[0].tekst,voorbeeld.bron,"officiële tekst blijft intact");
-  assert.equal(uit.lijst[0].vertaling.tekst,voorbeeld.nl,"synthetische vertaling slaagt");
-  const fout=await t.vertaalWaarschuwingen(data,env,{cache:null,fetcher:async()=>({
-    ok:true,json:async()=>({translations:[{text:voorbeeld.nl.replace(/\bniet\b/,"wel"),detected_source_language:"EN"}]})
-  })});
-  assert.strictEqual(fout,data,"onveilige stubvertaling wordt niet gepubliceerd");
-  const onbekend={...data,lijst:[{...data.lijst[0],taal:"pt-PT"}]};
-  assert.strictEqual(await t.vertaalWaarschuwingen(onbekend,env,{
-    cache:null,fetcher:()=>{throw Error("ongetoetste brontaal mag geen API-request doen");}
-  }),onbekend);
-  const uitgeschakeld=await t.vertaalWaarschuwingen(data,{DEEPL_TRANSLATE_ENABLED:"0",DEEPL_API_KEY:"TEST_ONLY"},{
-    fetcher:()=>{throw Error("opt-out mag geen API-request doen");}
-  });
-  assert.strictEqual(uitgeschakeld,data,"standaard uit: geen kosten en originele data");
-  console.log("Waarschuwingveiligheid: 5 synthetische talen, expliciete ontkenningen, tijdzones, cijfers, eenheden, volledigheid en fail-closed stub geslaagd.");
+  const fetcher=async()=>{calls++;throw Error("veiligheidslock: geen DeepL-verzoek toegestaan");};
+  for(const geval of voorbeelden){
+    const data={bron:"National Weather Service",dekking:true,lijst:[{taal:geval.taal.toLowerCase(),tekst:geval.bron}]};
+    const out=await t.vertaalWaarschuwingen(data,env,{fetcher,cache:null});
+    assert.strictEqual(out,data,geval.taal+": officiële bron onveranderd");
+    assert.equal(out.lijst[0].vertaling,undefined,geval.taal+": geen machinevertaling");
+  }
+  const data={bron:"National Weather Service",dekking:true,lijst:[{taal:"en-US",tekst:bronInstructie}]};
+  assert.strictEqual(await t.vertaalWaarschuwingen(data,env,{
+    fetcher:async()=>({ok:true,json:async()=>({translations:[{text:verkeerdeInstructie,detected_source_language:"EN"}]})}),cache:null
+  }),data,"ook de bewezen semantische omkering kan niet gepubliceerd worden");
+  assert.equal(calls,0,"nul DeepL-verzoeken ondanks expliciete opt-in");
+  assert.strictEqual(await t.vertaalWaarschuwingen(null,env,{fetcher}),null);
+  assert.strictEqual(await t.vertaalWaarschuwingen(data,env,{
+    fetcher,cache:{match:()=>{throw Error("geen vertaalcache lezen");}}
+  }),data,"oude vertalingen komen niet uit de cache");
+  console.log("Veiligheid: vijf synthetische brontalen onderzocht, semantische false-negative aangetoond; harde no-publish/no-network lock geslaagd.");
 })().catch(err=>{console.error(err);process.exitCode=1;});
