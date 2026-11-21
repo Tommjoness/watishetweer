@@ -55,7 +55,17 @@ assert(bundel.includes("wiw-menu-rail")&&bundel.includes("wiw-menu"),"menuruntim
 const contactPad=path.join(OUT,"contact","index.html");
 assert(fs.existsSync(contactPad),"Contact-menu verwijst naar een ontbrekende /contact/-pagina");
 const contact=fs.readFileSync(contactPad,"utf8");
-for(const a of ['<h1>Contact</h1>','id="contact-adres"','mailto:support@watishetweer.nl','id="kopieer-adres"','id="kopie-status"','weerbriefing.thema.sessie'])
+for(const a of ['<h1>Contact</h1>','id="contact-adres"','mailto:support@watishetweer.nl','id="kopieer-adres"','id="kopie-status"'])
   assert(contact.includes(a),"Contact-pagina mist noodzakelijk onderdeel: "+a);
+/* Het pre-paintthemascript wordt tijdens de publicatie geëxternaliseerd naar een
+   gehashte early-*.js. Controleer daarom de echte delivery-referentie én asset,
+   niet de onbewerkte inline broncode. */
+const themascript=contact.match(/<script\\b[^>]*\\bsrc="\\/(early-[^"]+\\.js)"[^>]*><\\/script>/);
+assert(themascript,"Contact-pagina mist de externe vroege themabootstrap");
+const themaPad=path.join(OUT,themascript[1]);
+assert(fs.existsSync(themaPad),"Contact-pagina verwijst naar een ontbrekend themascript");
+const themaBron=fs.readFileSync(themaPad,"utf8");
+assert(themaBron.includes("weerbriefing.thema.sessie")&&themaBron.includes("weerbriefing.thema"),
+  "Contact-themascript bewaart sessie- en lokale themakeuze");
 assert(!/<form\b/i.test(contact),"Contact blijft bewust e-mailgebaseerd zonder ongeverifieerde backend");
 console.log(`Menu geverifieerd op ${gezien} weerpagina's: één menu vooraan in de bovenbalk met vier uitklapbare groepen en ${DOELEN.length} bestemmingen, footer zonder seizoens- en nachtlinks, runtime in ${[...bundels][0]}.`);
