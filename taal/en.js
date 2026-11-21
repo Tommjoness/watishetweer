@@ -574,6 +574,8 @@
     "Geen betrouwbare kans beschikbaar": "No reliable chance available",
     "Kans en hoeveelheid spreken elkaar tegen": "Chance and amount contradict each other",
     "Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.": "The chance and the daily total are separate model values, so they do not have to match exactly.",
+    "Waarom 0% kans bij neerslag?": "Why 0% chance despite predicted precipitation?",
+    "Neerslagkans en verwachte hoeveelheid zijn afzonderlijke modelwaarden. Ze kunnen verschillen; 0% is geen garantie dat het droog blijft.": "The chance and expected amount of precipitation are separate model estimates. They can differ; 0% does not guarantee dry weather.",
     "Minimum en maximum gelden voor de volledige kalenderdag.": "Minimum and maximum apply to the full calendar day.",
     /* Verborgen labels in de dagregel (toegankelijke naam). */
     "Maximale wind": "Maximum wind", "Maximale wind onbekend": "Maximum wind unknown", "Minimum onbekend": "Minimum unknown", "Maximum onbekend": "Maximum unknown",
