@@ -149,14 +149,14 @@ const CSS=`
 @media(min-width:1904px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
-/* Houd de brede zijbalk naast het inhoudsvel, ook op 1904-2032px.
-   Beide kanten blijven gecentreerd; de oorspronkelijke 1600px-keuze keert
-   vanzelf terug wanneer het venster er ruim genoeg voor is. */
+/* Houd 192px zijbalk + 8px lucht naast het inhoudsvel.
+   .sheet is content-box: tel ook 128px padding en borders mee.
+   Boven 2160px wordt de oorspronkelijke contentmax 1600px weer bereikt. */
 @media(min-width:1904px){
   html.wiw-menu-rail body>.sheet,
   html.wiw-menu-rail body .seo-plaatsnav-inner,
   html.wiw-menu-rail body .seo-route-context{
-    max-width:min(1600px,calc(100vw - 432px))!important
+    max-width:min(1600px,calc(100vw - 560px))!important
   }
 }
 `;
