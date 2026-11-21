@@ -218,6 +218,18 @@ async function controleerOntwerp(browserType,label,base){
       await page.locator('label[for="wk-auto"]').click();
       assert(await page.locator("#wk-auto").isChecked(),id+": auto geselecteerd");
       assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"auto",id+": auto opgeslagen");
+      /* Systeemthema wisselt na handmatige keuze: beide themahulpjes mogen elkaar niet overschrijven. */
+      await page.locator('label[for="wk-donker"]').click();
+      await page.emulateMedia({colorScheme:"dark"});
+      await page.emulateMedia({colorScheme:"light"});
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": handmatig Donker overleeft systeemwissel");
+      await page.locator('label[for="wk-licht"]').click();
+      await page.emulateMedia({colorScheme:"dark"});
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"licht",id+": handmatig Licht overleeft systeemwissel");
+      await page.locator('label[for="wk-auto"]').click();
+      assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": Auto volgt donker systeem");
+      await page.emulateMedia({colorScheme:"light"});
+      assert.equal(await page.locator("html").getAttribute("data-thema"),null,id+": Auto volgt licht systeem");
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+": geen horizontale overflow");
       assert.deepEqual(fouten,[],id+": geen JavaScript-fouten");
       await context.close();
