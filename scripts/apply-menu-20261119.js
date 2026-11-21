@@ -159,7 +159,7 @@ const CSS=`
   html.wiw-menu-rail body>.seo-plaatsnav:not(#wiw-desktop-premium),
   html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){
     max-width:1600px!important;
-    margin-left:max(178px,calc(50vw - 830px))!important;
+    margin-left:max(208px,calc(50vw - 800px))!important;
     margin-right:auto!important
   }
   html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium){
