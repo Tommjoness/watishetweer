@@ -4,7 +4,7 @@
 const STIJL=String.raw`
 <style id="wk-ontwerp-20261121">
 /* Alleen /witte-kerst/: alle overige seizoens-, maan- en Nachtzichtpagina's houden hun huidige opmaak. */
-main.kaart.breed.wk-page{max-width:1184px;padding:0 28px 48px;border:0;background:transparent}
+.kaart.breed.wk-page{max-width:1184px;padding:0 28px 48px;border:0;background:transparent}
 .wk-page{--wk-sky-a:#dfe8e8;--wk-sky-b:#e8edef;--wk-sky-c:#f6f6f3;--wk-line:#a9b9b0;--wk-overlay:rgba(255,255,255,.56)}
 html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sky-c:#1d2a2a;--wk-line:#607269;--wk-overlay:rgba(20,27,25,.86)}
 .wk-page .wk-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;min-height:92px;border-bottom:1px solid var(--rule)}
@@ -30,6 +30,7 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-hero-copy{min-width:0}
 .wk-page .wk-hero h1{font:400 clamp(44px,5vw,72px)/1.04 "Bodoni Moda",Georgia,serif;letter-spacing:-.035em;max-width:11ch;margin:0 0 22px}
 .wk-page .wk-lead{font-size:17px;line-height:1.55;color:var(--ink-70);max-width:47ch;margin:0}
+html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
 .wk-note{align-self:end;min-width:0;padding:24px 25px;border:1px solid var(--wk-line);background:var(--wk-overlay)}
 .wk-note:has(#seizoen-melding[hidden]){display:none}
 .wk-page .wk-note h2{font:700 11px/1.4 "Instrument Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70);margin:0 0 14px}
@@ -60,7 +61,7 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
  .wk-note{max-width:600px}
 }
 @media(max-width:600px){
- main.kaart.breed.wk-page{padding:0 16px 28px}
+ .kaart.breed.wk-page{padding:0 16px 28px}
  .wk-page .wk-header{grid-template-columns:minmax(0,1fr) auto;row-gap:12px;column-gap:12px;padding:14px 0;min-height:0}
  .wk-brand{font-size:15px}.wk-brandmark{width:26px;height:26px}
  .wk-menu{grid-column:2;grid-row:1}

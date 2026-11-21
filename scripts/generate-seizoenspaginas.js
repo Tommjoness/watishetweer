@@ -211,10 +211,10 @@ ${THEMA_SCRIPT}
 ${STIJL}
 ${witteKerst?WK.STIJL:""}
 </head>
-<body><main class="kaart breed${witteKerst?" wk-page":""}">
-${witteKerst?WK.HEADER:""}
+<body>${witteKerst?'<div class="kaart breed wk-page">':'<main class="kaart breed">'}
+${witteKerst?WK.HEADER+"\n<main>":""}
 <p${witteKerst?' class="wk-return"':""}><a href="/">← Terug naar het weer</a></p>
-${witteKerst?'<section class="wk-hero" aria-labelledby="seizoen-kop"><div class="wk-hero-copy">':""}
+${witteKerst?'<section class="wk-hero"><div class="wk-hero-copy">':""}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 <p${witteKerst?' class="wk-lead"':""}>${esc(cfg.intro)}</p>
 ${witteKerst?'</div><aside class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"><h2 id="wk-status-kop">Verwachtingsstatus</h2>'+meldingHtml+'</aside></section>':""}
@@ -232,8 +232,8 @@ ${witteKerst?"</div>":""}
 ${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${witteKerst?'</section><section class="wk-related"><h2>Verder ontdekken</h2>':""}${zieOokHtml(cfg)}${witteKerst?'</section><section class="wk-weather">':""}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 ${witteKerst?"</section>":""}
-${witteKerst?WK.FOOTER:""}
-</main>
+${witteKerst?"</main>\n"+WK.FOOTER:""}
+${witteKerst?"</div>":"</main>"}
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>
 ${cfg.soort==="vakantie"?`<script defer src="/${REGIO_ASSET}"></script>`:""}
 <script>

@@ -199,6 +199,10 @@ async function controleerOntwerp(browserType,label,base){
       await page.goto(base+PAD,{waitUntil:"networkidle"});
       const id=`${label} ontwerp ${breedte}px`;
       assert.equal(await page.locator(".wk-page").count(),1,id+": geïsoleerde kerstpagina");
+      assert.equal(await page.getByRole("banner").count(),1,id+": siteheader is een eigen landmark");
+      assert.equal(await page.getByRole("main").count(),1,id+": één hoofdlandmark");
+      assert.equal(await page.getByRole("contentinfo").count(),1,id+": sitefooter is een eigen landmark");
+      assert.equal(await page.getByRole("region",{name:"Witte kerst 2026",exact:true}).count(),1,id+": één regio met de paginanaam");
       assert.equal(await page.locator("#seizoen-melding").count(),1,id+": één runtimebericht");
       assert.equal(await page.locator("#seizoen-melding").locator('xpath=ancestor::*[@aria-live="polite"][1]').count(),1,id+": statusbericht heeft beleefde live-aankondiging");
       assert.equal(await page.locator(".wk-cards article").count(),2,id+": twee KNMI-uitlegkaarten");
