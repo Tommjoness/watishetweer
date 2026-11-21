@@ -120,4 +120,12 @@ assert.equal(q.cacheIsDirectBruikbaar({op:1000},1001+q.CACHE_DIRECT_MS),false,"o
 const gesnoeid=q.cacheSnoei({a:{op:1},b:{op:2},c:{op:3},d:{op:4},e:{op:5},f:{op:6},g:{op:7},h:{op:8},i:{op:9}});
 assert.deepEqual(Object.keys(gesnoeid),["i","h","g","f","e","d","c","b"],"cache volgt de acht mogelijke bewaarde plaatsen");
 
+/* De richting volgt de afgeronde waarden die de bezoeker daadwerkelijk ziet. */
+{
+  const tz="Europe/Amsterdam",nu=Date.UTC(2026,7,11,21,17),vanaf=Date.UTC(2026,7,11,20,0);
+  assert.equal(q.temperatuurTrend(trendFixture(tz,nu,vanaf,10,19,()=>19),nu).richting,"gelijk");
+  assert.equal(q.temperatuurTrend(trendFixture(tz,nu,vanaf,10,19,()=>21),nu).richting,"stijgt");
+  assert.equal(q.temperatuurTrend(trendFixture(tz,nu,vanaf,10,19,()=>17),nu).richting,"daalt");
+}
+
 console.log("Checkpoint 25%: temperatuurtrend, neerslagsemantiek en performancecache geslaagd.");
