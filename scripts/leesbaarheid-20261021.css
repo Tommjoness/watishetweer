@@ -263,3 +263,11 @@ html body #chartdata>summary:focus,html body #chartdata[open]>summary{
   padding:10px 0!important;overflow:visible!important;
   clip-path:none!important;white-space:normal!important
 }
+
+/* De uitleg onder de zes bovenste weertegels moet op desktop leesbaar zijn;
+   uitsluitend beschrijvende zinnen, niet de krappe labels of hoofdwaarden. */
+@media(min-width:1100px){
+  html body #app .final-top-grid>.stats .stat .ssub:not(#wiw-leesbaarheid){
+    font-size:16px!important;line-height:1.5!important
+  }
+}
