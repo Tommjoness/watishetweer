@@ -217,7 +217,7 @@ ${witteKerst?WK.HEADER:""}
 ${witteKerst?'<section class="wk-hero" aria-labelledby="seizoen-kop"><div class="wk-hero-copy">':""}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 <p${witteKerst?' class="wk-lead"':""}>${esc(cfg.intro)}</p>
-${witteKerst?'</div><aside class="wk-note" aria-labelledby="wk-status-kop"><h2 id="wk-status-kop">Verwachtingsstatus</h2>'+meldingHtml+'</aside></section>':""}
+${witteKerst?'</div><aside class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"><h2 id="wk-status-kop">Verwachtingsstatus</h2>'+meldingHtml+'</aside></section>':""}
 <section class="seizoen-status" aria-labelledby="seizoen-kop" aria-live="polite">
 ${cfg.soort==="vakantie"?`<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio's.</p>`:""}
 <p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
