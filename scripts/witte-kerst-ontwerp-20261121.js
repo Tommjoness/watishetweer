@@ -113,7 +113,7 @@ const THEMA_SCRIPT=String.raw`<script>
   try{sessionStorage.setItem(KEY,JSON.stringify(keuze));localStorage.removeItem(LEGACY);}catch(e){}
   pas();
  });
- if(systeem){const volg=()=>{if(keuze==="auto")pas();};if(systeem.addEventListener)systeem.addEventListener("change",volg);else if(systeem.addListener)systeem.addListener(volg);}
+ if(systeem){const volg=()=>pas();if(systeem.addEventListener)systeem.addEventListener("change",volg);else if(systeem.addListener)systeem.addListener(volg);}
  pas();
 }catch(e){}})();
 </script>`;
