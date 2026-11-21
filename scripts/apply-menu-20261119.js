@@ -62,7 +62,7 @@ function menuHtml(vandaag){
     groep("weer","Weer en plaatsen",[{href:"/",naam:"Actueel weer"},{href:"/weer/",naam:"Weer per plaats"}])+
     groep("nacht","Sterren en nacht",[{href:"#nachtzicht",naam:"Nachtzicht vanavond"},{href:NZ.BASIS,naam:"Sterren kijken"},{href:NZ.MAAN,naam:"De maan vandaag"}])+
     groep("seizoen","Seizoenen en feestdagen",seizoenen(vandaag))+
-    groep("info","Over en informatie",[{href:"/over/",naam:"Over deze site"},{href:"/privacy",naam:"Privacy & gegevens"},{href:"mailto:support@watishetweer.nl",naam:"Contact"}])+
+    groep("info","Over en informatie",[{href:"/over/",naam:"Over deze site"},{href:"/privacy",naam:"Privacy & gegevens"},{href:"/contact/",naam:"Contact"}])+
     `</nav></details>`;
 }
 
@@ -139,11 +139,11 @@ const CSS=`
 @media(min-width:1904px){
   /* Zijbalk: hetzelfde menu, permanent open (wiw-menu-rail via de menulaag). */
   .wiw-menu>summary{display:none}
-  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:8px;right:auto;width:136px;display:block;padding:3px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
-  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:4px}
-  html.wiw-menu-rail .wiw-menu-kop{min-height:34px;gap:9px;font-size:12px;letter-spacing:.08em}
-  html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 6px 17px}
-  html.wiw-menu-rail .wiw-menu-paneel a{min-height:30px;font-size:14px;color:var(--ink-70)}
+  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:12px;right:auto;width:192px;display:block;padding:8px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
+  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:10px}
+  html.wiw-menu-rail .wiw-menu-kop{min-height:42px;gap:9px;font-size:13px;letter-spacing:.035em;line-height:1.45}
+  html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 10px 22px}
+  html.wiw-menu-rail .wiw-menu-paneel a{min-height:40px;padding:5px 0;font-size:15px;line-height:1.35;color:var(--ink-70);overflow-wrap:normal}
   html.wiw-menu-rail .wiw-menu-paneel a:hover{color:var(--ink)}
 }
 @media(min-width:1904px) and (pointer:coarse){
