@@ -200,6 +200,7 @@ async function controleerOntwerp(browserType,label,base){
       const id=`${label} ontwerp ${breedte}px`;
       assert.equal(await page.locator(".wk-page").count(),1,id+": geïsoleerde kerstpagina");
       assert.equal(await page.locator("#seizoen-melding").count(),1,id+": één runtimebericht");
+      assert.equal(await page.locator("#seizoen-melding").locator('xpath=ancestor::*[@aria-live="polite"][1]').count(),1,id+": statusbericht heeft beleefde live-aankondiging");
       assert.equal(await page.locator(".wk-cards article").count(),2,id+": twee KNMI-uitlegkaarten");
       assert.equal(await page.locator(".wk-note .wk-dot").count(),0,id+": geen nulachtig statusicoon");
       assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
