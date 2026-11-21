@@ -39,10 +39,10 @@ for (const naam of ["forecast", "neerslag", "plaatsnaam", "waarschuwingen"]) {
   const aanroep=naam==="forecast"
     ? `metEdgeCache(context, "${naam}", (requestId) => worker.fetch(context.request, context.env, { requestId }))`
     : naam==="neerslag"
-    ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env))`
+    ? `metEdgeCache(context, "${naam}", (_requestId, query) => worker.fetch(context.request, context.env, query))`
     : naam==="waarschuwingen"
-      ? `metEdgeCache(context, "${naam}", () => worker.fetch(context.request, context.env, context))`
-      : `metEdgeCache(context, "${naam}", () => worker.fetch(context.request))`;
+      ? `metEdgeCache(context, "${naam}", (_requestId, query) => worker.fetch(context.request, context.env, context, query))`
+      : `metEdgeCache(context, "${naam}", (_requestId, query) => worker.fetch(context.request, query))`;
   assert.ok(wrapper.includes(aanroep), `${naam}-wrapper omzeilt de veilige edge-cache of de bestaande handler`);
   assert.ok(!wrapper.includes("Vercel-CDN-Cache-Control"), `${naam}-wrapper bevat nog Vercel-vertaling`);
 }

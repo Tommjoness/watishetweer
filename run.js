@@ -3422,19 +3422,20 @@ async function testenOpstartlocatie(){
       opgeslagenNa&&opgeslagenNa.label==="Oud",JSON.stringify(opgeslagenNa));
   }
 
-  // 2. url met hier=1
+  // 2. De PWA-snelkoppeling biedt geen toestemming voor GPS.
   {
-    let geoTellers=0;
+    let geoTellers=0, bigDataCloud=0;
     const geo=(gelukt)=>{ geoTellers++; gelukt({coords:{latitude:52.5,longitude:5.5,accuracy:15}}); };
     const fetchMock=async(url)=>{
-      if(String(url).includes("/api/plaatsnaam")) return {ok:true,json:async()=>({naam:"Testplaats"})};
+      if(String(url).includes("bigdatacloud.net")) bigDataCloud++;
       return {ok:false,status:500,json:async()=>({})};
     };
-    const {api}=laadKern(1280,{zoek:"?hier=1",geo,fetch:fetchMock});
+    const opgeslagen={lat:52.0907,lon:5.1214,label:"Utrecht"};
+    const {api}=laadKern(1280,{zoek:"?hier=1",geo,fetch:fetchMock,opgeslagen});
     await wacht();
-    check("2. GPS wordt precies één keer gestart via hier=1",geoTellers===1,geoTellers);
-    check("2. dezelfde herbruikbare procedure levert de gevonden plaats op",
-      api.S.label==="Testplaats",api.S.label);
+    check("2. navigatie naar de snelkoppeling start geen GPS of reverse-geocoding",
+      geoTellers===0&&bigDataCloud===0,geoTellers+"/"+bigDataCloud);
+    check("2. de opgeslagen plaats blijft beschikbaar",api.S.label==="Utrecht",api.S.label);
   }
 
   // 3. terugkerende gebruiker: opgeslagen plaats direct, zonder stille GPS-prompt

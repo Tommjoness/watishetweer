@@ -61,7 +61,7 @@ const REPOSITORYSECRETS = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PRE
 const OUDE_REPOSITORYSECRETS = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ANALYTICS_API_TOKEN", "CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET", "KNMI_EDR_API_KEY", "METEOALARM_API_TOKEN"]);
 /* Jobs die de omgeving alleen voor secrets en de branchbeperking gebruiken en niets uitrollen: `deployment: false`.
    De echte deployjobs (productie en PR-preview) leggen wel een deployment vast. */
-const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken"]);
+const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken", "sec06-a2-access-bewijs.yml/access-bewijs"]);
 const MET_DEPLOYMENT = new Set(["cloudflare-production.yml/deploy-production", "cloudflare-preview-deploy.yml/preview"]);
 
 function ontleed(tekst) {
@@ -104,7 +104,7 @@ function omgevingVan(blok) {
 function controleerOmgevingen(naam, tekst) {
   const f = [];
   const { triggers, jobs, kop } = ontleed(tekst);
-  if (secretsIn(kop).length) f.push(`${naam}: secrets op workflowniveau (${secretsIn(kop).join(", ")}); die horen op jobniveau, in de job met de omgeving`);
+  if (secretsIn(kop).length) f.push(`${naam}: secrets op workflowniveau (${secretsIn(kop).join(", ")}); die horen in de job met de omgeving`);
   if (/secrets:\s*inherit/.test(tekst)) f.push(`${naam}: secrets: inherit geeft alle secrets door`);
   if (naam === "cloudflare-web-analytics.yml") {
     if (/CLOUDFLARE_DEPLOY_API_TOKEN|deploy-fallback/.test(tekst)) f.push(`${naam}: Web Analytics-setup mag geen Pages-deploytoken als fallback gebruiken`);
@@ -116,6 +116,12 @@ function controleerOmgevingen(naam, tekst) {
     if (omgeving && !omgeving.naam) f.push(`${waar}: environment zonder letterlijke naam`);
     if (omgeving && omgeving.naam && !(omgeving.naam in OMGEVINGSSECRETS)) f.push(`${waar}: onbekende omgeving ${omgeving.naam}`);
     if (omgeving && triggers.has("pull_request")) f.push(`${waar}: een pull_request-workflow mag geen omgeving gebruiken`);
+    if (omgeving?.naam === "productie") {
+      const jobKop = blok.split(/^ {4}steps:/m)[0];
+      if (secretsIn(jobKop).some(s => OMGEVING_VAN_SECRET.has(s))) {
+        f.push(`${waar}: productiesecrets horen uitsluitend in de stappen die ze gebruiken`);
+      }
+    }
     for (const s of secretsIn(blok)) {
       if (s === "GITHUB_TOKEN" || REPOSITORYSECRETS.has(s)) continue;
       if (OUDE_REPOSITORYSECRETS.has(s)) { f.push(`${waar}: ${s} is een oude repository-secretnaam; gebruik het omgevingssecret`); continue; }
@@ -173,6 +179,18 @@ function controleer(naam, tekst) {
   return f;
 }
 
+/* Leg immutable referenties vast voor acties en containerimages uit de eigen workflows. */
+for (const naam of fs.readdirSync(workflowDir).filter(n => /\.ya?ml$/.test(n))) {
+  const workflow = fs.readFileSync(path.join(workflowDir, naam), "utf8");
+  for (const [regel, actie] of workflow.matchAll(/^[ \t]*(?:-[ \t]+)?uses:[ \t]+([^\s#]+)/gm)) {
+    if (actie.startsWith("./")) continue;
+    assert.match(actie, /@[a-f0-9]{40}$/, `${naam}: actie moet vastgezet zijn: ${regel.trim()}`);
+  }
+  for (const [, image] of workflow.matchAll(/^\s+image: ([^\s#]+)/gm)) {
+    assert.match(image, /@sha256:[a-f0-9]{64}$/, `${naam}: image moet vastgezet zijn: ${image}`);
+  }
+}
+
 /* ---- 1. de echte workflows voldoen aan het contract ---- */
 const bestanden = fs.readdirSync(workflowDir).filter(n => /\.ya?ml$/.test(n));
 assert(bestanden.length >= 10, "workflowmap niet gevonden");
@@ -210,6 +228,7 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}"), /hoort bij omgeving productie, maar de job draait in geen omgeving/);
   proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: provider-controles", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}"), /hoort bij omgeving productie, maar de job draait in provider-controles/);
   proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.CLOUDFLARE_API_TOKEN }}"), /oude repository-secretnaam/);
+  proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}"), /uitsluitend in de stappen/);
   proef("cloudflare-production.yml", wf(...kop, "env:", "  T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}", "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie"), /secrets op workflowniveau/);
   proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.NIEUW_GEHEIM }}"), /onbekend secret NIEUW_GEHEIM/);
   proef("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment:", "      name: productie", "      deployment: false"), /echte deployjob mag geen deployment: false/);
@@ -224,7 +243,18 @@ assert(bestanden.length >= 10, "workflowmap niet gevonden");
   proef("cloudflare-web-analytics.yml", wf(...kop, "jobs:", "  setup:", "    runs-on: ubuntu-latest", "    environment:", "      name: productie", "      deployment: false", "    env:", "      CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_SETUP_API_TOKEN }}", "      CLOUDFLARE_DEPLOY_API_TOKEN: pretend-fallback"), /mag geen Pages-deploytoken als fallback/);
   /* De goede vormen geven geen schending. */
   assert.deepStrictEqual(controleerOmgevingen("meteoalarm-verkenning.yml", wf("name: x", "on:", "  workflow_dispatch:", "jobs:", "  verken:", "    runs-on: ubuntu-latest", "    environment:", "      name: provider-controles", "      deployment: false", "    steps:", "      - env:", "          T: ${{ secrets.METEOALARM_CONTROLE_API_TOKEN }}", "        run: echo")), [], "de bedoelde vorm met deployment: false voldoet");
-  assert.deepStrictEqual(controleerOmgevingen("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    env:", "      T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}")), [], "de bedoelde vorm van de productiedeploy voldoet");
+  assert.deepStrictEqual(controleerOmgevingen("cloudflare-production.yml", wf(...kop, "jobs:", "  deploy-production:", "    runs-on: ubuntu-latest", "    environment: productie", "    steps:", "      - env:", "          T: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}", "        run: echo")), [], "de bedoelde vorm van de productiedeploy voldoet");
+  /* SEC-06 A2: bewijsjob mag niets uitrollen en alleen vanaf main, met productieomgeving zonder deployment. */
+  const a2 = fs.readFileSync(path.join(workflowDir, "sec06-a2-access-bewijs.yml"), "utf8");
+  assert.deepStrictEqual([...ontleed(a2).triggers], ["workflow_dispatch"], "A2 mag alleen handmatig starten");
+  assert.match(a2, /if: github\.ref == 'refs\/heads\/main'/, "A2 uitsluitend vanaf main");
+  assert.deepStrictEqual(omgevingVan(ontleed(a2).jobs["access-bewijs"]),
+    { naam: "productie", deployment: false }, "A2 moet environment secrets zonder deployment gebruiken");
+  assert.match(a2, /persist-credentials: false/, "A2 mag geen checkout-token opslaan");
+  assert(!/wrangler|pages deploy|CLOUDFLARE_PRODUCTIE_API_TOKEN|CLOUDFLARE_PREVIEW_API_TOKEN/.test(a2),
+    "A2 mag geen deploy- of API-credentials gebruiken");
+  assert.match(a2, /node scripts\/ci\/sec06-a2-access-bewijs\.test\.js/,
+    "A2 zelftests moeten vooraf slagen");
   process.stdout.write("workflow-secretgrens: omgevingssecrets (SEC-02b) geslaagd\n");
 }
 

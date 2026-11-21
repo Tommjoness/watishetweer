@@ -1,8 +1,8 @@
 "use strict";
 
 /* Eerste scherm op het finale artifact, met de echte runtime.
-   Mobiel: bediening in één rij, temperatuur hoger in beeld, thema-keuze onder
-   de footer. Desktop: grafiek begint boven de vouw, plaatsnaam op de lijn van
+   Mobiel: bediening in één rij, temperatuur hoger in beeld, thema-keuze in de
+   bovenbalk boven de kop (sinds 18 november; daarvoor onder de footer). Desktop: grafiek begint boven de vouw, plaatsnaam op de lijn van
    de h1, tegelkoppen blijven binnen hun tegel.
 
    Draait na: npm run build:cloudflare */
@@ -57,19 +57,19 @@ const server=http.createServer((req,res)=>{
         await sleep(800);
         const m=await page.evaluate(()=>{
           const r=s=>{const e=document.querySelector(s);if(!e)return null;const b=e.getBoundingClientRect();return {top:b.top+scrollY,bottom:b.bottom+scrollY,left:b.left,right:b.right,width:b.width,height:b.height};};
-          const thema=document.getElementById("thema"),voet=thema&&thema.closest(".wiw-weergave-voet");
+          const thema=document.getElementById("thema"),balk=thema&&thema.closest(".wiw-bovenbalk"),mast=document.querySelector(".mast");
           const tegels=[...document.querySelectorAll(".stats .stat")].filter(e=>e.getClientRects().length).map(t=>{const tb=t.getBoundingClientRect(),k=t.querySelector(".eyebrow");const kb=k?k.getBoundingClientRect():tb;return {tekst:(k?.textContent||"").trim(),over:Math.max(0,tb.left-kb.left,kb.right-tb.right,k?k.scrollWidth-k.clientWidth:0)};});
           const titel=document.getElementById("wiw-hour-title");
           return {
             q:r("#q"),here:r("#here"),ververs:r("#ververs"),hero:r(".hero"),chartkop:r(".dashrow-chart .chartkop")||r(".chartkop"),
             h1:r(".mast h1"),place:r("#place"),placeTekst:r("#place")&&(()=>{const range=document.createRange();const n=document.getElementById("place").firstChild;if(!n)return null;range.selectNodeContents(document.getElementById("place"));return range.getClientRects()[0]?.left??null;})(),
-            themaInTools:!!(thema&&thema.closest(".tools")),themaInVoet:!!voet,voetNaFooter:!!(voet&&voet.previousElementSibling&&voet.previousElementSibling.id==="app"&&voet.previousElementSibling.lastElementChild?.tagName==="FOOTER"),
+            themaInTools:!!(thema&&thema.closest(".tools")),themaInBalk:!!balk,balkVoorKop:!!(balk&&mast&&!balk.closest("#app")&&(balk.compareDocumentPosition(mast)&Node.DOCUMENT_POSITION_FOLLOWING)),oudeVoet:!!document.querySelector(".wiw-weergave-voet"),
             hereNaam:document.getElementById("here")?.getAttribute("aria-label")||"",verversNaam:(document.getElementById("ververs")?.textContent||"").trim(),
             tegels,titelTekst:titel?.textContent||"",titelBreed:titel?titel.getBoundingClientRect().width:0,
             overflow:document.documentElement.scrollWidth-innerWidth
           };
         });
-        assert(!m.themaInTools&&m.themaInVoet&&m.voetNaFooter,`${label}: thema-keuze staat niet in de Weergave-regel direct onder de footer`);
+        assert(!m.themaInTools&&m.themaInBalk&&m.balkVoorKop&&!m.oudeVoet,`${label}: thema-keuze staat niet in de bovenbalk boven de kop (of er staat nog een Weergave-regel onder de footer)`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
         assert.equal(m.hereNaam,"Mijn locatie",`${label}: locatieknop verliest zijn toegankelijke naam`);
         assert.equal(m.verversNaam,"Ververs",`${label}: verversknop verliest zijn toegankelijke naam`);
@@ -86,7 +86,7 @@ const server=http.createServer((req,res)=>{
           }
         }
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
-        console.log(`EERSTE SCHERM ${label}: ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}; thema-keuze onder de footer.`);
+        console.log(`EERSTE SCHERM ${label}: ${w<=900?"temperatuur op "+Math.round(m.hero.top)+"px":"grafiekkop op "+Math.round(m.chartkop.top)+"px"}; thema-keuze in de bovenbalk.`);
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}

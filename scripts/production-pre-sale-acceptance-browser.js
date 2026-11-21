@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium,webkit,devices}=require("playwright");
 const {isAlleenGemeld}=require("./cloudflare-scriptmonitor.js");
+const {openMeteoAntwoord,metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
@@ -18,16 +19,26 @@ const profiles=[
   {name:"WebKit iPhone",engine:webkit,options:{...devices["iPhone 13"]}}
 ];
 const requestedLocations=[
-  {name:"Almere",lat:52.3508,lon:5.2647,land:"NL"},
-  {name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},
-  {name:"New York",lat:40.7128,lon:-74.0060,land:"US"},
-  {name:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},
-  {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"},
-  {name:"Tokyo",lat:35.6762,lon:139.6503,land:"JP"},
-  {name:"Sydney",lat:-33.8688,lon:151.2093,land:"AU"},
-  {name:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO"},
-  {name:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"}
+  {name:"Almere",lat:52.3508,lon:5.2647,land:"NL",tz:"Europe/Amsterdam"},
+  {name:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL",tz:"Europe/Amsterdam"},
+  {name:"New York",lat:40.7128,lon:-74.0060,land:"US",tz:"America/New_York"},
+  {name:"Dubai",lat:25.2048,lon:55.2708,land:"AE",tz:"Asia/Dubai"},
+  {name:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP",tz:"Asia/Kathmandu"},
+  {name:"Tokyo",lat:35.6762,lon:139.6503,land:"JP",tz:"Asia/Tokyo"},
+  {name:"Sydney",lat:-33.8688,lon:151.2093,land:"AU",tz:"Australia/Sydney"},
+  {name:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO",tz:"Arctic/Longyearbyen"},
+  {name:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR",tz:"America/Argentina/Ushuaia"}
 ];
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026):
+   iedere browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van
+   scripts/openmeteo-fixture.js; de exacte productie-URL per locatie ook. Alle
+   controles blijven ongewijzigd. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
+const tzVoor=tzUitLijst(requestedLocations);
+function bronFixture(url,naam){
+  const {status,json}=openMeteoAntwoord(url,{nu:Date.now(),tzVoor});
+  if(status!==200||!(json&&json.timezone&&json.current&&json.hourly&&json.daily))throw new Error(`${naam}: productie-URL gaf geen geldige fixture (HTTP ${status}${json&&json.reason?": "+json.reason:""})`);
+  return json;
+}
 const coordOk=(a,b)=>Number.isFinite(Number(a))&&Math.abs(Number(a)-Number(b))<=0.0011;
 const ROOT_ORIGIN=new URL(ROOT).origin;
 const isReportOnlyCspConsoleError=msg=>/^\[Report Only\]\s+Refused to /.test(String(msg))&&/Content Security Policy\.$/.test(String(msg));
@@ -254,7 +265,6 @@ async function historyFlow(profile,browser){
 
 async function requestedLocationMatrix(browser){
   const results=[];
-  const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isVolledigeForecast=url=>{
     try{
       const u=new URL(url);
@@ -280,27 +290,10 @@ async function requestedLocationMatrix(browser){
       return await belofte;
     }finally{clearTimeout(timer);await context.close();}
   };
-  const haalLiveForecast=async (url,loc)=>{
-    let laatsteFout=null;
-    for(let poging=1;poging<=3;poging++){
-      try{
-        const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-pre-sale-location-matrix/1.0"},signal:AbortSignal.timeout(15000)});
-        if(!response.ok)throw new Error(`HTTP ${response.status}`);
-        const bron=await response.json();
-        if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
-        return {bron,poging};
-      }catch(e){
-        laatsteFout=String(e&&e.message||e);
-        if(poging<3)await slaap(500*poging);
-      }
-    }
-    throw new Error(`${loc.name}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
-  };
-
   for(const loc of requestedLocations){
     const sourceUrl=await ontdekVolledigeForecastUrl(loc);
-    const live=await haalLiveForecast(sourceUrl,loc);
-    console.log(`PRE_SALE_LOCATION_SOURCE ${loc.name}: echte volledige forecast opgehaald op bronpoging ${live.poging}.`);
+    const live={bron:bronFixture(sourceUrl,loc.name)};
+    console.log(`PRE_SALE_LOCATION_SOURCE ${loc.name}: exacte productie-URL beantwoord met de contractgetrouwe fixture (geen live Open-Meteo in CI).`);
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:"nl-NL",serviceWorkers:"block"});
     const page=await context.newPage(),consoleErrors=[],pageErrors=[];
     page.on("console",m=>{if(m.type()==="error"&&!isAlleenGemeld(m.text()))consoleErrors.push(m.text());});
@@ -311,7 +304,7 @@ async function requestedLocationMatrix(browser){
       const start=Date.now(),response=await page.goto(ROOT+"/?"+q,{waitUntil:"domcontentloaded",timeout:30000});
       assert(response&&response.ok(),`${loc.name}: HTTP ${response&&response.status()}`);
       const terminal=await waitTerminal(page,start,15000);let x=terminal.state;
-      assert(kernGereed(x),`${loc.name}: echte bronfixture gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
+      assert(kernGereed(x),`${loc.name}: bronfixture gaf geen bruikbare forecast; terminal=${x.error?"error":"loading"}, status=${x.status}`);
       x=await waitNachtKlaar(page,5000);
       assert.equal(x.sha,EXPECTED,`${loc.name}: verkeerde build ${x.sha}`);
       assertIdentity(x,loc);
@@ -340,7 +333,7 @@ async function requestedLocationMatrix(browser){
   const report={expectedSha:EXPECTED,cold:[],dubai:[],history:{},locations:[]};
   for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){
     const profile=profiles[profileIndex];
-    const browser=await profile.engine.launch({headless:true});
+    const browser=metOpenMeteoFixtures(await profile.engine.launch({headless:true}),{tzVoor});
     try{
       report.cold.push(...await coldLoads(profile,browser));
       report.dubai.push(...await dubaiRepeats(profile,browser,3));
@@ -351,7 +344,7 @@ async function requestedLocationMatrix(browser){
       await new Promise(resolve=>setTimeout(resolve,COLD_PROFILE_COOLDOWN_MS));
     }
   }
-  const matrixBrowser=await chromium.launch({headless:true});
+  const matrixBrowser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor});
   try{report.locations=await requestedLocationMatrix(matrixBrowser);}
   finally{await matrixBrowser.close();}
   assert.equal(report.cold.length,PER_PROFILE*profiles.length,"cold-load totaal klopt niet");

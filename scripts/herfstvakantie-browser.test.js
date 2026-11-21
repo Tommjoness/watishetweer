@@ -48,7 +48,7 @@ function antwoord(start) {
 }
 
 const SCENARIOS = [
-  { naam: "voor", nu: "2026-09-20T10:00:00Z", nl: { aftellen: "20 dagen tot de herfstvakantie in regio noord", melding: "Vanaf zondag 4 oktober staat hier de verwachting voor de eerste vakantiedag.", tabellen: 0, fetch: 0 }, en: { kop: "Autumn school holiday 2026", aftellen: "20 days to go until the autumn school holiday in the northern region" } },
+  { naam: "voor", nu: "2026-09-20T10:00:00Z", nl: { aftellen: "20 dagen tot de herfstvakantie in regio noord", melding: "De herfstvakantie begint landelijk als eerste op zaterdag 10 oktober 2026. Vanaf zondag 4 oktober is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.", tabellen: 0, fetch: 0 }, en: { kop: "Autumn school holiday 2026", aftellen: "20 days to go until the autumn school holiday in the northern region" } },
   { naam: "noord", nu: "2026-10-12T10:00:00Z", data: antwoord("2026-10-12"), nl: { aftellen: "Het is herfstvakantie in regio noord. In regio midden en zuid begint de vakantie op zaterdag 17 oktober.", samenvatting: "Volgens de huidige verwachting zijn 6 van de 7 vakantiedagen in de verwachting overwegend droog.", tabellen: 7, fetch: 1, koppen: ["Maandag 12 oktober regio noord", "Zaterdag 17 oktober alle regio's"], cellen: ["Droog · 7 uur zon", "4,2 mm regen · kans 70%", "Droog · weinig zon"], later: "De vakantiedagen tot en met zondag 25 oktober verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen." }, en: { aftellen: "It is the autumn school holiday in the northern region. In the central and southern regions, the holiday starts on Saturday 17 October." } },
   { naam: "overal", nu: "2026-10-17T10:00:00Z", data: antwoord("2026-10-17"), nl: { aftellen: "Het is overal herfstvakantie.", tabellen: 7, fetch: 1 }, en: { aftellen: "It is the autumn school holiday everywhere." } },
   { naam: "na", nu: "2026-10-26T10:00:00Z", nl: { kop: "Herfstvakantie 2027", aftellen: "355 dagen tot de herfstvakantie in regio noord en midden", tabellen: 0, fetch: 0 }, en: { kop: "Autumn school holiday 2027" } },
@@ -89,7 +89,7 @@ server.listen(0, async () => {
         cellen: [...document.querySelectorAll("#seizoen-verwachting td:nth-child(2)")].map(td => td.textContent.replace(/\s+/g, " ").trim()),
         later: (document.querySelector(".seizoen-later") || {}).textContent || "",
         fout: !!document.querySelector(".seizoen-fout"),
-        perioden: [...document.querySelectorAll(".seizoen-perioden")].map(d => d.getAttribute("data-jaar")),
+        perioden: [...document.querySelectorAll(".seizoen-perioden:not([hidden])")].map(d => d.getAttribute("data-jaar")),
         overloop: document.documentElement.scrollWidth - innerWidth,
         ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null
       }));
@@ -109,7 +109,7 @@ server.listen(0, async () => {
         for (const c of v.cellen || []) assert(m.cellen.includes(c), `${label}: weercel "${c}" ontbreekt`);
         if (v.later) assert.equal(m.later, v.later, `${label}: later`);
         assert.equal(m.fout, !!v.fout, `${label}: foutmelding`);
-        assert(m.perioden.length >= 1, `${label}: vakantiedata per regio staan op de pagina`);
+        assert.deepEqual(m.perioden,[m.kop.slice(-4)],`${label}: alleen de relevante periode is zichtbaar`);
         controleerUitlijning(assert, uitlijning, breedte, label);
       } else {
         assert.deepEqual(m.ontbreekt, [], `${label}: onvertaalde teksten`);

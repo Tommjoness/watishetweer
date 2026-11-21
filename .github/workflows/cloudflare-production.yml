@@ -67,12 +67,6 @@ jobs:
     runs-on: ubuntu-latest
     # Echte deployment: gewone omgevingsverwijzing (GitHub legt hiervoor een deployment vast).
     environment: productie
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
-      CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
-      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
-      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
     outputs:
       production_url: ${{ steps.production_url.outputs.url }}
     steps:
@@ -97,12 +91,12 @@ jobs:
           fi
 
       - name: Checkout exacte main-SHA
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.SOURCE_SHA }}
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
@@ -110,6 +104,12 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Controleer Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
@@ -123,6 +123,9 @@ jobs:
           fi
 
       - name: Controleer Pages-projectconfig
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -137,20 +140,40 @@ jobs:
           test "$production_branch" = main
 
       - name: Sync Cloudflare admin analytics-bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_ANALYTICS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         run: node scripts/cloudflare-admin-analytics-runtime.js
 
       - name: Borg Cloudflare API rate limit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         run: node scripts/cloudflare-api-rate-limit.js
 
       - name: Bouw Cloudflare productie-artifact
         env:
           WEATHER_BUILD_SHA: ${{ env.SOURCE_SHA }}
+          # Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915): alleen deze stap (build en
+          # tests, zonder secrets) laadt de bewaker; de Cloudflare-stappen met tokens blijven ongemoeid.
+          NODE_OPTIONS: --require ${{ github.workspace }}/scripts/ci/geen-live-openmeteo.cjs
+          GEEN_LIVE_OPENMETEO_LOG: ${{ runner.temp }}/geen-live-openmeteo.jsonl
         run: npm run build:cloudflare
+
+      - name: Controle geen live Open-Meteo tijdens de build
+        if: always()
+        env:
+          GEEN_LIVE_OPENMETEO_LOG: ${{ runner.temp }}/geen-live-openmeteo.jsonl
+        run: node scripts/ci/geen-live-openmeteo-controle.js
 
       # Eerst exact hetzelfde artifact als releasekandidaat (Pages-preview) uitrollen
       # en volledig smoken. Pas als dat groen is, gaat hetzelfde public/ naar
       # production; een rode kandidaat laat de live site dus ongemoeid.
       - name: Deploy releasekandidaat naar Cloudflare Pages preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -180,18 +203,25 @@ jobs:
 
       - name: Wacht tot Pages Functions van de releasekandidaat actief zijn
         env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
           CLOUDFLARE_ROOT: ${{ steps.candidate_url.outputs.url }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-functions-readiness.js
 
       - name: Smoke releasekandidaat vóór productie
         env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
           PREVIEW_ROOT: ${{ steps.candidate_url.outputs.url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-preview-smoke.js
 
       - name: Deploy exact naar Cloudflare Pages production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -203,6 +233,9 @@ jobs:
             --commit-dirty=true | tee /tmp/cloudflare-production.log
 
       - name: Verifieer Analytics-bindings na deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -235,18 +268,25 @@ jobs:
 
       - name: Wacht tot Pages Functions actief zijn
         env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
           CLOUDFLARE_ROOT: ${{ steps.production_url.outputs.url }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-functions-readiness.js
 
       - name: Smoke immutable deployment voor domeinkoppeling
         env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PRODUCTIE_CLIENT_SECRET }}
           PREVIEW_ROOT: ${{ steps.production_url.outputs.url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cloudflare-preview-smoke.js
 
       - name: Koppel custom domains idempotent
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTIE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PRODUCTIE_ACCOUNT_ID }}
         id: domains
         shell: bash
         run: |

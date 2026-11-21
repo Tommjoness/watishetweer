@@ -103,6 +103,7 @@ assert.equal(R.sneeuwTekst({sneeuwdek:0,sneeuwval:0,neerslag:3.14}),"Geen sneeuw
 assert.equal(R.sneeuwTekst({sneeuwdek:0,sneeuwval:0,neerslag:0}),"Geen sneeuw, droog");
 assert.equal(R.sneeuwTekst({sneeuwdek:null,sneeuwval:null,neerslag:null}),"Geen gegevens","ontbrekende waarden worden niet stil 'droog'");
 assert.equal(R.sneeuwTekst(null),"Geen gegevens");
+assert.equal(R.sneeuwTekst({sneeuwdek:null,sneeuwval:0,neerslag:0}),"Sneeuwdek onbekend","ontbrekend sneeuwdek is niet hetzelfde als 0 cm");
 assert.equal(R.dagWaarden(wit,"2026-12-31",9),null,"dag buiten het antwoord geeft geen waarden");
 
 /* Samenvatting gaat over de officiële meetplaats (De Bilt). */
@@ -114,6 +115,16 @@ assert.equal(res.length,kerst.plaatsen.length);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.");
 res=R.verwerkAntwoord(kerst.plaatsen.map(()=>groen),t,kerst);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting wordt het geen officiële witte kerst: in De Bilt ligt op eerste kerstdag geen sneeuwdek.");
+const onvolledig=plaatsData({"2026-12-25":{diepte:null,val:0,nat:0,min:1,max:2},"2026-12-26":{diepte:0.03,val:1,nat:0,min:-2,max:0}});
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?onvolledig:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar.","ontbrekende sneeuwdekwaarde mag geen negatief oordeel geven");
+assert.equal(R.sneeuwTekst(res[0].dagen["2026-12-25"]),"Sneeuwdek onbekend","rij gebruikt geen droog of geen sneeuw bij ontbrekende sneeuwdekwaarde");
+const welNul=plaatsData({"2026-12-25":{diepte:null,val:0,nat:0,min:1,max:2},"2026-12-26":{diepte:0,val:0,nat:0,min:1,max:2}});
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?welNul:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting wordt het geen officiële witte kerst: in De Bilt ligt op tweede kerstdag geen sneeuwdek.","bekende nul op een van beide dagen blijft beslissend");
+t=R.toestand("2026-12-26",kerst);
+res=R.verwerkAntwoord(kerst.plaatsen.map((p,i)=>i===0?wit:groen),t,kerst);
+assert.equal(R.samenvatting(t,res,kerst),"","op 26 december geen conclusie over een uit het venster gevallen eerste kerstdag");
 t=R.toestand("2026-12-19",kerst);
 res=R.verwerkAntwoord(lijst,t,kerst);
 assert.equal(R.samenvatting(t,res,kerst),"Volgens de huidige verwachting ligt er op eerste kerstdag sneeuw in De Bilt. De verwachting voor tweede kerstdag verschijnt op 20 december.");
@@ -135,6 +146,20 @@ assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
 assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
+assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
+/* SEO-content blijft statisch, bronverifieerbaar en in het Engels volledig vertaald. */
+assert.equal(kerst.uitleg.vragen.length,2,"twee gerichte KNMI-vragen");
+assert(html.includes('<h2>'+kerst.uitleg.vragen[0].kop+'</h2>')&&html.includes("09:00 uur"),"officiële definitie met meetmoment");
+assert(html.includes("1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010")&&html.includes("2009 op eerste kerstdag 9 centimeter"),"KNMI-historie en sneeuwdiepte");
+assert(html.includes("https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"),"historische bron is zichtbaar");
+const vertalerKerst=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.match(vertalerKerst.vertaal(kerst.intro),/^Will we have a white Christmas\?/,"nieuwe intro wordt vertaald");
+assert.equal(vertalerKerst.vertaal("Sneeuwdek onbekend"),"Snow cover unknown");
+assert.equal(vertalerKerst.vertaal("Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar."),"An official white Christmas cannot yet be assessed: snow-cover data for De Bilt is not available for both Christmas days.");
+assert.equal(vertalerKerst.vertaal(kerst.uitleg.vragen[0].kop),"Why does snow at Christmas not always count as an official white Christmas?");
+assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[0].antwoord),/09:00 on both 25 and 26 December/);
+assert.match(vertalerKerst.vertaal(kerst.uitleg.vragen[1].antwoord),/nine centimetres|9 centimetres/);
+
 const zichtbaar=html.split('<script type="application/json" id="seizoen-config">')[0];
 assert(!/undefined|\{\w+\}|NaN/.test(zichtbaar),"geen lege plaatshouders in de statische pagina");
 const cfgJson=html.match(/<script type="application\/json" id="seizoen-config">([\s\S]*?)<\/script>/);
@@ -250,7 +275,7 @@ let h=hv("2026-09-20");
 assert.equal(h.t.jaar,2026);assert.equal(h.t.fase,"ver");
 assert.equal(h.a,"Nog 20 dagen tot de herfstvakantie in regio noord.");
 assert.deepEqual(h.g,{n:20,tekst:"dagen tot de herfstvakantie in regio noord"});
-assert.equal(h.m,"Vanaf zondag 4 oktober staat hier de verwachting voor de eerste vakantiedag.");
+assert.equal(h.m,"De herfstvakantie begint landelijk als eerste op zaterdag 10 oktober 2026. Vanaf zondag 4 oktober is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.");
 h=hv("2026-10-04");
 assert.equal(h.t.fase,"verwachting");assert.deepEqual(h.zicht,["2026-10-10"],"4 oktober: alleen de eerste vakantiedag valt in het venster");
 assert.equal(h.m,"");
@@ -296,8 +321,15 @@ assert.equal(R.vakantieSamenvatting(R.toestand("2026-10-25",herfst),vakRes([2,2,
 const htmlHerfst=pagina(herfst,"2026-10-12");
 assert(htmlHerfst.includes("<title>Weer herfstvakantie 2026: regen, zon en temperatuur per dag | watishetweer.nl</title>"));
 assert(htmlHerfst.includes('<link rel="canonical" href="https://watishetweer.nl/herfstvakantie/">'));
-assert(htmlHerfst.includes('<tr><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
-assert(!pagina(herfst,"2026-10-26").includes('data-jaar="2026"'),"na de vakantie verdwijnt het voorbije jaar uit de tabel");
+assert(htmlHerfst.includes('<tr data-regio="noord"><th scope="row">Regio noord</th><td>10 t/m 18 oktober</td></tr>')&&htmlHerfst.includes('<tr data-regio="zuid"><th scope="row">Regio zuid</th><td>23 t/m 31 oktober</td></tr>'),"data 2026 en 2027 staan in de HTML");
+assert(pagina(herfst,"2026-10-26").includes('data-jaar="2026" hidden'),"na de vakantie is het voorbije jaar verborgen");
+{
+  /* Bronvermelding regiokaart: zichtbaar op iedere vakantiepagina, met bron, licentie en bewerking; niet op andere seizoenspagina's. */
+  const bron=htmlHerfst.match(/<p class="klein" id="seizoen-regio-bron">([\s\S]*?)<\/p>/);
+  assert(bron,"vakantiepagina toont de bronvermelding van de regiokaart");
+  for(const deel of ['href="https://api.pdok.nl/kadaster/brk-bestuurlijke-gebieden/ogc/v1"','href="https://creativecommons.org/licenses/by/4.0/deed.nl"','href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/wijk-en-buurtkaart"',"(Kadaster, ","(CBS en Kadaster)","bewerkt door watishetweer.nl."])assert(bron[1].includes(deel),"bronvermelding regiokaart mist: "+deel);
+  for(const p of SEIZOENSPAGINAS)assert.equal(pagina(p,"2026-10-12").includes('id="seizoen-regio-bron"'),p.soort==="vakantie",p.slug+": bronvermelding regiokaart hoort alleen op vakantiepagina's");
+}
 assert(pagina(herfst,"2027-11-01").includes("<h1 id=\"seizoen-kop\">Herfstvakantie 2028</h1>"),"onbekend jaar bouwt zonder fout");
 assert.equal(R.regioKop({regios:["noord","midden","zuid"]},3),"alle regio's");
 assert.equal(R.regioKop({regios:["midden","zuid"]},3),"regio midden en zuid");
@@ -311,7 +343,7 @@ assert.deepEqual([...new Set(kerstVak.perioden[2027].map(p=>p.van+"/"+p.tot))],[
 const kv=(d)=>{const t=R.toestand(d,kerstVak);return {t,a:R.aftelTekst(t,kerstVak),m:R.meldingTekst(t,kerstVak),zicht:t.dagen.filter(x=>x.zichtbaar).map(x=>x.iso)};};
 let k=kv("2026-10-12");
 assert.equal(k.a,"Nog 68 dagen tot de kerstvakantie.","overal tegelijk: geen regio in het aftellen");
-assert.equal(k.m,"Vanaf zondag 13 december staat hier de verwachting voor de eerste vakantiedag.");
+assert.equal(k.m,"De kerstvakantie begint op zaterdag 19 december 2026. Vanaf zondag 13 december is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.");
 assert.equal(kv("2026-12-18").a,"Morgen begint de kerstvakantie.");
 assert.equal(kv("2026-12-19").a,"Vandaag begint de kerstvakantie.");
 assert.equal(kv("2026-12-27").a,"Het is kerstvakantie.");
@@ -326,7 +358,7 @@ const kerstRes=(mm)=>mm.map((n,i)=>({plaats:kerstVak.plaatsen[i],dagen:{"2027-01
 assert.equal(R.vakantieSamenvatting(R.toestand("2027-01-03",kerstVak),kerstRes([2,2,2,2,0,0,0]),kerstVak),"Volgens de huidige verwachting valt er op zondag 3 januari in een groot deel van het land neerslag.");
 const htmlKerst=pagina(kerstVak,"2026-10-12");
 assert(htmlKerst.includes("<title>Weer kerstvakantie 2026: regen, sneeuw en temperatuur per dag | watishetweer.nl</title>"));
-assert(htmlKerst.includes('<tr><th scope="row">Alle regio\'s</th><td class="jaargrens">19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
+assert(htmlKerst.includes('<tr data-regio="alle"><th scope="row">Alle regio\'s</th><td class="jaargrens">19 december 2026 t/m 3 januari 2027</td></tr>'),"gelijke data: één regel voor alle regio's");
 assert(!htmlKerst.includes('<th scope="row">Regio noord</th>'),"geen drie gelijke regels");
 assert(htmlHerfst.includes('<th scope="row">Regio noord</th>'),"verschillende data blijven per regio");
 console.log("Seizoenspagina kerstvakantie: overal tegelijk, aftellen zonder regio, jaargrens, sneeuw en vakantiedata kloppen.");
@@ -341,11 +373,64 @@ assert.deepEqual([...new Set(mei.perioden[2027].map(p=>p.van+"/"+p.tot))],["2027
 assert.deepEqual([...new Set(mei.perioden[2028].map(p=>p.van+"/"+p.tot))],["2028-04-29/2028-05-07"]);
 assert.deepEqual(zomer.perioden[2027].map(p=>[p.regio,p.van,p.tot]),[["noord","2027-07-10","2027-08-22"],["midden","2027-07-17","2027-08-29"],["zuid","2027-07-24","2027-09-05"]]);
 assert.deepEqual(zomer.perioden[2028].map(p=>[p.regio,p.van,p.tot]),[["noord","2028-07-15","2028-08-27"],["midden","2028-07-08","2028-08-20"],["zuid","2028-07-22","2028-09-03"]]);
+for(const [cfg,jaar] of [[kerstVak,2026],[mei,2027],[voorjaar,2027],[zomer,2027],[herfst,2027]]){
+  const zichtbaar=[...pagina(cfg,"2026-11-12").matchAll(/class="seizoen-dag seizoen-perioden" data-jaar="(\d+)"( hidden)?>/g)].filter(m=>!m[2]).map(m=>Number(m[1]));
+  assert.deepEqual(zichtbaar,[jaar],cfg.slug+": slechts één actuele tabel");
+}
+assert.match(R.meldingTekst(R.toestand("2026-11-12",mei),mei),/begint op zaterdag 24 april 2027\. Vanaf zondag 18 april/);
 const at=(d,c)=>R.aftelTekst(R.toestand(d,c),c);
+{
+  const data=require("./vakantieregio-data.json");
+  const test=(lat,lon,land="NL")=>R.vakantieregioVoorPlaats(data,{lat,lon,land});
+  for(const [naam,lat,lon,regio] of [
+    ["Almere",52.3508,5.2647,"noord"],["Groningen",53.2194,6.5665,"noord"],
+    ["Zeewolde",52.3308,5.5431,"midden"],["Utrecht",52.0907,5.1214,"midden"],
+    ["Eindhoven",51.4416,5.4697,"zuid"],["Maastricht",50.8514,5.6910,"zuid"],
+    ["Abcoude",52.2725,4.9726,"noord"],["Mijdrecht",52.2065,4.8637,"midden"],
+    ["Didam",51.9394,6.1319,"zuid"],["'s-Heerenberg",51.8772,6.2583,"midden"],
+    ["Dodewaard",51.9118,5.6564,"zuid"],["Kesteren",51.9331,5.5704,"midden"],
+    ["Hank",51.7343,4.9028,"zuid"],["Dussen",51.7316,4.9649,"zuid"],
+    ["Wijk en Aalburg",51.7536,5.1291,"zuid"],["Werkendam",51.8097,4.8936,"midden"],
+    ["Woudrichem",51.8154,5.0010,"midden"],["Baarle-Hertog",51.44009,4.92708,null],
+    ["Baarle-Nassau, gemeentehuis",51.44339019,4.93058728,null],
+    ["Baarle-Nassau, Oordeelsestraat",51.44641579,4.93830117,"zuid"]
+  ]){
+    assert.equal(test(lat,lon),regio,naam);
+    assert.equal(test(Number(lat.toFixed(3)),Number(lon.toFixed(3))),regio,naam+" afgerond");
+  }
+  assert.deepEqual([5.359,5.361,5.364].map(lon=>test(52.330,lon)),["noord",null,"midden"],"onzekere cel rond de Flevolandse regiogrens");
+  assert.equal(test(51.911,5.620),null,"onzekere historische rand bij Dodewaard");
+  assert.equal(test(52.351,5.265,"BE"),null,"landcode buiten NL krijgt landelijke uitwijk");
+  assert.equal(test(52.351,5.265,null),null,"onbekend land krijgt landelijke uitwijk");
+  assert.equal(R.vakantieregioVoorPlaats(data,null),null);
+  assert.equal(test(12.15,-68.27),null,"buiten Europees-Nederlandse kaartdekking");
+}
 assert.equal(at("2026-10-12",voorjaar),"Nog 124 dagen tot de voorjaarsvakantie in regio zuid.","zuid begint in 2027 een week eerder");
 assert.equal(at("2027-02-13",voorjaar),"Vandaag begint de voorjaarsvakantie in regio zuid. In regio noord en midden begint de vakantie op zaterdag 20 februari.");
 assert.equal(at("2027-02-20",voorjaar),"Het is overal voorjaarsvakantie.");
 assert.equal(at("2027-02-22",voorjaar),"Het is voorjaarsvakantie in regio noord en midden.");
+{
+  const noord=R.toestandVakantie("2026-11-12",voorjaar,"noord");
+  const zuid=R.toestandVakantie("2026-11-12",voorjaar,"zuid");
+  assert.deepEqual([R.aftelGetal(noord,voorjaar).n,R.aftelGetal(zuid,voorjaar).n],[100,93]);
+  assert.deepEqual([noord.perioden[0].van,noord.tot,noord.vanaf],["2027-02-20","2027-02-28","2027-02-14"]);
+  assert.deepEqual([zuid.perioden[0].van,zuid.tot,zuid.vanaf],["2027-02-13","2027-02-21","2027-02-07"]);
+  assert.match(R.aftelTekst(noord,voorjaar),/in regio noord\.$/);
+  const tijdens=R.toestandVakantie("2027-02-17",voorjaar,"noord");
+  assert.deepEqual(tijdens.dagen.filter(d=>d.zichtbaar).map(d=>d.iso),["2027-02-20","2027-02-21","2027-02-22","2027-02-23"]);
+  assert.equal(R.toestandVakantie("2027-02-22",voorjaar,"zuid").jaar,2028,"Zuid schuift door zodra de eigen vakantie voorbij is");
+  assert.equal(R.toestandVakantie("2027-02-22",voorjaar,"noord").jaar,2027,"Noord blijft in dezelfde vakantie");
+  assert.equal(R.toestandVakantie("2027-01-03",kerstVak,"midden").jaar,2026);
+  assert.equal(R.toestandVakantie("2027-01-04",kerstVak,"midden").jaar,2027);
+  assert.deepEqual(R.toestandVakantie("2026-11-12",voorjaar,"onzeker"),R.toestand("2026-11-12",voorjaar));
+  for(const [voor,na,dagVoor,dagNa] of [
+    ["2027-03-27T22:59:00Z","2027-03-27T23:00:00Z","2027-03-27","2027-03-28"],
+    ["2027-10-30T21:59:00Z","2027-10-30T22:00:00Z","2027-10-30","2027-10-31"]
+  ]){
+    const dag=iso=>R.vandaagIn("Europe/Amsterdam",new Date(iso));
+    assert.deepEqual([dag(voor),dag(na)],[dagVoor,dagNa],"vakantiedag blijft in Nederlandse tijd bij klokwissels");
+  }
+}
 assert.equal(at("2026-10-12",mei),"Nog 194 dagen tot de meivakantie.","overal tegelijk: geen regio");
 assert.equal(at("2027-04-27",mei),"Het is meivakantie.");
 assert.equal(at("2027-07-10",zomer),"Vandaag begint de zomervakantie in regio noord. In regio midden begint de vakantie op zaterdag 17 juli.");

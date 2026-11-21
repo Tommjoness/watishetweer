@@ -12,12 +12,19 @@ jobs:
   measure-final-artifact:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
@@ -79,8 +86,9 @@ jobs:
         run: node scripts/dagkans-browser.test.js
       - name: Google Analytics na toestemming krijgt geen plaats of coördinaten in de URL
         run: node scripts/ga4-url-privacy-browser.test.js
-      - name: Open-Meteo-dagwaarden, over welk uurvenster (providercontract)
-        run: node scripts/openmeteo-daggrens-contract.js
+      # Het providercontract van de Open-Meteo-dagwaarden (scripts/openmeteo-daggrens-contract.js) roept
+      # Open-Meteo live aan en draait daarom niet meer in CI (Open-Meteo, ticket #235915); het hoort bij de
+      # providermonitoring buiten GitHub Actions (docs/open-meteo-monitoring.md).
       - name: Waarschuwingen per plaats (eigen regio, geen melding van elders, Engels)
         run: node scripts/waarschuwing-plaats-browser.test.js
       - name: Wintertijd 25 oktober (uurtabel, grafiekas, regen en zon in echte lokale tijd)
@@ -89,8 +97,11 @@ jobs:
         run: node scripts/reserveroute-klokwissel-browser.test.js
       - name: Bewaar reproduceerbare CWV-metingen
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: cwv-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: cwv-evidence/
           retention-days: 14
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js

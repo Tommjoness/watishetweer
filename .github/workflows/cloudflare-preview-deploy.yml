@@ -65,12 +65,12 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PREVIEW_CLIENT_SECRET }}
     steps:
       - name: Checkout vertrouwde standaardbranch
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
@@ -85,7 +85,7 @@ jobs:
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Geen geldige head-SHA in de workflow_run-gebeurtenis." >&2; exit 1; }
 
       - name: Download previewbundel (gegevens, geen code)
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: preview-bundle
           run-id: ${{ github.event.workflow_run.id }}
@@ -195,7 +195,7 @@ jobs:
     needs: preview
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 20
     permissions:
@@ -207,13 +207,21 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PREVIEW_CLIENT_SECRET }}
     steps:
       - name: Checkout exacte bron-SHA (onbetrouwbaar)
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
 
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
 
@@ -224,12 +232,12 @@ jobs:
         env:
           PREVIEW_ROOT: ${{ env.PREVIEW_ROOT }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/preview-responsive-visual-browser.js
 
       - name: Bewaar responsive screenshotbewijs
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: preview-responsive-${{ env.SOURCE_SHA }}
           path: preview-evidence/
@@ -243,7 +251,7 @@ jobs:
           # Zonder providersleutel in het previewproject: 503-contract en gecontroleerde geen-data-toestand, geen live
           # Visual Crossing-bewijs (zie scripts/ci/preview-providermodus.js). Het live bewijs blijft in de releasekandidaat.
           PREVIEW_PROVIDERMODUS: geen-sleutel
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/weatherapi-live-fallback-browser.js
 
       - name: Wereldwijde preview in mobiel en desktop
@@ -252,7 +260,7 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           WORLDWIDE_SOURCE_PACING_MS: 5000
           WORLDWIDE_SOURCE_RETRY_BACKOFF_MS: 5000
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/run-production-worldwide-browser.js
 
       - name: Finale locatie- en cold-loadacceptatie op deployed preview
@@ -267,7 +275,7 @@ jobs:
           HISTORY_SOURCE_INITIAL_COOLDOWN_MS: 30000
           HISTORY_SOURCE_PACING_MS: 15000
           HISTORY_SOURCE_RETRY_BACKOFF_MS: 10000
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/run-production-pre-sale-acceptance-browser.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -275,14 +283,17 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   preview-release-navigation:
     needs: preview
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 10
     permissions:
@@ -294,21 +305,39 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PREVIEW_CLIENT_SECRET }}
     steps:
       - name: Checkout exacte bron-SHA (onbetrouwbaar)
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
 
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
       - name: Installeer Chromium-driver
         run: npm ci --ignore-scripts
 
-      - name: Installeer native browserreload-driver
-        run: apt-get update && apt-get install -y --no-install-recommends xdotool
+      - name: Installeer native browserreload-driver (vastgepind, zonder pakketserver)
+        # Twee officiële Ubuntu 24.04-pakketten uit de repository in plaats van apt-get (scripts/ci/native-reload-driver/README.md).
+        # De SHA-256 staat in deze workflow en wordt vóór de installatie gecontroleerd; alleen deze twee bestanden worden geïnstalleerd.
+        working-directory: scripts/ci/native-reload-driver
+        run: |
+          set -eu
+          sha256sum --check --strict - <<'SHA256'
+          3506c2824a74255439813f824a1629387452d52c6efd6d7916b8b54e458175e8  libxdo3_3.20160805.1-5build1_amd64.deb
+          58a202c74bce31ca2d72d4d514942a5ab6191932696adc5d21d909c9216b13cb  xdotool_3.20160805.1-5build1_amd64.deb
+          SHA256
+          dpkg --install libxdo3_3.20160805.1-5build1_amd64.deb xdotool_3.20160805.1-5build1_amd64.deb
+          command -v xdotool
 
       - name: Bewijs release-navigatie en echte offline serviceworker-reload
         env:
@@ -316,7 +345,7 @@ jobs:
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
           HEADLESS: "false"
           NATIVE_BROWSER_RELOAD: "true"
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: xvfb-run --auto-servernum node scripts/production-release-recovery-navigation.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -324,14 +353,17 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ env.PREVIEW_ROOT }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   preview-cwv:
     needs: preview
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 15
     permissions:
@@ -342,11 +374,19 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_PREVIEW_CLIENT_SECRET }}
     steps:
       - name: Checkout exacte bron-SHA (onbetrouwbaar)
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is. Stappen met een eigen NODE_OPTIONS (Access-preload)
+        # overschrijven deze waarde; daar staat de bewaker daarom expliciet als eerste --require.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
@@ -354,7 +394,7 @@ jobs:
         env:
           CWV_ROOT: ${{ needs.preview.outputs.preview_url }}
           EXPECTED_SHA: ${{ env.SOURCE_SHA }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/cwv-desktop-recovery-browser.js
       - name: Netwerkdiagnostiek bij mislukking
         if: failure()
@@ -362,15 +402,18 @@ jobs:
         timeout-minutes: 2
         env:
           NETWERK_ROOT: ${{ needs.preview.outputs.preview_url }}
-          NODE_OPTIONS: --require=./scripts/cloudflare-access-preload.cjs
+          NODE_OPTIONS: --require=./scripts/ci/geen-live-openmeteo.cjs --require=./scripts/cloudflare-access-preload.cjs
         run: node scripts/netwerkdiagnostiek.js
       - name: Bewaar deployed CWV-bewijs
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: preview-cwv-${{ env.SOURCE_SHA }}
           path: cwv-evidence/
           retention-days: 14
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js
 
   # Workflow_run-checks horen bij main, niet bij de PR. Deze job zet de uitkomst als
   # commitstatus op de PR-head, zodat de previewresultaten zichtbaar blijven. Een

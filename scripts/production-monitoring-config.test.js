@@ -121,7 +121,14 @@ assert(wereldwijd.includes('{naam:"desktop",width:1440,height:1000}'),"wereldwij
 assert(wereldwijd.includes('uit.overflow<=1'),"wereldwijde monitor bewaakt horizontale overflow niet");
 assert(wereldwijd.includes('assert.equal(uit.sha,verwacht'),"wereldwijde browsermonitor moet de exacte build-SHA bewaken");
 assert(wereldwijd.includes("verifieerBronwaarheid(bron,uit"),"wereldwijde browsermonitor vergelijkt zichtbare waarden niet met de live bronrespons");
-assert(wereldwijd.includes("if(!klaar&&isVolledigeForecast(url))")&&wereldwijd.includes("haalLiveForecast(sourceUrl"),"wereldwijde browsermonitor moet de volledige forecastrespons via de exacte productie-URL live vergelijken en niet de current-only preview");
+/* Sinds 20 november (Open-Meteo, ticket #235915): geen live Open-Meteo vanuit CI. De exacte volledige
+   productie-URL wordt nog steeds door de pagina zelf bepaald en daarna beantwoord met de contractgetrouwe
+   fixture; iedere browsercontext krijgt die fixture voor alle Open-Meteo-hosts en het script haalt zelf niets op. */
+assert(wereldwijd.includes("if(!klaar&&isVolledigeForecast(url))")&&wereldwijd.includes("bronFixture(sourceUrl")&&wereldwijd.includes("openMeteoAntwoord(url,"),"wereldwijde browsermonitor moet de volledige forecastrespons via de exacte productie-URL vergelijken (contractgetrouwe fixture) en niet de current-only preview");
+assert(wereldwijd.includes("metOpenMeteoFixtures(await chromium.launch("),"wereldwijde browsermonitor moet iedere context de Open-Meteo-fixture geven");
+assert(!/\bfetch\(/.test(wereldwijd)&&!/https:\/\/[a-z-]*\.?open-meteo\.com\/v1\/[a-z]+\?/.test(wereldwijd),"wereldwijde browsermonitor mag Open-Meteo niet live aanroepen");
+/* Volgorde van bronverzameling (eerst ontdekken, dan achter elkaar ophalen): gedragstest met alle 11 locaties. */
+require("./worldwide-bronvolgorde.test.js");
 assert(wereldwijd.includes('assert.equal(uit.timezone,bron.timezone'),"wereldwijde browsermonitor moet de UI-tijdzone tegen dezelfde providerresponse verifiëren");
 assert(wereldwijd.includes('retired pressure_msl')&&wereldwijd.includes('pressureRest'),"wereldwijde browsermonitor moet pressure-retirement in providerquery én DOM bewaken");
 assert(wereldwijd.includes('toekomstige Nachtzicht-rij gebruikt verleden tijd'),"wereldwijde browsermonitor moet toekomstige Nachtzicht-copy bewaken");

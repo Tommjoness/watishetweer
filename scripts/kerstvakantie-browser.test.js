@@ -50,7 +50,7 @@ function antwoord(start) {
 }
 
 const SCENARIOS = [
-  { naam: "voor", nu: "2026-10-12T10:00:00Z", nl: { aftellen: "68 dagen tot de kerstvakantie", melding: "Vanaf zondag 13 december staat hier de verwachting voor de eerste vakantiedag.", tabellen: 0, fetch: 0 }, en: { kop: "Christmas school holiday 2026", aftellen: "68 days to go until the Christmas school holiday" } },
+  { naam: "voor", nu: "2026-10-12T10:00:00Z", nl: { aftellen: "68 dagen tot de kerstvakantie", melding: "De kerstvakantie begint op zaterdag 19 december 2026. Vanaf zondag 13 december is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.", tabellen: 0, fetch: 0 }, en: { kop: "Christmas school holiday 2026", aftellen: "68 days to go until the Christmas school holiday" } },
   { naam: "eerste dag", nu: "2026-12-19T09:00:00Z", data: antwoord("2026-12-19"), nl: { aftellen: "Vandaag begint de kerstvakantie.", tabellen: 7, fetch: 1, koppen: ["Zaterdag 19 december alle regio's", "Vrijdag 25 december alle regio's"], cellen: ["1,8 cm sneeuw · kans 75%", "Droog · 2 uur zon"], later: "De vakantiedagen tot en met zondag 3 januari verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen." }, en: { aftellen: "The Christmas school holiday starts today." } },
   { naam: "jaargrens", nu: "2027-01-01T10:00:00Z", data: antwoord("2027-01-01"), nl: { aftellen: "Het is kerstvakantie.", tabellen: 3, fetch: 1, koppen: ["Vrijdag 1 januari alle regio's", "Zondag 3 januari alle regio's"], cellen: ["3,1 mm regen · kans 75%"] }, en: { aftellen: "It is the Christmas school holiday." } },
   { naam: "na", nu: "2027-01-04T10:00:00Z", nl: { kop: "Kerstvakantie 2027", aftellen: "355 dagen tot de kerstvakantie", tabellen: 0, fetch: 0 }, en: { kop: "Christmas school holiday 2027" } },
@@ -90,7 +90,7 @@ server.listen(0, async () => {
         cellen: [...document.querySelectorAll("#seizoen-verwachting td:nth-child(2)")].map(td => td.textContent.replace(/\s+/g, " ").trim()),
         later: (document.querySelector(".seizoen-later") || {}).textContent || "",
         fout: !!document.querySelector(".seizoen-fout"),
-        periodeRijen: [...document.querySelectorAll(".seizoen-perioden tbody tr")].map(tr => [...tr.children].map(c => c.textContent.trim()).join(" ")),
+        periodeRijen: [...document.querySelectorAll(".seizoen-perioden:not([hidden]) tbody tr")].map(tr => [...tr.children].map(c => c.textContent.trim()).join(" ")),
         overloop: document.documentElement.scrollWidth - innerWidth,
         ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null
       }));

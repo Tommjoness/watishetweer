@@ -25,6 +25,25 @@ assert((privacy.match(/href="mailto:[^"@]+@watishetweer\.nl"/g)||[]).length>=2,"
 for(const provider of ["PostHog Cloud EU","Cloudflare Web Analytics","Google Analytics 4"]){
   assert(privacy.includes(provider),"Privacyverklaring mist analyticsprovider: "+provider);
 }
+const posthogAlinea=privacy.match(/<p>Daarnaast gebruikt de site <b>PostHog Cloud EU<\/b>(.*?)<\/p>/)?.[0].replace(/<[^>]+>/g,"");
+assert(posthogAlinea?.includes("standaard een termijn van één jaar voor statistiekgebeurtenissen."),"privacytekst onderscheidt de standaardtermijn voor PostHog-events");
+assert(posthogAlinea.includes("PostHog kan verlopen gebeurtenissen langer opslaan voordat ze worden verwijderd."),"privacytekst vermeldt dat feitelijke opslag langer kan duren");
+assert.doesNotMatch(privacy,/PostHog bewaart (?:deze statistieken|de gegevens) één jaar\./,"privacytekst mag geen vaste verwijdertermijn beloven");
+const vertaler=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
+assert.match(vertaler.vertaal(posthogAlinea),/default one-year retention period for analytics events\. Events expire after that period\. PostHog may store expired events for longer before deleting them\./,"Engelse privacytekst maakt hetzelfde onderscheid");
+
+const weerAlinea=privacy.match(/<li><b>Weer voor een gekozen plaats<\/b>(.*?)<\/li>/)?.[0].replace(/<[^>]+>/g,"");
+assert.match(weerAlinea,/tijdelijk in een gedeelde cache.*bevat de opgevraagde coördinaten/);
+assert.match(vertaler.vertaal(weerAlinea),/temporarily stores eligible API responses in a shared cache.*contains the requested coordinates/);
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");
+assert.doesNotMatch(index,/\bfunction logBij\b|\bls\.set\(KEY_LOG\b/,"nieuwe bezoeken mogen geen locatiehistorie opbouwen");
+const migratie=index.split("\n").find(regel=>regel.includes('localStorage.removeItem("weerbriefing.log")'));
+assert(migratie,"oude locatiehistorie moet worden verwijderd");
+const behouden=[["weerbriefing.plaats","gekozen"],["weerbriefing.lijst","bewaard"],["weerbriefing.ga4.consent.v1","denied"],["weerbriefing.analytics.uit.v1","1"],["weerbriefing.analytics.id.v1","code"]];
+const oudeOpslag=new Map([["weerbriefing.log","oud"],...behouden]);
+vm.runInNewContext(migratie,{localStorage:{removeItem:key=>oudeOpslag.delete(key)}});
+assert.deepStrictEqual([...oudeOpslag],behouden,"alleen de oude locatiehistorie mag verdwijnen");
+assert.doesNotThrow(()=>vm.runInNewContext(migratie,{localStorage:{removeItem(){throw Error("geblokkeerd");}}}));
 
 function voerAnalyticsUit(opt={}){
   const requests=[];

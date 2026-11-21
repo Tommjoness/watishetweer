@@ -103,15 +103,35 @@ async function controleer(browser,root,route,w){
       assert(!tijdenEn[4]||(tijdenEn[1]!==tijdenEn[3]&&tijdenEn[2]<=tijdenEn[4]),`/maan/ ${w}px: op- en ondergang niet in volgorde van de dag: ${tijdenEn[0]}`);
       assert(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{1,2} (July|August), \d{2}:\d{2}/.test(maan.tekst),`/maan/ ${w}px: datums van de fasen niet in het Engels`);
       assert.deepEqual(maan.spans,["nz-maan-plaats","nz-maan-standplaats","nz-maan-tijdzone","nz-maan-elders"],`/maan/ ${w}px: de vertaling heeft de spans van plaats en tijdzone weggehaald`);
-      assert.equal(overzicht.title,"Stargazing in the Netherlands: the darkest places | watishetweer.nl",`/nachtzicht/ ${w}px: titel`);
+      assert.equal(overzicht.title,"Stargazing in the Netherlands: national parks | watishetweer.nl",`/nachtzicht/ ${w}px: titel`);
+      assert.match(overzicht.tekst,new RegExp(`in ${overzicht.parkLinks.length} selected national parks\\.`),`/nachtzicht/ ${w}px: selectie en aantal`);
+      assert.match(overzicht.tekst,/grouped by estimated light pollution, from low to high\. Within each category, parks are listed in alphabetical order\./,`/nachtzicht/ ${w}px: sorteervolgorde`);
       assert(overzicht.parkLinks.includes("De Hoge Veluwe")&&overzicht.parkLinks.includes("Lauwersmeer"),`/nachtzicht/ ${w}px: parknamen blijven niet letterlijk staan`);
       assert(/How dark is it\?/.test(overzicht.tekst)&&/How the indication works/.test(overzicht.tekst),`/nachtzicht/ ${w}px: uitleg niet in het Engels`);
       assert(/Sources: the forecast comes from the weather model via Open-Meteo/.test(overzicht.tekst),`/nachtzicht/ ${w}px: bronregel niet in het Engels`);
       assert.equal(park.title,"Stargazing in Lauwersmeer National Park | watishetweer.nl",`park ${w}px: titel`);
       assert.equal(park.h1,"Stargazing in Lauwersmeer National Park",`park ${w}px: kop`);
       assert(/Light pollution: low \(estimated\)/.test(park.tekst),`park ${w}px: lichtvervuiling niet in het Engels`);
+      assert(park.tekst.includes("Where can you go stargazing in Lauwersmeer National Park?"),`Lauwersmeer ${w}px: sterrenkijkkop niet vertaald`);
+      assert(park.tekst.includes("Lauwersnest Visitor Centre")&&park.tekst.includes("Achter de Zwarten")&&park.tekst.includes("Vlinderbalg"),`Lauwersmeer ${w}px: kijklocaties niet zichtbaar in het Engels`);
+      assert(park.tekst.includes("Marnewaard military training area")&&park.tekst.includes("Nationaal Park Lauwersmeer"),`Lauwersmeer ${w}px: bron/toegangsinformatie ontbreekt`);
+      assert(!vanGogh.tekst.includes("Achter de Zwarten"),`ander park ${w}px: Lauwersmeer-content gelekt`);
       assert(/average \d+%/.test(park.tekst)&&/Cloud cover per hour/.test(park.tekst),`park ${w}px: feiten en grafiek niet in het Engels`);
       assert.equal(vanGogh.h1,"Stargazing in Van Gogh National Park",`Van Gogh ${w}px: parknaam met "Nationaal Park" achteraan`);
+    }
+    /* No-JS: een gebruiker krijgt alleen duidelijk gedateerde maanwaarden, nooit ongemerkt "vandaag". */
+    for(const w of [390,1366]){
+      const ctx=await browser.newContext({viewport:{width:w,height:844},javaScriptEnabled:false});
+      try{
+        const page=await ctx.newPage();
+        await page.goto(root+"/maan/",{waitUntil:"load"});
+        const html=await page.locator("main").innerText();
+        assert(/momentopname van \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/.test(html),`/maan/ no-JS ${w}px: berekeningsdatum ontbreekt`);
+        assert(/Voor De Bilt op \d{4}-\d{2}-\d{2}:/.test(html),`/maan/ no-JS ${w}px: plaats en datum ontbreken`);
+        assert(html.includes("De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):"),`/maan/ no-JS ${w}px: fasen niet uitgelegd`);
+        assert.equal(await page.locator("noscript ul li").count(),4,`/maan/ no-JS ${w}px: vier berekende hoofdfasen`);
+        assert.equal(await page.locator("h1").textContent(),"De maan vandaag",`/maan/ no-JS ${w}px: kop`);
+      }finally{await ctx.close();}
     }
     /* Laad- en foutteksten (de runtime schrijft ze alleen bij een trage of mislukte verwachting). */
     const kern=require("../taal/vertaalkern.js"),en=require("../taal/en.js"),v=kern.maakVertaler(en);

@@ -12,12 +12,19 @@ jobs:
   recovery-build-browser:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --ipc=host
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bewaker tegen live Open-Meteo
+        # Open-Meteo vraagt om geen live API-aanroepen vanuit CI (ticket #235915). Iedere Node-opdracht
+        # hierna laadt scripts/ci/geen-live-openmeteo.cjs: Open-Meteo is onbereikbaar en elke poging wordt
+        # vastgelegd; de laatste stap van deze job faalt als er één is.
+        run: |
+          echo "NODE_OPTIONS=--require $GITHUB_WORKSPACE/scripts/ci/geen-live-openmeteo.cjs" >> "$GITHUB_ENV"
+          echo "GEEN_LIVE_OPENMETEO_LOG=$RUNNER_TEMP/geen-live-openmeteo.jsonl" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
       - name: Installeer builddependencies
@@ -29,6 +36,21 @@ jobs:
           node --check scripts/production-release-recovery.js
           node --check scripts/production-release-recovery-browser.js
           node --check scripts/production-release-recovery-navigation.js
+          node --check scripts/native-reload-driver-browser.js
+      - name: Installeer native browserreload-driver (vastgepind, zonder pakketserver)
+        # Twee officiële Ubuntu 24.04-pakketten uit de repository in plaats van apt-get (scripts/ci/native-reload-driver/README.md).
+        # De SHA-256 staat in deze workflow en wordt vóór de installatie gecontroleerd; alleen deze twee bestanden worden geïnstalleerd.
+        working-directory: scripts/ci/native-reload-driver
+        run: |
+          set -eu
+          sha256sum --check --strict - <<'SHA256'
+          3506c2824a74255439813f824a1629387452d52c6efd6d7916b8b54e458175e8  libxdo3_3.20160805.1-5build1_amd64.deb
+          58a202c74bce31ca2d72d4d514942a5ab6191932696adc5d21d909c9216b13cb  xdotool_3.20160805.1-5build1_amd64.deb
+          SHA256
+          dpkg --install libxdo3_3.20160805.1-5build1_amd64.deb xdotool_3.20160805.1-5build1_amd64.deb
+          command -v xdotool
+      - name: Bewijs native focus, Ctrl+R en offline serviceworker-reload met de vastgepinde driver
+        run: xvfb-run --auto-servernum node scripts/native-reload-driver-browser.js
       - name: Bouw exact herstelartifact
         env:
           WEATHER_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -53,9 +75,12 @@ jobs:
           node browser-serviceworker-upgrade.test.js 2>&1 | tee release-recovery-serviceworker.log
       - name: Bewaar hersteltestdiagnostiek
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-recovery-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
           path: release-recovery-*.log
           if-no-files-found: warn
           retention-days: 7
+      - name: Controle geen live Open-Meteo
+        if: always()
+        run: NODE_OPTIONS= node scripts/ci/geen-live-openmeteo-controle.js

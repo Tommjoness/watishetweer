@@ -57,10 +57,16 @@ const metSneeuw=start=>antwoord(start,(p,i)=>i===0||i===2?{
   "2026-12-26":{diepte:0.05,val:0.6,nat:0.5,min:-5.1,max:-0.8}
 }:null);
 
+const metOntbrekendeDiepte=start=>antwoord(start,(p,i)=>i===0?{
+  "2026-12-25":{diepte:null,val:0,nat:0,min:1,max:2},
+  "2026-12-26":{diepte:0.03,val:1,nat:0,min:-2,max:0}
+}:null);
+
 const SCENARIOS=[
   {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"81 dagen tot eerste kerstdag",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"4 dagen tot eerste kerstdag",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),verwacht:{tabellen:1,fetch:1,later:"Tweede kerstdag: de verwachting verschijnt op zondag 20 december."}},
+  {naam:"onbekend",nu:"2026-12-21T09:00:00Z",data:metOntbrekendeDiepte("2026-12-21"),verwacht:{samenvatting:"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar.",tabellen:2,fetch:1,cel:"Sneeuwdek onbekend"}},
   {naam:"fout",nu:"2026-12-21T09:00:00Z",status:503,verwacht:{tabellen:0,fetch:2,fout:true}},
   /* Eén nieuwe poging na een korte hapering van Open-Meteo (14 oktober). */
   {naam:"herstel",nu:"2026-12-21T09:00:00Z",eersteStatus:503,data:metSneeuw("2026-12-21"),verwacht:{tabellen:2,fetch:2,cel:"Sneeuwdek, 4 cm"}},

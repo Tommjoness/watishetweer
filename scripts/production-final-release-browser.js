@@ -3,6 +3,7 @@
 const fs=require("fs"),path=require("path"),assert=require("assert");
 const {chromium}=require("playwright");
 const {wachtEindtoestand}=require("./release-eindtoestand.js");
+const {openMeteoAntwoord,metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const EXPECTED=String(process.env.EXPECTED_SHA||"").trim();
@@ -10,13 +11,13 @@ if(!/^[0-9a-f]{7,40}$/i.test(EXPECTED))throw new Error("EXPECTED_SHA ontbreekt o
 const OUT=path.join(__dirname,"..","artifacts","final-release");fs.mkdirSync(OUT,{recursive:true});
 
 const locaties=[
-  {naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL"},
-  {naam:"Kansas City",lat:39.0997,lon:-94.5786,land:"US"},
-  {naam:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP"},
-  {naam:"Dubai",lat:25.2048,lon:55.2708,land:"AE"},
-  {naam:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO"},
-  {naam:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR"},
-  {naam:"Zuidpool",lat:-90,lon:0,land:"AQ",vrijeNaam:true}
+  {naam:"Amsterdam",lat:52.3676,lon:4.9041,land:"NL",tz:"Europe/Amsterdam"},
+  {naam:"Kansas City",lat:39.0997,lon:-94.5786,land:"US",tz:"America/Chicago"},
+  {naam:"Kathmandu",lat:27.7172,lon:85.3240,land:"NP",tz:"Asia/Kathmandu"},
+  {naam:"Dubai",lat:25.2048,lon:55.2708,land:"AE",tz:"Asia/Dubai"},
+  {naam:"Longyearbyen",lat:78.2232,lon:15.6469,land:"NO",tz:"Arctic/Longyearbyen"},
+  {naam:"Ushuaia",lat:-54.8019,lon:-68.3030,land:"AR",tz:"America/Argentina/Ushuaia"},
+  {naam:"Zuidpool",lat:-90,lon:0,land:"AQ",vrijeNaam:true,tz:null}
 ];
 const viewports=[[1100,900],[1280,800],[1366,936],[1440,900],[1660,900],[1920,1080],[320,844],[360,844],[390,844],[430,932]];
 const COORD_TOL=0.0011;
@@ -30,7 +31,6 @@ function urlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.ge
 function forecastUrlPastBijLocatie(url,l){try{const u=new URL(url),lat=u.searchParams.get("latitude"),lon=u.searchParams.get("longitude");return lat!==null&&lon!==null&&coordPast(lat,l.lat)&&coordPast(lon,l.lon);}catch(e){return false;}}
 /* De app toont vorst met een echt minteken (U+2212); lees dat als gewoon minteken. */
 function getal(t){const m=/[-\u2212]?\d+(?:[.,]\d+)?/.exec(String(t||""));return m?Number(m[0].replace("\u2212","-").replace(",",".")):null;}
-const slaap=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 /* Minimum aantal volledige uurrijen in de desktopuurtabel (vanaf 1100px). Enige bron
    voor wachtKlaar, de locatiecontrole en de viewportcontrole: 1366–1439px 7 rijen,
@@ -115,21 +115,15 @@ async function ontdekVolledigeForecastUrl(browser,l){
   }
 }
 
-async function haalLiveForecast(url,naam){
-  let laatsteFout=null;
-  for(let poging=1;poging<=3;poging++){
-    try{
-      const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-final-release-monitor/1.0"},signal:AbortSignal.timeout(15000)});
-      if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      const bron=await response.json();
-      if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
-      return {bron,poging};
-    }catch(e){
-      laatsteFout=String(e&&e.message||e);
-      if(poging<3)await slaap(500*poging);
-    }
-  }
-  throw new Error(`${naam}: live Open-Meteo-bron niet bereikbaar na drie begrensde pogingen: ${laatsteFout}`);
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026):
+   de exacte productie-URL krijgt een deterministisch, contractgetrouw antwoord
+   (scripts/openmeteo-fixture.js); alle controles blijven ongewijzigd. Echte
+   beschikbaarheid: docs/open-meteo-monitoring.md. */
+const tzVoor=tzUitLijst(locaties);
+function bronFixture(url,naam){
+  const {status,json}=openMeteoAntwoord(url,{nu:Date.now(),tzVoor});
+  if(status!==200||!isVolledigeBron(json))throw new Error(`${naam}: productie-URL gaf geen geldige fixture (HTTP ${status}${json&&json.reason?": "+json.reason:""})`);
+  return {bron:json,poging:1};
 }
 
 async function lees(page){return page.evaluate(()=>{
@@ -176,18 +170,17 @@ async function lees(page){return page.evaluate(()=>{
 });}
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor});
   const rapport={expectedSha:EXPECTED,root:ROOT,startedAt:new Date().toISOString(),locations:[],viewports:[],failureSafety:{},screenshots:[]};
   const liveBronnen=new Map();
   try{
     /* Wereldwijde inhoud: de productiepagina bepaalt de exacte provider-URL.
-       De monitor haalt diezelfde URL live op met begrensde netwerkretry en voert
-       exact die live JSON terug aan de pagina. Zo blijft bronwaarheid streng,
-       zonder dat een trage browserresponse de UI-bewijsrun laat flappen. */
+       De monitor beantwoordt diezelfde URL met de contractgetrouwe fixture en
+       vergelijkt de UI met exact die JSON. */
     for(const l of locaties){
       const sourceUrl=await ontdekVolledigeForecastUrl(browser,l);
       assert(forecastUrlPastBijLocatie(sourceUrl,l),`${l.naam}: forecast-URL wijkt af van gevraagde coördinaten`);
-      const live=await haalLiveForecast(sourceUrl,l.naam),bron=live.bron;
+      const live=bronFixture(sourceUrl,l.naam),bron=live.bron;
       const context=await browser.newContext({viewport:{width:1366,height:936},serviceWorkers:"block",locale:"nl-NL"});
       const page=await context.newPage(),pageErrors=[];page.on("pageerror",e=>pageErrors.push(String(e)));
       try{
@@ -224,17 +217,17 @@ async function lees(page){return page.evaluate(()=>{
         assert.deepEqual(pageErrors,[],`${l.naam}: pageerrors ${pageErrors.join(' | ')}`);
         liveBronnen.set(l.naam,bron);
         rapport.locations.push({name:l.naam,displayLabel:uit.label,status:"source-verified",sourceAttempts:live.poging,timezone:bron.timezone,currentTime:bron.current&&bron.current.time,raw:{temperature_2m:bron.current&&bron.current.temperature_2m,apparent_temperature:bron.current&&bron.current.apparent_temperature,wind_speed_10m:bron.current&&bron.current.wind_speed_10m,relative_humidity_2m:bron.current&&bron.current.relative_humidity_2m},ui:{temperature:uit.temp,feels:uit.feels,wind:uit.wind,humidity:uit.humidity},pageOverflow:uit.pageOverflow});
-        console.log(`FINAL LIVE ${l.naam}: source-verified via exacte productie-URL als ${uit.label} (bronpoging ${live.poging}).`);
+        console.log(`FINAL ${l.naam}: source-verified via exacte productie-URL (contractgetrouwe fixture) als ${uit.label}.`);
       }finally{await context.close();}
     }
 
     const amsterdamBron=liveBronnen.get("Amsterdam"),kansasCityBron=liveBronnen.get("Kansas City");
-    assert(amsterdamBron,"Amsterdam: live source-verified fixture ontbreekt voor layoutbewijs");
-    assert(kansasCityBron,"Kansas City: live source-verified fixture ontbreekt voor cachebewijs");
-    rapport.renderFixture={source:"live-source-verified-same-run",locations:["Amsterdam","Kansas City"]};
+    assert(amsterdamBron,"Amsterdam: source-verified fixture ontbreekt voor layoutbewijs");
+    assert(kansasCityBron,"Kansas City: source-verified fixture ontbreekt voor cachebewijs");
+    rapport.renderFixture={source:"contract-fixture-source-verified-same-run",locations:["Amsterdam","Kansas City"]};
 
     /* Exacte afgesproken viewports tegen productie. De providerdata is hierboven
-       in dezelfde run live geverifieerd; vanaf hier meten we deterministisch de
+       in dezelfde run tegen de UI geverifieerd; vanaf hier meten we deterministisch de
        rendering van exact die response zodat een extra provider-timeout geen
        layoutbewijs kan veranderen in een beschikbaarheidstest. */
     for(const [w,h] of viewports){

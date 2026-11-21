@@ -3,6 +3,7 @@
 const assert=require("assert");
 const {chromium}=require("playwright");
 const {zichtbaarGetal,verifieerBronwaarheid}=require("./production-source-truth.js");
+const {openMeteoAntwoord,metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
 
 const ROOT=String(process.env.PRODUCTION_ROOT||"https://watishetweer.nl").replace(/\/$/,"");
 const verwacht=String(process.env.EXPECTED_SHA||"").trim();
@@ -50,8 +51,8 @@ const begrensdeMs=(naam,standaard,min,max)=>{
   return Number.isFinite(waarde)?Math.min(max,Math.max(min,Math.round(waarde))):standaard;
 };
 const BRON_PACING_MS=begrensdeMs("WORLDWIDE_SOURCE_PACING_MS",5000,1000,30000);
-const BRON_RETRY_BACKOFF_MS=begrensdeMs("WORLDWIDE_SOURCE_RETRY_BACKOFF_MS",5000,1000,30000);
 const query=locatie=>new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon),plaats:locatie.naam,land:locatie.land});
+const {verzamelLiveBronnen}=require("./worldwide-bronvolgorde.js");
 
 async function ontdekVolledigeForecastUrl(browser,locatie){
   const context=await browser.newContext({viewport:{width:1363,height:936},serviceWorkers:"block",locale:"nl-NL"});
@@ -71,41 +72,18 @@ async function ontdekVolledigeForecastUrl(browser,locatie){
   }finally{clearTimeout(timer);await context.close();}
 }
 
-async function haalJson(url){
-  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"watishetweer-worldwide-monitor/1.0"},signal:AbortSignal.timeout(15000)});
-  if(!response.ok)throw new Error(`HTTP ${response.status}`);
-  const bron=await response.json();
-  if(!isVolledigeBron(bron))throw new Error("onvolledige forecastrespons");
-  return bron;
-}
-/* Open-Meteo knijpt de gedeelde IP-adressen van GitHub-runners geregeld af
-   (3 oktober 2026, 19:57: Punta Arenas na drie pogingen niet bereikbaar). Dan
-   halen we dezelfde live verwachting via de eigen reserveroute van de site
-   (/api/forecast), die hetzelfde Open-Meteo-contract levert en die de app zelf
-   ook gebruikt als Open-Meteo hapert. Er wordt niets overgeslagen: alle
-   controles hieronder draaien op die live data. Faalt ook de reserveroute, dan
-   blijft de monitor rood. */
-async function haalLiveForecast(url,naam,locatie){
-  let laatsteFout=null;
-  for(let poging=1;poging<=3;poging++){
-    try{
-      return {bron:await haalJson(url),poging,via:"Open-Meteo"};
-    }catch(e){
-      laatsteFout=String(e&&e.message||e);
-      if(poging<3)await slaap(BRON_RETRY_BACKOFF_MS*poging);
-    }
-  }
-  const reserve=ROOT+"/api/forecast?"+new URLSearchParams({lat:String(locatie.lat),lon:String(locatie.lon)});
-  let reserveFout=null;
-  for(let poging=1;poging<=2;poging++){
-    try{
-      return {bron:await haalJson(reserve),poging,via:"reserveroute /api/forecast (Open-Meteo: "+laatsteFout+")"};
-    }catch(e){
-      reserveFout=String(e&&e.message||e);
-      if(poging<2)await slaap(BRON_RETRY_BACKOFF_MS);
-    }
-  }
-  throw new Error(`${naam}: live bron niet bereikbaar: Open-Meteo na drie begrensde pogingen (${laatsteFout}) en de reserveroute na twee (${reserveFout})`);
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026):
+   de exacte forecast-URL die de productiepagina opbouwt, krijgt een
+   deterministisch, contractgetrouw antwoord (scripts/openmeteo-fixture.js) in
+   plaats van een live ophaling. Alle controles hieronder blijven ongewijzigd en
+   vergelijken de zichtbare UI met precies dat antwoord. Echte beschikbaarheid
+   van Open-Meteo wordt buiten GitHub Actions bewaakt (docs/open-meteo-monitoring.md). */
+const tzVoor=tzUitLijst(locaties);
+function bronFixture(url,naam){
+  const {status,json}=openMeteoAntwoord(url,{nu:Date.now(),tzVoor});
+  if(status!==200)throw new Error(`${naam}: productie-URL is geen geldige Open-Meteo-aanvraag (HTTP ${status}: ${json&&json.reason})`);
+  if(!isVolledigeBron(json))throw new Error(`${naam}: fixture is onvolledig`);
+  return {bron:json,poging:1,via:"fixture"};
 }
 
 async function installeerForecastFixture(page,bron){
@@ -143,29 +121,38 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
 }
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor});
   try{
-    /* Laat de productiepagina de exacte provider-URL bepalen. Haal die URL daarna
-       live op met begrensde retry en gebruik exact die response voor beide
-       viewports. Daarmee blijft bronwaarheid live, terwijl een ontbrekend
-       browser-response-event de bewijsrun niet meer kan laten flappen. */
-    const liveBronnen=new Map();
-    for(const [index,locatie] of locaties.entries()){
-      if(index>0)await slaap(BRON_PACING_MS);
-      const sourceUrl=await ontdekVolledigeForecastUrl(browser,locatie);
-      verifieerGeenPressureQuery(sourceUrl,locatie.naam);
-      const live=await haalLiveForecast(sourceUrl,locatie.naam,locatie);
-      liveBronnen.set(locatie.naam,live.bron);
-      console.log(live.via==="Open-Meteo"
-        ?`BRON LIVE ${locatie.naam}: exacte pressure-vrije productie-URL opgehaald (poging ${live.poging}).`
-        :`BRON LIVE ${locatie.naam}: via ${live.via} (poging ${live.poging}).`);
-    }
+    /* Laat de productiepagina de exacte provider-URL bepalen en beantwoord die
+       URL met de contractgetrouwe fixture; exact dat antwoord geldt voor beide
+       viewports.
+       Volgorde (scripts/worldwide-bronvolgorde.js): eerst alle URL's ontdekken
+       met de bestaande pauze ertussen, daarna alle antwoorden direct
+       achter elkaar ophalen, zodat de open verbinding hergebruikt kan worden. */
+    const bronTijd=new Map();
+    let ophalenStart=null;
+    const liveBronnen=await verzamelLiveBronnen({
+      locaties,
+      ontdek:locatie=>ontdekVolledigeForecastUrl(browser,locatie),
+      controleerUrl:(sourceUrl,locatie)=>verifieerGeenPressureQuery(sourceUrl,locatie.naam),
+      haal:(sourceUrl,locatie)=>{
+        if(ophalenStart===null)ophalenStart=Date.now();
+        return bronFixture(sourceUrl,locatie.naam);
+      },
+      pauzeMs:BRON_PACING_MS,
+      slaap,
+      meld:(locatie,live)=>{
+        bronTijd.set(locatie.naam,Date.now());
+        console.log(`BRON FIXTURE ${locatie.naam}: exacte pressure-vrije productie-URL beantwoord met de contractgetrouwe fixture (geen live Open-Meteo in CI).`);
+      }
+    });
+    const ophalenMs=Date.now()-ophalenStart,oudsteBron=Math.min(...bronTijd.values()),controleStart=Date.now();
 
     for(const scherm of schermen){
       const context=await browser.newContext({viewport:{width:scherm.width,height:scherm.height},serviceWorkers:"block",locale:"nl-NL"});
       for(const locatie of locaties){
         const bron=liveBronnen.get(locatie.naam);
-        assert(isVolledigeBron(bron),`${scherm.naam}/${locatie.naam}: live bronfixture ontbreekt`);
+        assert(isVolledigeBron(bron),`${scherm.naam}/${locatie.naam}: bronfixture ontbreekt`);
         const page=await context.newPage(),pageErrors=[];
         page.on("pageerror",e=>pageErrors.push(String(e)));
         await installeerForecastFixture(page,bron);
@@ -254,11 +241,11 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
           assert.fail(`${scherm.naam}/${locatie.naam}: enkelvoudtemperatuur gebruikt 'graden'; DOM=${JSON.stringify(diagnose)}`);
         }
         for(const [i,r] of uit.rijen.entries())assert(String(r.neerslagHoofd||r.neerslagHoeveelheid||r.neerslagAria).trim(),`${scherm.naam}/${locatie.naam}: dagrij ${i+1} heeft leeg neerslagveld`);
-        /* De providerresponse blijft exact zoals live ontvangen. Alleen de horizon
+        /* De providerresponse blijft exact zoals ontvangen. Alleen de horizon
            voor de resterende huidige dag volgt dezelfde actuele lokale klok
            als de pagina. UV volgt de bestaande Q3-guard voor een stale lokale
            kalenderdag; temperatuur, wind, thema en alle overige bronvelden
-           blijven tegen de ongewijzigde live response gecontroleerd. */
+           blijven tegen de ongewijzigde response gecontroleerd. */
         const bronUit=verifieerBronwaarheid(bron,uit,`${scherm.naam}/${locatie.naam}`,uit.actueleLokaleTijd);
         const klokVerwacht=new Intl.DateTimeFormat("nl-NL",{timeZone:bron.timezone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
         assert(klokVerschil(uit.klok,klokVerwacht)<=1,`${scherm.naam}/${locatie.naam}: lokale klok ${uit.klok} wijkt af van ${bron.timezone} (${klokVerwacht})`);
@@ -268,6 +255,7 @@ async function wachtDataKlaar(page,locatie,timeout=25000){
       }
       await context.close();
     }
-    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met live bronvergelijking en pressure-retirement.`);
+    console.log(`BRONLEEFTIJD: ${liveBronnen.size} bronnen opgehaald in ${Math.round(ophalenMs/100)/10} s; oudste bron ${Math.round((controleStart-oudsteBron)/1000)} s oud bij de eerste browsercontrole en ${Math.round((Date.now()-oudsteBron)/1000)} s bij de laatste.`);
+    console.log(`PRODUCTIE-BROWSERMONITOR GESLAAGD: ${verwacht}; ${locaties.length} locaties × mobiel/desktop met bronvergelijking (contractgetrouwe fixture, geen live Open-Meteo) en pressure-retirement.`);
   }finally{await browser.close();}
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});

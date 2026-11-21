@@ -11,6 +11,7 @@ const OUT=path.join(__dirname,"..","public");
 const ROOT_HTML=path.join(OUT,"index.html");
 const MARKER_NAV="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const MARKER_ROUTE="<!-- WEATHER NOW PLAATSROUTE -->";
+const LEGE_PLAATSKOP='<h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>';
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
 const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
 const TITLE_SYNC_HAKEN=Object.freeze([
@@ -134,12 +135,21 @@ function voegRouteContextToe(html,loc){
   return html.replace(navHtml(),blok+"\n"+navHtml());
 }
 
+/* Statische plaatsroutes kennen hun plaatsnaam al vóór de forecastlaadstap.
+   De bestaande runtime mag de kop, inclusief de klok, daarna blijven verversen. */
+function voegVroegePlaatsnaamToe(html,loc){
+  if(tel(html,LEGE_PLAATSKOP)!==1)throw new Error(`${loc.slug}: lege plaatskop ontbreekt of is dubbel.`);
+  const naam=escHtml(loc.naam);
+  return html.replace(LEGE_PLAATSKOP,`<h2 id="place" aria-label="${naam}">${naam}<span id="plaatstijd" aria-hidden="true"></span></h2>`);
+}
+
 function maakPlaatsPagina(rootHtml,loc){
   let html=vervangMeta(rootHtml,loc);
   html=voegRouteUrlBeleidToe(html,loc.slug);
   html=voegRouteTitelBeleidToe(html,loc.slug);
   html=voegRouteToe(html,loc);
   html=voegRouteContextToe(html,loc);
+  html=voegVroegePlaatsnaamToe(html,loc);
   return html;
 }
 

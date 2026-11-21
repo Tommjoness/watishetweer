@@ -436,6 +436,14 @@
     "Mail naar support@watishetweer.nl": "Email support@watishetweer.nl",
     "Weer per plaats": "Weather by place",
     "Populaire plaatsen in Nederland": "Popular places in the Netherlands",
+    "Menu": "Menu",
+    "Weer en plaatsen": "Weather and places",
+    "Actueel weer": "Current weather",
+    "Sterren en nacht": "Stars and night",
+    "Nachtzicht vanavond": "Stargazing tonight",
+    "Seizoenen en feestdagen": "Seasons and holidays",
+    "Over en informatie": "About and information",
+    "Contact": "Contact",
     "Zoek een plaats in de lijst": "Search for a place in the list",
     "Plaatsen per beginletter": "Places by first letter",
     "Gemiddelden per maand": "Monthly averages",
@@ -566,6 +574,8 @@
     "Geen betrouwbare kans beschikbaar": "No reliable chance available",
     "Kans en hoeveelheid spreken elkaar tegen": "Chance and amount contradict each other",
     "Kans en dagsom zijn verschillende modelwaarden en hoeven daarom niet één op één samen te vallen.": "The chance and the daily total are separate model values, so they do not have to match exactly.",
+    "Waarom 0% kans bij neerslag?": "Why 0% chance despite predicted precipitation?",
+    "Neerslagkans en verwachte hoeveelheid zijn afzonderlijke modelwaarden. Ze kunnen verschillen; 0% is geen garantie dat het droog blijft.": "The chance and expected amount of precipitation are separate model estimates. They can differ; 0% does not guarantee dry weather.",
     "Minimum en maximum gelden voor de volledige kalenderdag.": "Minimum and maximum apply to the full calendar day.",
     /* Verborgen labels in de dagregel (toegankelijke naam). */
     "Maximale wind": "Maximum wind", "Maximale wind onbekend": "Maximum wind unknown", "Minimum onbekend": "Minimum unknown", "Maximum onbekend": "Maximum unknown",
@@ -604,7 +614,9 @@
     "De neerslagverwachting voor de komende twee uur is onzeker.": "The precipitation forecast for the next two hours is uncertain.",
     "In de komende twee uur is neerslag mogelijk.": "Precipitation is possible in the next two hours.",
     "In de komende twee uur kunnen enkele druppels vallen.": "A few drops may fall in the next two hours.",
+    "Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.": "According to the KNMI radar forecast, a few drops may fall in the next two hours.",
     "Het is nu droog. In de komende twee uur kunnen enkele druppels vallen.": "It is dry now. A few drops may fall in the next two hours.",
+    "Het is nu droog. Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.": "It is dry now. According to the KNMI radar forecast, a few drops may fall in the next two hours.",
     "Het is nu droog. In de komende twee uur wordt neerslag verwacht.": "It is dry now. Precipitation is expected in the next two hours.",
     "Er valt nu neerslag en dat blijft de komende twee uur zo.": "There is precipitation now and it will continue for the next two hours.",
     "Het regent nu en dat houdt de komende twee uur aan.": "It is raining now and will continue for the next two hours.",
@@ -634,6 +646,11 @@
     "Vannacht blijft de temperatuur ongeveer gelijk.": "Tonight the temperature stays about the same.",
 
     /* Nachtzicht */
+    /* Alleen de officiële Dark Sky Park-informatie voor Lauwersmeer. */
+    "Bron:": "Source:",
+    "Waar kun je sterren kijken in Nationaal Park Lauwersmeer?": "Where can you go stargazing in Lauwersmeer National Park?",
+    "Nationaal Park Lauwersmeer is sinds oktober 2016 officieel erkend als Dark Sky Park. Bij helder weer en weinig storende verlichting kun je er veel sterren zien en soms ook de Melkweg. De parkorganisatie noemt drie geschikte plekken: Activiteitencentrum Lauwersnest, hemelplatform Achter de Zwarten bij Suyderoogh en hemelplatform Vlinderbalg aan de Strandweg.": "Lauwersmeer National Park has been officially recognised as a Dark Sky Park since October 2016. On a clear night, away from intrusive lighting, you can see many stars and sometimes the Milky Way. The park organisation recommends three locations: Lauwersnest Visitor Centre, the Achter de Zwarten sky-viewing platform near Suyderoogh, and the Vlinderbalg platform on Strandweg.",
+    "Op de wegen en paden gelden volgens de parkorganisatie 's nachts in beginsel dezelfde toegangsregels als overdag; militair oefenterrein Marnewaard is uitgezonderd. Controleer vóór je bezoek de actuele informatie van het park en blijf op toegankelijke routes. De verwachting en lichtvervuilingsklasse hierboven gelden voor een representatief punt in het park; plaatselijke omstandigheden kunnen afwijken.": "According to the park organisation, the usual rules for walking on roads and paths also apply at night, except in the Marnewaard military training area. Check the park's current visitor information before travelling and stay on accessible routes. The forecast and light pollution category above refer to a representative point in the park; conditions may differ at your exact viewing location.",
     "Hoe goed je 's nachts de sterren kunt zien, hangt af van bewolking, zicht, mist, neerslag, vocht, wind en maanlicht.": "How well you can see the stars at night depends on cloud, visibility, fog, precipitation, humidity, wind and moonlight.",
     "Globale zichtscore op basis van de huidige verwachting": "Approximate stargazing score based on the current forecast",
     "Voorlopige zichtscore op basis van de huidige verwachting": "Provisional stargazing score based on the current forecast",
@@ -719,6 +736,35 @@
     /* Laden en fouten */
     "Weer vandaag en 7-daagse verwachting | watishetweer.nl": "Weather today and 7-day forecast | watishetweer.nl",
     "Het weer vandaag, morgen en per uur | watishetweer.nl": "The weather today, tomorrow and by the hour | watishetweer.nl",
+    /* Metadata in de head (description, og:title, og:description, twitter:*). Alleen weergave in de browser:
+       de HTML die de server levert blijft Nederlands (geen aparte Engelse URL). */
+    "Het actuele weer voor elke plek, in Nederland en wereldwijd: hoeveel graden het nu is, regen in de komende uren, het weer per uur, morgen en de 7-daagse verwachting.":
+      "The current weather for any place, in the Netherlands and worldwide: how warm it is now, rain over the coming hours, the hourly weather, tomorrow and the 7-day forecast.",
+    "Bekijk het actuele weer en de 7-daagse verwachting voor grote plaatsen in Nederland.": "See the current weather and the 7-day forecast for large places in the Netherlands.",
+    "Kies een plaats voor neerslag, lokale tijden, luchtkwaliteit en nachtzicht.": "Choose a place for precipitation, local times, air quality and stargazing.",
+    "Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt, welke bronnen worden gebruikt en hoe je de informatie moet lezen.":
+      "Read how watishetweer.nl brings together current weather information and model forecasts, which sources are used and how to read the information.",
+    "Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt en welke bronnen worden gebruikt.":
+      "Read how watishetweer.nl brings together current weather information and model forecasts, and which sources are used.",
+    "Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag, bezoekstatistieken en externe databronnen.":
+      "Read how watishetweer.nl handles location data, local storage, visitor statistics and external data sources.",
+    "Sterren kijken in Nederland: nationale parken": "Stargazing in the Netherlands: national parks",
+    "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.":
+      "Compare estimated light pollution and tonight's conditions in selected Dutch national parks.",
+    "Indicatie per nacht met de beste periode, bewolking per uur, de maan en de lichtvervuiling.":
+      "A night-by-night indication with the best period, hourly cloud cover, the moon and light pollution.",
+    "De maan vandaag: fase, opkomst en ondergang": "The moon today: phase, moonrise and moonset",
+    "Welke maanfase is het vandaag, hoeveel procent is de maan verlicht en wanneer komt hij op en gaat hij onder?":
+      "What is today's moon phase, how much of the moon is lit and when does it rise and set?",
+    "Met de datums van de volgende nieuwe en volle maan.": "With the dates of the next new and full moon.",
+    "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
+      "Rain, sunshine and temperature per day in seven large places, with the holiday dates.",
+    "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
+      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates.",
+    "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
+      "Rain, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
+    "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
+      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
     "Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.": "See the current weather, precipitation for the coming hours, the 7-day forecast, air quality and stargazing conditions for places worldwide.",
     "Op een later moment": "At a later time",
     "op een later moment": "at a later time",
@@ -741,6 +787,7 @@
     "Google Analytics is uitgeschakeld.": "Google Analytics is turned off.",
     "Google Analytics staat op dit apparaat uit, omdat je PostHog en Google Analytics hebt uitgezet.": "Google Analytics is off on this device because you have turned off PostHog and Google Analytics.",
     "PostHog en Google Analytics staan uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies.": "PostHog and Google Analytics are off. Cloudflare continues to measure visits and loading performance without cookies.",
+    "PostHog en Google Analytics staan uit op deze pagina. De afmelding kon niet worden bewaard.": "PostHog and Google Analytics are off on this page. Your opt-out could not be saved.",
     "Op dit apparaat staan de statistieken aan.": "Analytics are enabled on this device.",
     "Er is nog geen keuze opgeslagen.": "No choice has been saved yet.",
     "Lokale gegevens gewist.": "Local data cleared.",
@@ -753,11 +800,16 @@
     "De maan vandaag ›": "The moon today ›",
     "De maan vandaag": "The moon today",
     "Sterren kijken": "Stargazing",
-    "Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.":
-      "Will it be a white Christmas? Once Christmas falls within the 7-day forecast, the snow forecast for Christmas Day and Boxing Day appears here, for De Bilt and six large places across the Netherlands.",
+    "Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.":
+      "Will we have a white Christmas? While Christmas is beyond the 7-day forecast, it is not possible to make a reliable prediction. Once each Christmas day falls within that range, we show the forecast snow cover for De Bilt and six other places.",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
+    /* Witte kerst: KNMI-definitie en historische metingen (2026). */
+    "Waarom is sneeuw met kerst niet altijd een officiële witte kerst?": "Why does snow at Christmas not always count as an official white Christmas?",
+    "Een paar sneeuwvlokken tijdens kerst zijn niet genoeg. Voor een officiële witte kerst moet in De Bilt op zowel 25 als 26 december om 09:00 uur een gesloten sneeuwdek liggen. Elders in Nederland kan het wit zijn terwijl aan die landelijke definitie niet wordt voldaan.": "A few snowflakes at Christmas are not enough. For an official white Christmas in the Netherlands, there must be continuous snow cover in De Bilt at 09:00 on both 25 and 26 December. Other parts of the country can be snowy without meeting this national definition.",
+    "Wanneer hadden we voor het laatst een witte kerst?": "When was the last official white Christmas?",
+    "Volgens het KNMI waren er sinds 1901 acht officiële witte kersten: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010. De laatste twee volgden dus direct op elkaar. In De Bilt lag er in 2009 op eerste kerstdag 9 centimeter sneeuw en op tweede kerstdag 4 centimeter; in 2010 op beide dagen 5 centimeter.": "According to KNMI, there have been eight official white Christmases since 1901: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 and 2010. The most recent two happened in consecutive years. In De Bilt, snow depth was 9 centimetres on Christmas Day and 4 centimetres on Boxing Day in 2009, and 5 centimetres on both days in 2010.",
     "Bron: KNMI": "Source: KNMI",
     "Het weer voor jouw plaats": "The weather for your location",
     "jouw plaats": "your location",
@@ -768,6 +820,7 @@
     "Verwachting laden…": "Loading forecast…",
     "Geen sneeuw, droog": "No snow, dry",
     "Geen gegevens": "No data",
+    "Sneeuwdek onbekend": "Snow cover unknown",
     "officiële meetplaats": "official measuring site",
     "Sneeuwdek is de verwachte sneeuwhoogte in de ochtend. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Snow cover is the expected snow depth in the morning. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
@@ -833,6 +886,9 @@
     "Zie ook": "See also",
     "Naar dag": "Go to day",
     "Alle regio's": "All regions",
+    "Landelijk overzicht van alle schoolvakantieregio's.": "National overview of all school holiday regions.",
+    "Schoolvakantieregio bij je plaats: gemeentegrenzen uit BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) en de Wijk- en buurtkaart (CBS en Kadaster), bewerkt door watishetweer.nl.":
+      "School holiday region for your location: municipal boundaries from BRK Bestuurlijke Gebieden (Kadaster, CC BY 4.0) and the Wijk- en buurtkaart (CBS and Kadaster), adapted by watishetweer.nl.",
     "alle regio's": "all regions",
     "Overwegend droog: in minder dan de helft van de plaatsen valt 1 mm neerslag of meer. Sneeuw is de verwachte hoeveelheid verse sneeuw op die dag. Zon is het verwachte aantal uren zonneschijn. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.":
       "Mostly dry: 1 mm of precipitation or more falls in fewer than half of the places. Snow is the expected amount of fresh snow on that day. Sunshine is the expected number of hours of sunshine. A forecast a week ahead can still change considerably; this page always shows the latest. Source: Open-Meteo.",
@@ -855,12 +911,13 @@
     /* Verdiepingspagina's /maan/, /nachtzicht/ en de parkpagina's (audit 15 oktober). */
     "De maan vandaag": "The moon today",
     "De maan vandaag: fase, opkomst en ondergang | watishetweer.nl": "The moon today: phase, moonrise and moonset | watishetweer.nl",
-    "Hoe vol de maan is en hoe hoog hij staat, bepaalt hoeveel sterren je ziet.": "How full the moon is and how high it stands determine how many stars you can see.",
-    "Bij een volle maan verdwijnt de Melkweg; rond nieuwe maan is de hemel het donkerst.": "At full moon the Milky Way disappears; around new moon the sky is at its darkest.",
+    "Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.":
+      "What is the Moon like today? See the current moon phase, percentage illuminated, and moonrise and moonset times for De Bilt. Moonlight can make faint stars and the Milky Way harder to see; cloud cover and light pollution also matter for stargazing.",
     "De op- en ondergangstijden worden geladen.": "Loading moonrise and moonset times.",
+    "De maanopkomst en maanondergang worden bij het openen berekend.": "Moonrise and moonset times are calculated when the page opens.",
     "De komende fasen": "The coming phases",
     "Nederlandse tijd": "Dutch time",
-    "; elders in Nederland scheelt het hooguit enkele minuten": "; elsewhere in the Netherlands they differ by a few minutes at most",
+    "; de tijden kunnen per plaats en datum verschillen": "; times may differ by location and date",
     "Kies je in de app een plaats, dan gelden ze voor die plaats.": "If you choose a place in the app, they apply to that place.",
     "De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms).": "The times of the phases are calculated according to Meeus (Astronomical Algorithms).",
     "Het percentage en de fasen gelden overal op aarde.": "The percentage and the phases are the same everywhere on Earth.",
@@ -868,10 +925,10 @@
     "Maanfoto: NASA's Scientific Visualization Studio.": "Moon photo: NASA's Scientific Visualization Studio.",
     "Sterren kijken": "Stargazing",
     "Sterren kijken in Nederland": "Stargazing in the Netherlands",
-    "Sterren kijken in Nederland: de donkerste plekken | watishetweer.nl": "Stargazing in the Netherlands: the darkest places | watishetweer.nl",
+    "Sterren kijken in Nederland: nationale parken | watishetweer.nl": "Stargazing in the Netherlands: national parks | watishetweer.nl",
     "Waar het donker is en hoe de komende nachten worden, staat op Sterren kijken in Nederland.": "Where it is dark and what the coming nights will be like is on Stargazing in the Netherlands.",
-    "De Nationale Parken behoren tot de donkerste plekken van Nederland.": "The National Parks are among the darkest places in the Netherlands.",
-    "Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht.": "They are listed below, darkest first, with the indication for tonight.",
+    "De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog.": "Parks are grouped by estimated light pollution, from low to high.",
+    "Binnen iedere categorie staan ze op alfabetische volgorde.": "Within each category, parks are listed in alphabetical order.",
     "Kies een park voor de komende nachten en de bewolking per uur.": "Choose a park for the coming nights and the hourly cloud cover.",
     "De verwachting voor vannacht wordt geladen.": "Loading tonight's forecast.",
     "De verwachting voor vannacht kon niet worden geladen.": "Tonight's forecast could not be loaded.",
@@ -969,10 +1026,10 @@
       "The statistics that run without consent work without cookies. Our product statistics (PostHog, EU) receive no search terms, place names or coordinates; to count returning visits, your browser only stores a random browser code that expires after 90 days.",
     "Google Analytics staat alleen aan als je daar zelf toestemming voor geeft. Dan kan het cookies plaatsen en ziet het welke plaatspagina je opent. Je zet het hieronder altijd weer uit.":
       "Google Analytics is only on if you give consent yourself. It can then set cookies and see which place page you open. You can always turn it off again below.",
-    "Weer voor een gekozen plaats (Open-Meteo, KNMI, MeteoAlarm, NWS, reserveleveranciers, plaatsnaamdiensten): de gekozen positie, om het gevraagde weer te tonen. Grondslag: gerechtvaardigd belang, namelijk de dienst leveren waar je zelf om vraagt. Onze server heeft geen database en slaat deze aanvragen niet op.":
-      "Weather for a chosen place (Open-Meteo, KNMI, MeteoAlarm, NWS, backup providers, place-name services): the chosen position, to show the weather you asked for. Legal basis: legitimate interest, namely providing the service you request. Our server has no database and does not store these requests.",
-    "Statistieken zonder toestemming (PostHog Cloud EU en, als die actief is, Cloudflare Web Analytics): begrijpen of de site technisch en praktisch goed werkt en of bezoekers terugkomen, zonder cookies en zonder profiel. Grondslag: gerechtvaardigd belang. PostHog bewaart de gegevens één jaar.":
-      "Statistics without consent (PostHog Cloud EU and, when active, Cloudflare Web Analytics): understanding whether the site works well, technically and in practice, and whether visitors return, without cookies and without a profile. Legal basis: legitimate interest. PostHog keeps the data for one year.",
+    "Weer voor een gekozen plaats (Open-Meteo, KNMI, MeteoAlarm, NWS, reserveleveranciers, plaatsnaamdiensten): de gekozen positie, om het gevraagde weer te tonen. Grondslag: gerechtvaardigd belang, namelijk de dienst leveren waar je zelf om vraagt. Cloudflare bewaart geschikte API-antwoorden tijdelijk in een gedeelde cache. De cachesleutel bevat de opgevraagde coördinaten. De bewaartijd verschilt per API.":
+      "Weather for a chosen place (Open-Meteo, KNMI, MeteoAlarm, NWS, backup providers, place-name services): the chosen position, to show the weather you asked for. Legal basis: legitimate interest, namely providing the service you request. Cloudflare temporarily stores eligible API responses in a shared cache. The cache key contains the requested coordinates. The retention period varies by API.",
+    "Statistieken zonder toestemming (PostHog Cloud EU en, als die actief is, Cloudflare Web Analytics): begrijpen of de site technisch en praktisch goed werkt en of bezoekers terugkomen, zonder cookies en zonder profiel. Grondslag: gerechtvaardigd belang.":
+      "Statistics without consent (PostHog Cloud EU and, when active, Cloudflare Web Analytics): understanding whether the site works well, technically and in practice, and whether visitors return, without cookies and without a profile. Legal basis: legitimate interest.",
     "Google Analytics 4: alleen na jouw toestemming. Grondslag: toestemming, die je hierboven altijd kunt intrekken. Gegevens op gebruikers- en eventniveau hoogstens 14 maanden.":
       "Google Analytics 4: only with your consent. Legal basis: consent, which you can always withdraw above. User-level and event-level data for at most 14 months.",
     "Hosting en beveiliging (Cloudflare): technische gegevens zoals het IP-adres, om de site veilig en bereikbaar te houden. Grondslag: gerechtvaardigd belang. Bewaring volgens de voorwaarden van Cloudflare.":
@@ -985,8 +1042,8 @@
       "The last chosen place, saved places, theme setting and a recent weather snapshot are stored locally in your browser so the site is faster and stays usable during a brief outage. There is no user database of our own that links these preferences to an account. The PostHog integration sets no cookie; it only stores the random browser code described above, which expires after 90 days. Your GA4 consent choice is stored locally; only after consent can Google Analytics set its own measurement cookies.",
     "Als Cloudflare Web Analytics voor de site actief is, meet het onder meer paginaweergaven en technische laadprestaties. De Web Analytics-beacon gebruikt voor deze gebruiksmeting geen cookies of localStorage en Cloudflare geeft aan individuele bezoekers niet over websites van klanten heen te volgen. Bij automatische Cloudflare-injectie wordt de meting geladen via de officiële beacon en verstuurd via de eigen /cdn-cgi/rum-route.":
       "When Cloudflare Web Analytics is active for the site, it measures page views and technical loading performance, among other things. The Web Analytics beacon uses no cookies or localStorage for this measurement, and Cloudflare states that it does not track individual visitors across customers' websites. With automatic Cloudflare injection, the measurement is loaded through the official beacon and sent through the site's own /cdn-cgi/rum route.",
-    "Daarnaast gebruikt de site PostHog Cloud EU voor een beperkte set productstatistieken. Deze koppeling gebruikt geen PostHog-SDK, cookies of sessionStorage. Om te kunnen tellen hoeveel bezoekers terugkomen, bewaart je browser in localStorage onder de sleutel weerbriefing.analytics.id.v1 een willekeurige browsercode. Die code bevat geen naam, plaats of apparaatgegevens. Hij koppelt bezoeken uit dezelfde browser aan elkaar, zodat terugkerende bezoeken te tellen zijn. De code wordt na 90 dagen vervangen en wordt gewist als je PostHog en Google Analytics hieronder uitzet of je lokale gegevens wist. Er wordt geen PostHog-personenprofiel aangemaakt. Het PostHog-project staat in de EU-regio en IP-anonimisering is ingeschakeld. PostHog bewaart deze statistieken één jaar.":
-      "The site also uses PostHog Cloud EU for a limited set of product statistics. This integration uses no PostHog SDK, cookies or sessionStorage. To count how many visitors return, your browser stores a random browser code in localStorage under the key weerbriefing.analytics.id.v1. The code contains no name, location or device details. It links visits from the same browser to each other, so that returning visits can be counted. The code is replaced after 90 days and is deleted if you turn off PostHog and Google Analytics below or clear your local data. No PostHog person profile is created. The PostHog project is in the EU region and IP anonymisation is switched on. PostHog keeps these statistics for one year.",
+    "Daarnaast gebruikt de site PostHog Cloud EU voor een beperkte set productstatistieken. Deze koppeling gebruikt geen PostHog-SDK, cookies of sessionStorage. Om te kunnen tellen hoeveel bezoekers terugkomen, bewaart je browser in localStorage onder de sleutel weerbriefing.analytics.id.v1 een willekeurige browsercode. Die code bevat geen naam, plaats of apparaatgegevens. Hij koppelt bezoeken uit dezelfde browser aan elkaar, zodat terugkerende bezoeken te tellen zijn. De code wordt na 90 dagen vervangen en wordt gewist als je PostHog en Google Analytics hieronder uitzet of je lokale gegevens wist. Er wordt geen PostHog-personenprofiel aangemaakt. Het PostHog-project staat in de EU-regio en IP-anonimisering is ingeschakeld. Voor dit project geldt bij PostHog standaard een termijn van één jaar voor statistiekgebeurtenissen. Na die termijn zijn de gebeurtenissen verlopen. PostHog kan verlopen gebeurtenissen langer opslaan voordat ze worden verwijderd.":
+      "The site also uses PostHog Cloud EU for a limited set of product statistics. This integration uses no PostHog SDK, cookies or sessionStorage. To count how many visitors return, your browser stores a random browser code in localStorage under the key weerbriefing.analytics.id.v1. The code contains no name, location or device details. It links visits from the same browser to each other, so that returning visits can be counted. The code is replaced after 90 days and is deleted if you turn off PostHog and Google Analytics below or clear your local data. No PostHog person profile is created. The PostHog project is in the EU region and IP anonymisation is switched on. This project uses PostHog’s default one-year retention period for analytics events. Events expire after that period. PostHog may store expired events for longer before deleting them.",
     "PostHog ontvangt een geschoonde paginaweergave, een globale schermgroep (mobiel, tablet of desktop), een grove laadduurgroep en alleen generieke taakuitkomsten. Voorbeelden zijn het laden van de weerweergave, het starten van een plaatszoekactie, het kiezen van een zoekresultaat, het aanklikken van Mijn locatie, het bewaren of openen van een bewaarde plaats, op Delen tikken, het selecteren van een verwachtingsdag, het openen van uren of nachten en het installeren van de site als app. De ingetypte zoekterm, gekozen plaatsnaam, coördinaten, concrete weerwaarden, querystring en URL-hash worden niet meegestuurd. Weerroutes worden vóór verzending samengevat tot de generieke route /weer/:location. De analyticscall stuurt bovendien geen browser-Referer mee.":
       "PostHog receives a sanitised page-view event, a device category (mobile, tablet or desktop), an approximate load-time category and only generic task outcomes. Examples are loading the weather view, starting a place search, choosing a search result, clicking My location, saving or opening a saved place, tapping Share, selecting a forecast day, opening hours or nights and installing the site as an app. The search term you type, the chosen place name, coordinates, specific weather values, query string and URL hash are not sent. Weather routes are reduced to the generic route /weer/:location before sending. The analytics request also omits the browser’s Referer header.",
     "Daarnaast gaan vier grove kenmerken mee: de taal van de weergave (Nederlands of Engels), de herkomstcategorie van het bezoek (zoekmachine, AI-assistent, deze site, een andere site of geen), of de site als app of in de browser is geopend, en bij het laden van het weer of er bewaarde plaatsen zichtbaar zijn (ja of nee). De herkomstcategorie wordt in je browser afgeleid uit het verwijzende adres; dat adres zelf, de domeinnaam en eventuele zoektermen worden niet verstuurd. Welke plaatsen je hebt bewaard, gaat nooit mee. Als de browser Global Privacy Control of Do Not Track actief doorgeeft, wordt deze PostHog-meting niet gestart.":
@@ -999,8 +1056,8 @@
       "After consent, Google Analytics can set cookies to measure visits and sessions. When it receives a measurement, Google may also process technical data such as the IP address under its own terms, including outside the EU (for example in the United States). Google Analytics keeps user-level and event-level data for at most 14 months. Your choice is stored locally in this browser so the site can respect it on your next visit.",
     "Je kunt toestemming hier altijd weer intrekken en Google Analytics uitschakelen. Bij uitschakelen verwijdert de site waar mogelijk de bekende GA-cookies op dit domein. Je kunt sitegegevens daarnaast via je browserinstellingen wissen.":
       "You can always withdraw consent here and turn off Google Analytics. When you turn it off, the site removes the known GA cookies on this domain where possible. You can also clear site data through your browser settings.",
-    "PostHog en Google Analytics uitzetten. Met de knop hieronder zet je op dit apparaat PostHog, de vraag om Google Analytics en Google Analytics zelf uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies. Hetzelfde gebeurt als je de site één keer opent met ?analytics=uit achter het adres; met ?analytics=aan of dezelfde knop zet je ze weer aan. Alleen deze keuze wordt in je browser bewaard, onder de sleutel weerbriefing.analytics.uit.v1, zodat de site haar bij een volgend bezoek respecteert. Er gaat daarbij niets naar PostHog of Google.":
-      "Turn off PostHog and Google Analytics. The button below turns off PostHog, the Google Analytics prompt and Google Analytics itself on this device. Cloudflare continues to measure visits and loading performance without cookies. The same happens if you open the site once with ?analytics=uit after the address; ?analytics=aan or the same button turns them back on. Only this choice is stored in your browser, under the key weerbriefing.analytics.uit.v1, so the site respects it on your next visit. Nothing is sent to PostHog or Google in the process.",
+    "PostHog en Google Analytics uitzetten. Met de knop hieronder zet je op dit apparaat PostHog, de vraag om Google Analytics en Google Analytics zelf uit. Cloudflare blijft bezoeken en laadprestaties meten, zonder cookies. Hetzelfde gebeurt als je de site één keer opent met ?analytics=uit achter het adres. Gebruik dezelfde knop om de afmelding op te heffen. Alleen deze keuze wordt in je browser bewaard, onder de sleutel weerbriefing.analytics.uit.v1, zodat de site haar bij een volgend bezoek respecteert. Er gaat daarbij niets naar PostHog of Google.":
+      "Turn off PostHog and Google Analytics. The button below turns off PostHog, the Google Analytics prompt and Google Analytics itself on this device. Cloudflare continues to measure visits and loading performance without cookies. The same happens if you open the site once with ?analytics=uit after the address. Use the same button to opt back in. Only this choice is stored in your browser, under the key weerbriefing.analytics.uit.v1, so the site respects it on your next visit. Nothing is sent to PostHog or Google in the process.",
     "Voor weer, luchtkwaliteit, pollen en plaatszoeken gebruikt de site Open-Meteo. Als Open-Meteo niet op tijd antwoordt, vraagt onze server de verwachting op bij Visual Crossing of WeatherAPI.com. Voor Nederland en België haalt onze server de verwachting voor neerslag in de komende uren op bij het KNMI. Bij die aanvragen van onze server krijgen deze diensten hooguit de gekozen positie, niet je IP-adres. Voor een actuele GPS-locatie vraagt je browser de plaatsnaam rechtstreeks op bij BigDataCloud; die gratis dienst wordt niet via onze server aangeroepen. Als dat niet lukt, gebruikt de server OpenStreetMap Nominatim als beperkte fallback. Officiële waarschuwingen komen, afhankelijk van de locatie, van MeteoAlarm of de Amerikaanse National Weather Service. Cloudflare verzorgt hosting en beveiliging en, wanneer Web Analytics actief is, de geaggregeerde gebruiksmeting. PostHog verwerkt de hierboven beschreven beperkte productstatistieken in de EU. Alleen na jouw toestemming kan Google Analytics de hierboven beschreven gebruiksmetingen ontvangen. Diensten die je browser rechtstreeks aanroept, zoals Open-Meteo en BigDataCloud, kunnen bij een aanvraag technische gegevens zoals je IP-adres verwerken volgens hun eigen voorwaarden; voor PostHog is in het project IP-anonimisering ingeschakeld.":
       "For weather, air quality, pollen and place search, the site uses Open-Meteo. If Open-Meteo does not respond in time, our server requests the forecast from Visual Crossing or WeatherAPI.com. For the Netherlands and Belgium, our server fetches the precipitation forecast for the coming hours from the KNMI. For these requests from our server, these services receive at most the chosen position, not your IP address. For a current GPS location, your browser requests the place name directly from BigDataCloud; this free service is not called through our server. If that fails, the server uses OpenStreetMap Nominatim as a limited fallback. Depending on the location, official warnings come from MeteoAlarm or the US National Weather Service. Cloudflare provides hosting and security and, when Web Analytics is active, collects aggregate usage statistics. PostHog processes the limited product statistics described above in the EU. Only with your consent can Google Analytics receive the usage measurements described above. Services that your browser calls directly, such as Open-Meteo and BigDataCloud, may process technical data such as your IP address under their own terms when you make a request; IP anonymisation is switched on in the PostHog project.",
     "Je hebt recht op inzage, correctie en verwijdering van gegevens over jou, op beperking van de verwerking en op bezwaar tegen verwerking op basis van gerechtvaardigd belang. Toestemming voor Google Analytics trek je hierboven zelf in. Omdat de site geen account en geen profiel heeft, kunnen wij gegevens meestal niet aan jou als persoon koppelen; wat in je eigen browser staat, wis je met de knop hierboven. Voor een verzoek of vraag mail je naar support@watishetweer.nl; je krijgt binnen een maand antwoord. Ben je het niet eens met hoe met je gegevens wordt omgegaan, dan kun je een klacht indienen bij de Autoriteit Persoonsgegevens.":
@@ -1048,6 +1105,20 @@
   const D = "(ma|di|wo|do|vr|za|zo)";       // dag kort
 
   const patronen = [
+    /* Metadata in de head (zie de exacte zinnen hierboven): teksten met plaats, jaar of datum. */
+    [/^Actuele temperatuur en het weer in (.+) vandaag, morgen en per uur: hoeveel graden het nu is, regen in de komende uren en de 7-daagse verwachting\.$/,
+      (m) => `Current temperature and the weather in ${plaats(m[1])} today, tomorrow and by the hour: how warm it is now, rain over the coming hours and the 7-day forecast.`],
+    [/^Hoe wordt het weer in de (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4})\?$/, (m) => `What will the weather be like during the ${m[2]} ${VAKANTIE[m[1]]}?`],
+    [/^Weer (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}): regen, (zon|sneeuw) en temperatuur per dag$/, (m) => `${VakantieKop[m[1]]} weather ${m[2]}: rain, ${m[3] === "zon" ? "sunshine" : "snow"} and temperature per day`],
+    [/^Hoe wordt het weer met oud en nieuw (\d{4})\?$/, (m) => `What will the weather be like on New Year's Eve ${m[1]}?`],
+    [/^Vanaf (\d{1,2}) december staat hier de verwachting voor neerslag, wind en mist rond middernacht in zeven grote plaatsen in Nederland\.$/,
+      (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven large places in the Netherlands.`],
+    [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight`],
+    [/^Wordt het een witte kerst in (\d{4})\?$/, (m) => `Will it be a white Christmas in ${m[1]}?`],
+    [/^Vanaf (\d{1,2}) december staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland\.$/,
+      (m) => `From ${m[1]} December, this page shows the forecast for snow and temperature at Christmas, for De Bilt and large places in the Netherlands.`],
+    [/^Witte kerst (\d{4}): kans op sneeuw met kerst$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas`],
+    [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
        achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
        zonder achtervoegsel wordt vertaald en het Engelse achtervoegsel komt weer achter de tijd. */
@@ -1179,6 +1250,8 @@
     [/^Vandaag is het (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `Today is ${KERSTDAG[m[1]]}.`],
     [/^Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in (.+)\. Blijft dat zo, dan is het officieel een witte kerst\.$/,
       (m) => `According to the current forecast, there will be snow on the ground in ${plaats(m[1])} on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.`],
+    [/^Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor (.+) zijn niet voor beide kerstdagen beschikbaar\.$/,
+      (m) => `An official white Christmas cannot yet be assessed: snow-cover data for ${plaats(m[1])} is not available for both Christmas days.`],
     [/^Volgens de huidige verwachting wordt het geen officiële witte kerst: in (.+) ligt op (eerste kerstdag|tweede kerstdag) geen sneeuwdek\.$/,
       (m) => `According to the current forecast, it will not be an official white Christmas: there is no snow cover in ${plaats(m[1])} on ${KERSTDAG[m[2]]}.`],
     [/^Volgens de huidige verwachting ligt er op (eerste kerstdag|tweede kerstdag) sneeuw in (.+)\. De verwachting voor (eerste kerstdag|tweede kerstdag) verschijnt op (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
@@ -1229,7 +1302,9 @@
       return m[6] ? (regios(m[6]) && `${eerst} In the ${regios(m[6])}, the holiday starts on ${dagVol(m[7])} ${m[8]} ${maand(m[9])}.`) : eerst;
     }],
     [/^In regio (.+) begint de vakantie op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/, (m) => regios(m[1]) && `In the ${regios(m[1])}, the holiday starts on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
-    [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) staat hier de verwachting voor de eerste vakantiedag\.$/, (m) => `The forecast for the first day of the holiday will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
+    [/^De (herfst|kerst|voorjaars|mei|zomer)vakantie begint (landelijk als eerste )?op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) (\d{4})\.$/, (m) => `The ${VAKANTIE[m[1]]} starts ${m[2] ? "in the first region " : ""}on ${dagVol(m[3])} ${m[4]} ${maand(m[5])} ${m[6]}.`],
+    [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) is hier de eerste weersverwachting voor de vakantiedagen beschikbaar\.$/, (m) => `The first forecast for the school holiday will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
+    [/^Die kan nog veranderen\.$/, () => "The forecast may still change."],
     [/^De data van de (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}) zijn nog niet bekend\.$/, (m) => `The dates of the ${m[2]} ${VAKANTIE[m[1]]} are not yet known.`],
     [/^Volgens de huidige verwachting blijft het op alle (\d+) vakantiedagen in de verwachting overwegend droog\.$/, (m) => `According to the current forecast, it will stay mostly dry on all ${m[1]} holiday days in the forecast.`],
     [/^Volgens de huidige verwachting (?:zijn|is) (\d+) van de (\d+) vakantiedagen in de verwachting overwegend droog\.$/, (m) => `According to the current forecast, ${m[1]} of the ${m[2]} holiday days in the forecast will be mostly dry.`],
@@ -1240,6 +1315,7 @@
     [/^(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) alle regio's$/i, (m) => `${dagVol(m[1].toLowerCase())} ${m[2]} ${maand(m[3])} all regions`],
     [/^regio (.+)$/, (m) => regios(m[1])],
     [/^Regio (noord|midden|zuid)$/, (m) => `${REGIO[m[1]].charAt(0).toUpperCase() + REGIO[m[1]].slice(1)} region`],
+    [/^Schoolvakantie voor je gekozen plaats in regio (noord|midden|zuid)\.$/, (m) => `School holiday for your selected location in the ${REGIO[m[1]]} region.`],
     [/^(\d{1,2}) t\/m (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/, (m) => `${m[1]}–${m[2]} ${maand(m[3])}`],
     [/^(\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) t\/m (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/, (m) => `${m[1]} ${maand(m[2])} – ${m[3]} ${maand(m[4])}`],
     [/^De vakantiedagen tot en met (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnen hier vanzelf zodra ze binnen de 7-daagse verwachting vallen\.$/, (m) => `The holiday days up to and including ${dagVol(m[1])} ${m[2]} ${maand(m[3])} will appear here automatically once they fall within the 7-day forecast.`],
@@ -1305,7 +1381,7 @@
     [/^Vandaag komt de maan in ([^.]+) niet op of niet onder\.$/, (m) => `Today the moon does not rise or set in ${m[1]}.`],
     [/^Tijden in (Nederlandse tijd|plaatselijke tijd van [^.]+)\.$/, (m) => `Times are in ${m[1] === "Nederlandse tijd" ? "Dutch time" : "local time in " + m[1].slice("plaatselijke tijd van ".length)}.`],
     [/^plaatselijke tijd van (.+)$/, (m) => `local time in ${m[1]}`],
-    [/^Op- en ondergang gelden voor ([^;.]+)(; elders in Nederland scheelt het hooguit enkele minuten)?\.$/, (m) => `Moonrise and moonset are for ${m[1]}${m[2] ? "; elsewhere in the Netherlands they differ by a few minutes at most" : ""}.`],
+    [/^Op- en ondergang gelden voor ([^;.]+)(; de tijden kunnen per plaats en datum verschillen)?\.$/, (m) => `Moonrise and moonset are for ${m[1]}${m[2] ? "; times may differ by location and date" : ""}.`],
     [/^De maan staat getekend zoals je hem vanuit ([^:]+) ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat\.$/,
       (m) => `The moon is drawn as you see it from ${m[1]}: now, or otherwise at the next moment it is above the horizon in the dark.`],
     [/^Lichtvervuiling (laag|matig|hoog|laag tot matig|matig tot hoog)$/, (m) => `Light pollution ${LICHTKLASSE[m[1]]}`],
@@ -1389,10 +1465,10 @@
     /* Ophaalmoment van de verwachting op de Nachtzicht-pagina's (verversingsbeleid in nachtzicht-runtime.js). */
     [/^Verwachting van (\d{2}:\d{2})\.( Verversen lukt nu niet\.)?$/, (m) => `Forecast from ${m[1]}.${m[2] ? " Refreshing is not working right now." : ""}`],
     /* Direct antwoord boven het Nachtzicht-overzicht (antwoordHtml in scripts/nachtzicht-runtime.js); parkennamen blijven staan. */
-    [/^Vannacht zijn de omstandigheden in (\d+) van de (\d+) parken gunstig \(7\/10 of hoger\)\.$/, (m) => `Tonight conditions are favourable in ${m[1]} of ${m[2]} parks (7/10 or higher).`],
+    [/^Vannacht is er in (\d+) van de (\d+) parken een gunstig kijkvenster\.$/, (m) => `Tonight there is a favourable viewing window in ${m[1]} of ${m[2]} parks.`],
     [/^Het best \((\d+)\/10\): (.+)\.$/, (m) => `Best (${m[1]}/10): ${parkenEn(m[2])}.`],
     [/^Elders beperkend: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting elsewhere: ${r}.`; }],
-    [/^Vannacht is er geen park met gunstige omstandigheden\.$/, () => "Tonight no park has favourable conditions."],
+    [/^Vannacht is er geen gunstig kijkvenster gevonden\.$/, () => "Tonight no favourable viewing window was found."],
     [/^Hoogste indicatie: (\d+)\/10 \(([^)]+)\) in (.+)\.$/, (m) => { const o = ZICHTSCORE[m[2].toLowerCase()]; return o && `Highest rating: ${m[1]}/10 (${o}) in ${parkenEn(m[3])}.`; }],
     [/^Beperkend in de meeste parken: (.+)\.$/, (m) => { const r = oorzaken(m[1]); return r && `Limiting in most parks: ${r}.`; }],
     [/^Voor (\d+) (park|parken) ontbreken gegevens\.$/, (m) => `No data for ${m[1]} ${m[1] === "1" ? "park" : "parks"}.`],

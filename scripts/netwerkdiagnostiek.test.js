@@ -1,9 +1,11 @@
 "use strict";
 
 const assert=require("assert");
+const fs=require("fs");
+const net=require("net");
 const path=require("path");
 const {spawnSync}=require("child_process");
-const {coloUitRay,meetVerzoek,formatteer,diagnose,PADEN,TIMEOUT_MS}=require("./netwerkdiagnostiek.js");
+const {coloUitRay,meetVerzoek,formatteer,diagnose,beschrijfFetchFout,PADEN,TIMEOUT_MS}=require("./netwerkdiagnostiek.js");
 
 function antwoord({status=200,headers={}}={}){
   return {status,headers:new Headers(headers),arrayBuffer:async()=>new ArrayBuffer(8)};
@@ -75,5 +77,47 @@ function klokMet(...tijden){let i=0;return()=>tijden[Math.min(i++,tijden.length-
   assert(/NETWERKDIAGNOSTIEK host=127\.0\.0\.1:9 pad=\/robots\.txt fout=/.test(cli.stdout),"CLI-uitvoer onverwacht: "+cli.stdout);
   assert(!/\bat \w/.test(cli.stdout+cli.stderr),"stacktrace in de CLI-uitvoer");
 
-  console.log("Netwerkdiagnostiek: colo-herkenning, witgelijste logregel zonder gevoelige gegevens, foutpad, time-out en CLI (exit 0) OK.");
+  /* beschrijfFetchFout: het bestaande bericht blijft ongewijzigd voorop; daarachter alleen oorzaakcode, -naam en duur */
+  const connectTimeout=new TypeError("fetch failed");
+  connectTimeout.cause=Object.assign(new Error("Connect Timeout Error (attempted address: 203.0.113.7:443, timeout: 10000ms)"),{name:"ConnectTimeoutError",code:"UND_ERR_CONNECT_TIMEOUT"});
+  assert.equal(beschrijfFetchFout(connectTimeout,10012.4),"fetch failed [oorzaak=UND_ERR_CONNECT_TIMEOUT (ConnectTimeoutError); na=10012ms]");
+  assert(!/203\.0\.113|attempted|timeout:/.test(beschrijfFetchFout(connectTimeout,1)),"oorzaakbericht hoort niet in de foutregel");
+  const happyEyeballs=new TypeError("fetch failed");
+  happyEyeballs.cause=Object.assign(new AggregateError([Object.assign(new Error("x"),{code:"ETIMEDOUT"}),Object.assign(new Error("y"),{code:"ENETUNREACH"})],"agg"),{code:"ETIMEDOUT"});
+  assert.equal(beschrijfFetchFout(happyEyeballs,251),"fetch failed [oorzaak=ETIMEDOUT (AggregateError); adrespogingen=ETIMEDOUT,ENETUNREACH; na=251ms]");
+  const dns=new TypeError("fetch failed");dns.cause={code:"ENOTFOUND",message:"getaddrinfo ENOTFOUND api.open-meteo.com?token=geheim"};
+  assert.equal(beschrijfFetchFout(dns,40),"fetch failed [oorzaak=ENOTFOUND; na=40ms]");
+  assert.equal(beschrijfFetchFout(new Error("HTTP 429"),120),"HTTP 429 [na=120ms]","eigen fout zonder oorzaak: bericht ongewijzigd plus duur");
+  assert.equal(beschrijfFetchFout(new Error("onvolledige forecastrespons")),"onvolledige forecastrespons","zonder duur en oorzaak exact het oude bericht");
+  const timeoutFout=new Error("The operation was aborted due to timeout");timeoutFout.name="TimeoutError";
+  assert.equal(beschrijfFetchFout(timeoutFout,15003),"The operation was aborted due to timeout [na=15003ms]");
+  assert.equal(beschrijfFetchFout("los",NaN),"los");
+  const vuileCode=new TypeError("fetch failed");vuileCode.cause={code:"E;rm -rf /",name:"<script>"};
+  assert(!/[;<>\s\/]rm|<script>/.test(beschrijfFetchFout(vuileCode,1).replace("fetch failed ","")),"ongefilterde oorzaakcode: "+beschrijfFetchFout(vuileCode,1));
+
+  /* Met echte undici-fouten: een reset en een gesloten poort geven hun eigen code, binnen milliseconden */
+  const resetServer=net.createServer(s=>{s.resetAndDestroy?s.resetAndDestroy():s.destroy();});
+  await new Promise(klaar=>resetServer.listen(0,"127.0.0.1",klaar));
+  const echteFout=async url=>{const begin=Date.now();try{await fetch(url,{signal:AbortSignal.timeout(5000)});}catch(e){return beschrijfFetchFout(e,Date.now()-begin);}throw new Error("fetch slaagde onverwacht");};
+  assert.match(await echteFout(`http://127.0.0.1:${resetServer.address().port}/`),/^fetch failed \[oorzaak=ECONNRESET \(Error\); na=\d+ms\]$/);
+  await new Promise(klaar=>resetServer.close(klaar));
+  const vrij=net.createServer();await new Promise(klaar=>vrij.listen(0,"127.0.0.1",klaar));const vrijePoort=vrij.address().port;await new Promise(klaar=>vrij.close(klaar));
+  assert.match(await echteFout(`http://127.0.0.1:${vrijePoort}/`),/^fetch failed \[oorzaak=ECONNREFUSED \(Error\); na=\d+ms\]$/);
+
+  /* Sinds 20 november (Open-Meteo, ticket #235915): geen live Open-Meteo vanuit CI. De vier browsermonitors
+     die eerder live bronnen ophaalden, beantwoorden de exacte productie-URL nu met de contractgetrouwe fixture
+     en halen zelf niets op; er is dus geen live-bronlus meer die een foutoorzaak kan wegwerpen. */
+  const scripts=bestand=>fs.readFileSync(path.join(__dirname,bestand),"utf8");
+  for(const bestand of ["production-final-release-browser.js","production-worldwide-browser.js","production-pre-sale-acceptance-browser.js","run-production-pre-sale-acceptance-browser.js"]){
+    const bron=scripts(bestand);
+    assert(bron.includes('require("./openmeteo-fixture.js")'),`${bestand}: Open-Meteo-fixture niet geladen`);
+    assert(!/\bfetch\(/.test(bron),`${bestand}: haalt nog zelf iets live op`);
+    assert(!/https:\/\/[a-z-]*\.?open-meteo\.com\/v1\/[a-z_-]+\?/.test(bron),`${bestand}: bevat nog een live Open-Meteo-aanvraag`);
+  }
+  const workflow=fs.readFileSync(path.join(__dirname,"..",".github","workflows","production-smoke.yml"),"utf8");
+  const finaleJob=workflow.slice(workflow.indexOf("\n  final-release-browser:"),workflow.indexOf("\n  cwv-layout-browser:"));
+  assert(finaleJob.includes("node scripts/netwerkdiagnostiek.js https://watishetweer.nl"),"finale releasejob mist de diagnostiek van de site");
+  assert(!/open-meteo\.com/.test(workflow),"production-smoke mag Open-Meteo niet vanuit CI meten (ook niet als diagnostiek)");
+
+  console.log("Netwerkdiagnostiek: colo-herkenning, witgelijste logregel zonder gevoelige gegevens, foutpad, time-out, CLI (exit 0), foutoorzaak per poging; browsermonitors zonder live Open-Meteo en zonder Open-Meteo-diagnostiek in CI OK.");
 })().catch(e=>{console.error(e);process.exit(1);});

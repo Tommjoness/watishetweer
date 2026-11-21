@@ -177,13 +177,13 @@ async function verberg(page,ja){
         await sprong(page,UUR);
         assert.equal(ctl.primair,2,"overzicht: na een uur één verversing (alle parken in één aanvraag)");
         assert.equal(ctl.reserve,0,"overzicht: nooit een reeks betaalde reserveaanvragen");
-        assert.match(await page.locator("#nz-antwoord").innerText(),/geen park met gunstige omstandigheden/,"overzicht: antwoord volgt de nieuwe verwachting");
+        assert.match(await page.locator("#nz-antwoord").innerText(),/geen gunstig kijkvenster gevonden/,"overzicht: antwoord volgt de nieuwe verwachting");
         assert.equal(await page.locator("tr[data-park] .nz-n .nz-w").first().innerText().then(t=>/0\/10/.test(t)),true,"overzicht: rijen volgen de nieuwe verwachting");
         ctl.faalt=true;
         await sprong(page,UUR);
         assert.equal(ctl.primair,3);
         assert.equal(ctl.reserve,0,"overzicht: ook bij een storing geen reserveaanvragen");
-        assert.match(await page.locator("#nz-antwoord").innerText(),/geen park met gunstige omstandigheden/,"overzicht: bij een storing blijft het laatste antwoord staan");
+        assert.match(await page.locator("#nz-antwoord").innerText(),/geen gunstig kijkvenster gevonden/,"overzicht: bij een storing blijft het laatste antwoord staan");
         assert.match(await page.locator("#nz-bijgewerkt").innerText(),/Verversen lukt nu niet\.$/);
         assert.equal(ctl.maxGelijktijdig,1,"overzicht: nooit overlappende aanvragen");
         assert.deepEqual(fouten,[],"overzicht: scriptfouten");

@@ -243,6 +243,8 @@ Daarnaast draait `Cloudflare production` gepland op vier momenten per dag (23:15
 
 Een lokaal ontbrekende Chromium/WebKit-installatie is geen productfout. Gebruik in dat geval de vaste Playwright-container uit de GitHub-workflows; merge nooit op basis van alleen een lokaal overgeslagen browserdeel.
 
+De releasecontroles met een echte `Ctrl+R` in een zichtbaar Chromium-venster gebruiken `xdotool`. Dat komt niet meer met `apt-get` van een pakketserver, maar uit twee vastgepinde officiële Ubuntu-pakketten in de repository, die de job na een verplichte SHA-256-controle met `dpkg` installeert. Herkomst, hashes, de herkomstcontrole en de stappen bij een nieuwe Playwright-image staan in `scripts/ci/native-reload-driver/README.md`. `Release recovery verification` bewijst de installatie en de native reload op iedere pull request in dezelfde image; `Cloudflare preview deploy` gebruikt altijd de stap van `main`, dus open pull requests moeten na een wijziging van de driver eerst met `main` worden bijgewerkt.
+
 ### Cloudflare Web Analytics
 
 Web Analytics wordt niet door iedere productiedeploy aan- of uitgezet. De aparte workflow `.github/workflows/cloudflare-web-analytics.yml` wacht eerst totdat exact dezelfde bron-SHA publiek live staat en voert daarna `scripts/cloudflare-web-analytics-setup.js` idempotent uit. Het script maakt of activeert één Analytics-site voor de watishetweer-zone, verifieert die via de Cloudflare API en verwijdert daarna alleen de historische eigen `disable_rum`-regel als die nog bestaat. De normale productiedeploy raakt deze instelling niet meer aan.

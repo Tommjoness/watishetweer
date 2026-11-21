@@ -1,7 +1,7 @@
 "use strict";
 
 /* Bouwt de Nachtzicht-pagina's als losse subpagina's in de stijl van /over/:
-   - /nachtzicht/: de Nationale Parken op een rij, de donkerste eerst, met de
+   - /nachtzicht/: geselecteerde nationale parken per lichtvervuilingsklasse, met de
      indicatie voor vannacht;
    - /nachtzicht/<park>/: per park de komende nachten, bewolking per uur en maan;
    - /maan/: maanfase, op- en ondergang en de komende hoofdfasen.
@@ -170,6 +170,12 @@ const SCORE_UITLEG = `<h2>Hoe de indicatie werkt</h2>
 <p>De indicatie van 0 tot 10 is precies die van het blok Nachtzicht op watishetweer.nl, voor de rest van de nacht vanaf nu. Ze telt vooral de bewolking, en trekt er punten af voor slecht zicht, mist, neerslag, hoge luchtvochtigheid, kans op dauw, harde windstoten en maanlicht. Hoe hoger de maan staat en hoe voller hij is, hoe meer hij meetelt.</p>
 <p>Het kijkvenster is het langste aaneengesloten stuk van minstens twee uur met weinig bewolking (minder dan 35%), goed zicht, geen neerslag of mist en weinig maanlicht. Voor nachten verder vooruit staat er een dagdeel in plaats van kloktijden, omdat die verwachting nog onzeker is. Lichtvervuiling zit niet in de indicatie, want die verandert niet per nacht.</p>`;
 
+/* Uitsluitend brongeverifieerde bezoekersinformatie voor dit ene park. Andere parkpagina's blijven HTML-identiek. */
+function parkVerdieping(p) {
+  if(p.slug!=="lauwersmeer")return "";
+  return `<h2>Waar kun je sterren kijken in Nationaal Park Lauwersmeer?</h2>\n<p>Nationaal Park Lauwersmeer is sinds oktober 2016 officieel erkend als Dark Sky Park. Bij helder weer en weinig storende verlichting kun je er veel sterren zien en soms ook de Melkweg. De parkorganisatie noemt drie geschikte plekken: Activiteitencentrum Lauwersnest, hemelplatform Achter de Zwarten bij Suyderoogh en hemelplatform Vlinderbalg aan de Strandweg.</p>\n<p>Op de wegen en paden gelden volgens de parkorganisatie 's nachts in beginsel dezelfde toegangsregels als overdag; militair oefenterrein Marnewaard is uitgezonderd. Controleer vóór je bezoek de actuele informatie van het park en blijf op toegankelijke routes. De verwachting en lichtvervuilingsklasse hierboven gelden voor een representatief punt in het park; plaatselijke omstandigheden kunnen afwijken.</p>\n<p class="klein">Bron: <a href="https://www.np-lauwersmeer.nl/het-lauwersmeer/dark-sky-park/" rel="noopener" translate="no">Nationaal Park Lauwersmeer</a>.</p>\n`;
+}
+
 function parkPagina(p, kern) {
   const canonical = parkUrl(p);
   const titel = `Sterren kijken in ${p.naam}`;
@@ -184,19 +190,19 @@ function parkPagina(p, kern) {
 <section id="nz-nachten" aria-label="Komende nachten" hidden></section>
 <p id="nz-bijgewerkt" class="klein" hidden></p>
 <p><a href="${esc(weerUrl)}">Het weer per uur voor deze plek</a></p>
-${SCORE_UITLEG}
+${parkVerdieping(p)}${SCORE_UITLEG}
 ${BRONNEN}
 ` + staart({ soort: "park", tz: TIJDZONE, park: { slug: p.slug, lat: p.lat, lon: p.lon } }, kern);
 }
 
 function overzichtPagina(parken, kern) {
   const canonical = `https://watishetweer.nl${BASIS}`;
-  const titel = "Sterren kijken in Nederland: de donkerste plekken";
-  const beschrijving = "De Nationale Parken van Nederland op een rij, de donkerste eerst: lichtvervuiling per park en de kans op een heldere sterrenhemel vannacht.";
+  const titel = "Sterren kijken in Nederland: nationale parken";
+  const beschrijving = "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.";
   const rijen = parken.map((p, i) => `<tr data-park="${p.slug}"${i > 0 && parken[i - 1].licht.naam !== p.licht.naam ? ' class="nz-groep"' : ""}><th scope="row"><a href="${BASIS}${p.slug}/" translate="no">${esc(p.kort)}</a><span class="nz-licht-mob">Lichtvervuiling ${esc(p.licht.naam)}</span></th><td class="nz-licht-kol">${esc(p.licht.naam)}</td><td class="nz-n"><span class="nz-lbl">Vannacht</span><span class="nz-w">…</span></td><td class="nz-venster"><span class="nz-lbl" aria-hidden="true">Beste periode</span><span class="nz-w">…</span></td></tr>`).join("\n");
   return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>Sterren kijken in Nederland</h1>
-<p>De Nationale Parken behoren tot de donkerste plekken van Nederland. Hieronder staan ze op een rij, de donkerste eerst, met de indicatie voor vannacht. Kies een park voor de komende nachten en de bewolking per uur.</p>
+<p>Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in ${parken.length} geselecteerde nationale parken. De parken zijn gegroepeerd op geschatte lichtvervuiling, van laag naar hoog. Binnen iedere categorie staan ze op alfabetische volgorde. Kies een park voor de komende nachten en de bewolking per uur.</p>
 <div class="nz-antwoordkader">
 <p id="nz-antwoord" class="nz-antwoord" aria-live="polite" hidden></p>
 <p id="nz-status" class="klein">De verwachting voor vannacht wordt geladen.</p>
@@ -222,20 +228,26 @@ function maanPagina(kern, nuMs) {
   const K = laadKern();
   const m = K.maanOverzicht(nuMs, MAAN_REFERENTIE.lat, MAAN_REFERENTIE.lon, TIJDZONE);
   const naam = m.naam.charAt(0).toUpperCase() + m.naam.slice(1) + ", " + Math.round(m.ill * 100) + "% verlicht";
+  /* Zonder JavaScript alleen een duidelijk gedateerde momentopname; geen verouderde tijden als "vandaag". */
+  const berekendOp = new Date(nuMs).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  const tijdenMoment = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0] + " " + x[1]).join(", ") || "geen opkomst of ondergang op deze dag";
+  const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
   return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
-<p>Hoe vol de maan is en hoe hoog hij staat, bepaalt hoeveel sterren je ziet. Bij een volle maan verdwijnt de Melkweg; rond nieuwe maan is de hemel het donkerst.</p>
+<p>Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
 <div class="nz-maan-raster">
 <div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
-<p id="nz-maan-tijden">De op- en ondergangstijden worden geladen.</p>
+<p id="nz-maan-tijden">De maanopkomst en maanondergang worden bij het openen berekend.</p>
+<noscript><p class="klein">Zonder JavaScript is dit een momentopname van ${esc(berekendOp)}. Voor De Bilt op ${esc(m.datum)}: ${esc(tijdenMoment)}. De stand en tijden worden niet automatisch bijgewerkt.</p></noscript>
 </div></div>
 <div>
 <h2>De komende fasen</h2>
 <ul id="nz-maan-fasen"></ul>
+<noscript><p class="klein">De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):</p><ul>${fasenMoment}</ul></noscript>
 </div>
 </div>
-<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; elders in Nederland scheelt het hooguit enkele minuten</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
+<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
 ` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);

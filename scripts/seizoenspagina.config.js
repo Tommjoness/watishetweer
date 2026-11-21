@@ -13,6 +13,8 @@ function plaatsroute(slug){
   return {naam:loc.naam,lat:loc.lat,lon:loc.lon,href:`/weer/${loc.slug}/`};
 }
 
+const VAKANTIE_VOORAF="De {vakantie} begint {landelijk}op {start}. Vanaf {datum} is hier de eerste weersverwachting voor de vakantiedagen beschikbaar. Die kan nog veranderen.";
+
 const SEIZOENSPAGINAS=Object.freeze([
   Object.freeze({
     slug:"witte-kerst",
@@ -25,13 +27,17 @@ const SEIZOENSPAGINAS=Object.freeze([
     dagen:[{maand:12,dag:25,label:"Eerste kerstdag"},{maand:12,dag:26,label:"Tweede kerstdag"}],
     titel:"Witte kerst {jaar}: kans op sneeuw met kerst",
     beschrijving:"Wordt het een witte kerst in {jaar}? Vanaf {datum} staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland.",
-    intro:"Wordt het een witte kerst? Zodra kerst binnen de 7-daagse verwachting valt, staat hier de verwachting voor sneeuw op eerste en tweede kerstdag, voor De Bilt en zes grote plaatsen verspreid over Nederland.",
+    intro:"Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.",
     uitleg:{
       kop:"Wanneer is het een witte kerst?",
       alineas:[
         "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010."
       ],
-      bron:{naam:"KNMI",url:"https://www.knmi.nl/over-het-knmi/nieuws/witte-kerst-steeds-zeldzamer"}
+      vragen:[
+        {kop:"Waarom is sneeuw met kerst niet altijd een officiële witte kerst?",antwoord:"Een paar sneeuwvlokken tijdens kerst zijn niet genoeg. Voor een officiële witte kerst moet in De Bilt op zowel 25 als 26 december om 09:00 uur een gesloten sneeuwdek liggen. Elders in Nederland kan het wit zijn terwijl aan die landelijke definitie niet wordt voldaan."},
+        {kop:"Wanneer hadden we voor het laatst een witte kerst?",antwoord:"Volgens het KNMI waren er sinds 1901 acht officiële witte kersten: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010. De laatste twee volgden dus direct op elkaar. In De Bilt lag er in 2009 op eerste kerstdag 9 centimeter sneeuw en op tweede kerstdag 4 centimeter; in 2010 op beide dagen 5 centimeter."}
+      ],
+      bron:{naam:"KNMI",url:"https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"}
     },
     teksten:{
       ver:"Vanaf {datum} verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op {datum2}.",
@@ -41,6 +47,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       aftellenVandaag:"Vandaag is het {dag}.",
       allemaal:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in {plaats}. Blijft dat zo, dan is het officieel een witte kerst.",
       nietOp:"Volgens de huidige verwachting wordt het geen officiële witte kerst: in {plaats} ligt op {dag} geen sneeuwdek.",
+      onbekend:"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor {plaats} zijn niet voor beide kerstdagen beschikbaar.",
       totNuToe:"Volgens de huidige verwachting ligt er op {dag} sneeuw in {plaats}. De verwachting voor {volgende} verschijnt op {datum}.",
       dagLater:"{dag}: de verwachting verschijnt op {datum}.",
       toelichting:"Sneeuwdek is de verwachte sneeuwhoogte in de ochtend. Een verwachting een week vooruit kan nog flink veranderen; deze pagina toont steeds de nieuwste. Bron: Open-Meteo.",
@@ -130,7 +137,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de herfstvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de herfstvakantie{regio}.",
       aftellenGetal:"dagen tot de herfstvakantie{regio}",
@@ -183,7 +190,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de kerstvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de kerstvakantie{regio}.",
       aftellenGetal:"dagen tot de kerstvakantie{regio}",
@@ -233,7 +240,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de voorjaarsvakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de voorjaarsvakantie{regio}.",
       aftellenGetal:"dagen tot de voorjaarsvakantie{regio}",
@@ -283,7 +290,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de meivakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de meivakantie{regio}.",
       aftellenGetal:"dagen tot de meivakantie{regio}",
@@ -333,7 +340,7 @@ const SEIZOENSPAGINAS=Object.freeze([
       bron:{naam:"Rijksoverheid",url:"https://www.rijksoverheid.nl/onderwerpen/schoolvakanties/overzicht-schoolvakanties-per-schooljaar"}
     },
     teksten:{
-      ver:"Vanaf {datum} staat hier de verwachting voor de eerste vakantiedag.",
+      ver:VAKANTIE_VOORAF,
       onbekend:"De data van de zomervakantie {jaar} zijn nog niet bekend.",
       aftellenMeer:"Nog {n} dagen tot de zomervakantie{regio}.",
       aftellenGetal:"dagen tot de zomervakantie{regio}",

@@ -13,15 +13,10 @@ function geldigeAccountId(waarde){
 }
 
 function tokenKandidaten(env=process.env){
-  const kandidaten=[
-    ["dedicated-analytics",env.CLOUDFLARE_ANALYTICS_API_TOKEN],
-    ["deploy-fallback",env.CLOUDFLARE_DEPLOY_API_TOKEN||env.CLOUDFLARE_API_TOKEN]
-  ];
-  const gezien=new Set();
-  return kandidaten
-    .map(([bron,token])=>({bron,token:String(token||"").trim()}))
-    .filter(item=>item.token&&!gezien.has(item.token)&&(gezien.add(item.token),true));
+  const token=String(env.CLOUDFLARE_ANALYTICS_API_TOKEN||"").trim();
+  return token?[{bron:"dedicated-analytics",token}]:[];
 }
+
 
 function venstersUitOmgeving(waarde){
   const bron=String(waarde||"").trim();

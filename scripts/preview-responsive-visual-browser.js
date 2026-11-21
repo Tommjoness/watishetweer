@@ -5,6 +5,10 @@ const fs=require("fs");
 const path=require("path");
 const crypto=require("crypto");
 const {chromium}=require("playwright");
+const {metOpenMeteoFixtures,tzUitLijst}=require("./openmeteo-fixture.js");
+/* Geen live Open-Meteo vanuit CI (Open-Meteo, ticket #235915, 20 november 2026): iedere context van deze
+   browser krijgt voor *.open-meteo.com het contractgetrouwe antwoord van scripts/openmeteo-fixture.js.
+   Routes van dit script zelf gaan voor. Echte beschikbaarheid: docs/open-meteo-monitoring.md. */
 const {bouw}=require("../data.js");
 
 const ROOT=String(process.env.PREVIEW_ROOT||process.env.PRODUCTION_ROOT||"").replace(/\/$/,"");
@@ -67,7 +71,7 @@ function binnenViewport(rect,width){return !!rect&&rect.left>=-1&&rect.right<=wi
 const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(data)});
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=metOpenMeteoFixtures(await chromium.launch({headless:true}),{tzVoor:tzUitLijst([{lat:52.37,lon:4.9,tz:"Europe/Amsterdam"}])});
   const evidence=path.join(process.cwd(),"preview-evidence");
   fs.rmSync(evidence,{recursive:true,force:true});
   fs.mkdirSync(evidence,{recursive:true});

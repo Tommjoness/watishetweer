@@ -34,6 +34,7 @@ const server=http.createServer((req,res)=>{
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const VARIANT={
   goed:{cc:()=>8},
+  zonderVenster:{cc:u=>u%3===0?36:0},
   matig:{cc:()=>60},
   slecht:{cc:()=>95,pr:()=>0.6,zicht:1500,wc:()=>61}
 };
@@ -49,7 +50,7 @@ function nacht(lat,lon,soort,verwijderNacht){
   return d;
 }
 /* scenario: "goed" | "slecht" | "gemengd" | "ontbrekend" */
-const soortVoor=(scenario,i)=>scenario==="gemengd"?["goed","matig","slecht"][i%3]:scenario==="ontbrekend"?"goed":scenario;
+const soortVoor=(scenario,i)=>scenario==="gemengd"?["goed","matig","slecht"][i%3]:scenario==="ontbrekend"?"goed":scenario==="hoogGemengd"?(i===1?"goed":"zonderVenster"):scenario;
 
 async function open(browser,scenario,{breedte,taal,vertraging}){
   const context=await browser.newContext({viewport:{width:breedte,height:900},locale:taal==="en"?"en-GB":"nl-NL",timezoneId:"Europe/Amsterdam",serviceWorkers:"block"});
@@ -79,7 +80,7 @@ const NL_RESTEN=/\b(Vannacht|parken|omstandigheden|gunstige?|Elders|beperkend|He
   try{
     /* ----- inhoud van het antwoord, Nederlands ----- */
     const tekst={};
-    for(const scenario of ["goed","slecht","gemengd","ontbrekend"]){
+    for(const scenario of ["goed","slecht","gemengd","ontbrekend","zonderVenster","hoogGemengd"]){
       const {context,page,fouten}=await open(browser,scenario,{breedte:1440,taal:"nl"});
       try{
         await page.waitForFunction(()=>{const a=document.getElementById("nz-antwoord");return a&&!a.hidden&&a.textContent.trim();},null,{timeout:20000});
@@ -96,20 +97,32 @@ const NL_RESTEN=/\b(Vannacht|parken|omstandigheden|gunstige?|Elders|beperkend|He
           assert.equal(l.vertaling,"no",`${scenario}: parknaam in het antwoord is vertaalbaar`);
         }
         if(scenario==="goed"){
-          assert(/Vannacht zijn de omstandigheden in 19 van de 19 parken gunstig \(7\/10 of hoger\)\./.test(t.tekst),`goed: ${t.tekst}`);
+          assert(/Vannacht is er in 19 van de 19 parken een gunstig kijkvenster\./.test(t.tekst),`goed: ${t.tekst}`);
           assert(/Het best \(\d+\/10\): alle 19 parken\./.test(t.tekst),`goed: ${t.tekst}`);
           assert(!/Elders beperkend/.test(t.tekst),`goed: "elders beperkend" zonder overige parken: ${t.tekst}`);
         }
         if(scenario==="slecht"){
-          assert(/^Vannacht is er geen park met gunstige omstandigheden\./.test(t.tekst),`slecht: ${t.tekst}`);
+          assert(/^Vannacht is er geen gunstig kijkvenster gevonden\./.test(t.tekst),`slecht: ${t.tekst}`);
           assert(!/parken gunstig|Het best/.test(t.tekst),`slecht: een relatief beste park mag niet als gunstig gelden: ${t.tekst}`);
           assert(/Hoogste indicatie: \d\/10 \(Ongunstig\) in alle 19 parken\./.test(t.tekst),`slecht: ${t.tekst}`);
           assert(/Beperkend in de meeste parken: .*(neerslag|bewolking)/.test(t.tekst),`slecht: factoren ontbreken: ${t.tekst}`);
         }
         if(scenario==="gemengd"){
-          assert(/in 7 van de 19 parken gunstig/.test(t.tekst),`gemengd: ${t.tekst}`);
+          assert(/in 7 van de 19 parken een gunstig kijkvenster/.test(t.tekst),`gemengd: ${t.tekst}`);
           assert(t.links.length>=1&&/\+\d/.test(t.tekst)||t.links.length>=1,`gemengd: links naar de beste parken ontbreken: ${t.tekst}`);
           assert(/Elders beperkend: /.test(t.tekst),`gemengd: ${t.tekst}`);
+        }
+        if(scenario==="zonderVenster"||scenario==="hoogGemengd"){
+          const hogeZonder=await page.locator("tr:has(.nz-venster.nz-geen) .nz-n .nz-w").allTextContents();
+          assert(hogeZonder.some(x=>/^[789]\/10|^10\/10/.test(x)),`fixture bevat geen hoge score zonder venster: ${hogeZonder}`);
+          if(scenario==="zonderVenster"){
+            assert.match(t.tekst,/^Vannacht is er geen gunstig kijkvenster gevonden\./);
+            assert.doesNotMatch(t.tekst,/Het best/);
+          }else{
+            assert.match(t.tekst,/in 1 van de 19 parken een gunstig kijkvenster/);
+            const geschikt=await page.locator("tr:not(:has(.nz-venster.nz-geen)) th a").getAttribute("href");
+            assert.deepEqual(t.links.map(l=>l.href),[geschikt]);
+          }
         }
         if(scenario==="ontbrekend")assert(/Voor 1 park ontbreken gegevens\./.test(t.tekst),`ontbrekend: ${t.tekst}`);
         assert.deepEqual(fouten,[],`${scenario}: scriptfouten ${fouten}`);
@@ -118,7 +131,7 @@ const NL_RESTEN=/\b(Vannacht|parken|omstandigheden|gunstige?|Elders|beperkend|He
     console.log("Nachtzicht-antwoord NL: goed, slecht, gemengd en ontbrekend kloppen.");
 
     /* ----- Engels ----- */
-    for(const scenario of ["goed","slecht","gemengd","ontbrekend"]){
+    for(const scenario of ["goed","slecht","gemengd","ontbrekend","zonderVenster","hoogGemengd"]){
       const {context,page,fouten}=await open(browser,scenario,{breedte:1440,taal:"en"});
       try{
         await page.waitForFunction(()=>{const a=document.getElementById("nz-antwoord");return a&&!a.hidden&&a.textContent.trim();},null,{timeout:20000});
@@ -126,7 +139,7 @@ const NL_RESTEN=/\b(Vannacht|parken|omstandigheden|gunstige?|Elders|beperkend|He
         const t=await page.evaluate(()=>document.getElementById("nz-antwoord").textContent.replace(/\s+/g," ").trim());
         assert(!NL_RESTEN.test(t),`en ${scenario}: Nederlandse resten in "${t}"`);
         assert(/^Tonight/.test(t),`en ${scenario}: ${t}`);
-        if(scenario==="slecht")assert(/no park|none of the parks/i.test(t)&&!/Best \(/.test(t),`en slecht: ${t}`);
+        if(scenario==="slecht"||scenario==="zonderVenster")assert(/no favourable viewing window was found/i.test(t)&&!/Best \(/.test(t),`en ${scenario}: ${t}`);
         assert.deepEqual(fouten,[],`en ${scenario}: scriptfouten ${fouten}`);
       }finally{await context.close();}
     }
