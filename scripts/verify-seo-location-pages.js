@@ -15,6 +15,8 @@ const rootPath=path.join(OUT,"index.html"),hubPath=path.join(OUT,"weer","index.h
 for(const p of [rootPath,hubPath,sitemapPath])if(!fs.existsSync(p))throw new Error("SEO-plaatsartifact ontbreekt: "+p);
 
 const root=fs.readFileSync(rootPath,"utf8");
+const uurkopProef=new Set(["almere","amersfoort","den-haag","kampen"]);
+if(tel(root,'<span id="chartlab">Het etmaal</span>')!==1)throw new Error("Homepage mist de standaard grafiekkop.");
 if(tel(root,'<h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>')!==1)throw new Error("Homepage moet de neutrale plaatskop behouden zolang er geen locatie gekozen is.");
 if(tel(root,'<div class="sheet" data-nosnippet>')!==1)throw new Error("Homepage moet de dynamische weerinterface exact één keer uit zoeksnippets houden.");
 if(tel(root,SKIPLINK)!==1||tel(root,'class="skiplink"')!==1)throw new Error("Homepage moet de skiplink exact één keer in een data-nosnippet-omhulsel houden.");
@@ -62,6 +64,8 @@ for(const loc of LOCATIES){
   if(!html.includes(`<h2 id="seo-route-title">Weer in ${loc.naam}</h2>`))throw new Error(`${loc.slug}: zichtbare prerendercontext ontbreekt.`);
   /* Fysiek zichtbaar én toegankelijk vanaf eerste HTML, ook zonder JavaScript. */
   const naamHtml=loc.naam.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const uurkop=uurkopProef.has(loc.slug)?`Weer per uur in ${naamHtml}`:"Het etmaal";
+  if(tel(html,`<span id="chartlab">${uurkop}</span>`)!==1)throw new Error(`${loc.slug}: statische grafiekkop wijkt af van de proefscope.`);
   const vroegeKop=`<h2 id="place" aria-label="${naamHtml}">${naamHtml}<span id="plaatstijd" aria-hidden="true"></span></h2>`;
   if(tel(html,vroegeKop)!==1)throw new Error(`${loc.slug}: statische plaatskop mist juiste zichtbare naam of toegankelijkheidslabel.`);
   if(/<link rel="canonical" href="https:\/\/watishetweer\.nl\/">/.test(html))throw new Error(`${loc.slug}: homepage-canonical lekt naar plaatsroute.`);

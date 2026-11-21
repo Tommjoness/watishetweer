@@ -1900,6 +1900,12 @@ function klokTimerStart(){
   klokUitlijnTimer=setTimeout(()=>{ klokBijwerken(); klokMinuutTimer=setInterval(klokBijwerken,60000); }, totVolgende);
 }
 
+function weatherNowPlaatsUurKop(){
+  const route=window.__WEATHERNOW_ROUTE_LOCATION__;
+  if(route?.uurkop&&Number(S.lat)===Number(route.lat)&&Number(S.lon)===Number(route.lon))return route.uurkop;
+  return "";
+}
+
 function etmaal(start,n){
   S.chartStart=start; S.chartBereik=n;
   /* MM werd verderop gebruikt maar nergens aangemaakt. Een verwijzing naar een
@@ -2413,7 +2419,7 @@ function etmaal(start,n){
   scrubKoppel(); chartHint(); uurPlan();
 
   const dg=S.dag;
-  document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?"De komende 24 uur":S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
+  document.getElementById("chartlab").textContent = dg==null ? (S.bereik===24?(weatherNowPlaatsUurKop()||"De komende 24 uur"):S.bereik===48?"De komende 48 uur":"De komende zeven dagen")
     : new Date(S.d.daily.time[dg]+"T12:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"})+", per uur";
   let di=dg==null?0:dg;
   /* In de standaardweergave tonen we na zonsondergang het eerstvolgende

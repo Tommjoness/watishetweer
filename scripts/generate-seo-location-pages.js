@@ -12,6 +12,8 @@ const ROOT_HTML=path.join(OUT,"index.html");
 const MARKER_NAV="<!-- WEATHER NOW INDEXEERBARE PLAATSEN -->";
 const MARKER_ROUTE="<!-- WEATHER NOW PLAATSROUTE -->";
 const LEGE_PLAATSKOP='<h2 id="place" aria-label="Plaats">&nbsp;<span id="plaatstijd" aria-hidden="true"></span></h2>';
+const STANDAARD_UURKOP='<span id="chartlab">Het etmaal</span>';
+const UURKOP_PROEFPLAATSEN=new Set(["almere","amersfoort","den-haag","kampen"]);
 const START_HAAK="(function(){\n  const p=new URLSearchParams(location.search);\n";
 const URL_SYNC_HAAK=`  try{\n    const u=new URL(location.href);\n    u.searchParams.set("lat",S.lat.toFixed(3));u.searchParams.set("lon",S.lon.toFixed(3));\n    u.searchParams.set("plaats",S.label);\n    if(S.land) u.searchParams.set("land",S.land); else u.searchParams.delete("land");\n    history.replaceState(null,"",u);\n  }catch(e){}\n`;
 const TITLE_SYNC_HAKEN=Object.freeze([
@@ -115,6 +117,11 @@ function voegRouteToe(html,loc){
   let bron=String(html||"");
   if(tel(bron,START_HAAK)!==1)throw new Error(`${loc.slug}: start-haak ontbreekt of is dubbel.`);
   const route={slug:loc.slug,name:loc.naam,lat:loc.lat,lon:loc.lon,country:loc.land};
+  if(UURKOP_PROEFPLAATSEN.has(loc.slug)){
+    if(tel(bron,STANDAARD_UURKOP)!==1)throw new Error(`${loc.slug}: standaard grafiekkop ontbreekt of is dubbel.`);
+    route.uurkop=`Weer per uur in ${loc.naam}`;
+    bron=bron.replace(STANDAARD_UURKOP,`<span id="chartlab">${escHtml(route.uurkop)}</span>`);
+  }
   const bootstrap=`${MARKER_ROUTE}\n<script>window.__WEATHERNOW_ROUTE_LOCATION__=Object.freeze(${JSON.stringify(route)});</script>`;
   if(tel(bron,"</head>")!==1)throw new Error(`${loc.slug}: head-einde ontbreekt of is dubbel.`);
   bron=bron.replace("</head>",bootstrap+"\n</head>");
