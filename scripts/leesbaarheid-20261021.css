@@ -246,3 +246,20 @@ html body #nights .nachtmaanregel:not(#wiw-leesbaarheid){font-size:var(--wiw-t-m
   html body #wiw-hour-table tbody td:not(#wiw-leesbaarheid),
   html body #wiw-hour-table thead th:not(#wiw-leesbaarheid){padding-left:1px!important;padding-right:1px!important}
 }
+
+/* De alternatieve grafiektabel blijft toetsenbord- en schermlezertoegankelijk,
+   maar toont geen permanente link onder de grafiek. Bij focus of openstand
+   verschijnt de native samenvatting weer als bedienbaar 44px-doel. */
+html body #chartdata{position:relative}
+html body #chartdata:not([open])>summary:not(:focus){
+  position:absolute!important;width:1px!important;height:1px!important;
+  min-width:0!important;min-height:0!important;margin:-1px!important;
+  padding:0!important;border:0!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;white-space:nowrap!important
+}
+html body #chartdata>summary:focus,html body #chartdata[open]>summary{
+  position:static!important;width:auto!important;height:auto!important;
+  min-height:44px!important;margin:0!important;
+  padding:10px 0!important;overflow:visible!important;
+  clip-path:none!important;white-space:normal!important
+}
