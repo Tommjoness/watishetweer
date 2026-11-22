@@ -168,6 +168,8 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
     uitleg: document.querySelector("#kopie-status + p").textContent.trim(),
     privacy: document.querySelector('a[href="/privacy"]')?.textContent.trim(),
     meta: document.querySelector('meta[name="description"]').content,
+    statusRole: document.getElementById("kopie-status").getAttribute("role"),
+    statusLive: document.getElementById("kopie-status").getAttribute("aria-live"),
     onbekend: [...(window.__WIW_TAAL_ONTBREEKT__ || [])]
   }));
   assert.equal(contact.lang, "en-GB", "contact: Engelse documenttaal");
@@ -178,6 +180,8 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
   assert.equal(contact.uitleg, "If your email app does not open automatically, you can select or copy the address above.", "contact: Engelse terugvaluitleg");
   assert.equal(contact.privacy, "Privacy & data", "contact: correcte privacylink");
   assert.equal(contact.meta, "Questions or feedback about watishetweer.nl? Find the contact email address here and copy it easily.", "contact: Engelse metabeschrijving");
+  assert.equal(contact.statusRole, "status", "contact: kopieerfeedback is een status");
+  assert.equal(contact.statusLive, "polite", "contact: kopieerfeedback is voor schermlezers aangekondigd");
   assert.deepEqual(contact.onbekend, [], "contact: geen onvertaalde Nederlandse tekst: " + contact.onbekend.join(" | "));
   await t.page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined }));
   await t.page.locator("#kopieer-adres").click();
