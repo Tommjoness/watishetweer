@@ -61,7 +61,7 @@ function bouwServer(opties){
 
 /* In de browser: effectieve maten per rol (kleinste en grootste), plus de controles die grotere tekst niet mag breken. */
 const ROLLEN={
-  kop:"#chartlab,#app > h2 > span,.dashcol h2 > span",label:".stat .eyebrow",uitleg:".stat .ssub",eenheid:".sval > s",
+  kop:"#chartlab,#app > h2 > span,.dashcol h2 > span",label:".stat .eyebrow",uitleg:".stat .ssub",uitlegTop:".final-top-grid>.stats .stat .ssub",eenheid:".sval > s",
   wtitel:"#waarschuwingen .waarsch h3",wtekst:"#waarschuwingen .waarsch p",mlabel:"#modelrisico .modelrisico-label",mnote:"#modelrisico .modelrisico-note",
   uurkop:"#wiw-hour-table thead th",uurtijd:"#wiw-hour-table tbody time",uurprim:"#wiw-hour-table .wiw-hour-primary",uursec:"#wiw-hour-table .wiw-hour-secondary",
   uurdatum:"#wiw-hour-table .wiw-hour-date",dagkop:"#days .row.kop > div",altth:"#chartdata th",alttd:"#chartdata td",terug:"#back",
@@ -78,6 +78,9 @@ function meet(page){
       const w=[];
       for(const el of document.querySelectorAll(sel)){
         if(!zichtbaar(el)||verborgen(el))continue;
+        // De bovenste zes tegels hebben bewust 16px uitleg op desktop;
+        // houd de overige tegeluitleg apart op de bestaande 15px-norm.
+        if(naam==="uitleg"&&el.matches(".final-top-grid>.stats .stat .ssub"))continue;
         let eff=parseFloat(getComputedStyle(el).fontSize);
         if(el instanceof SVGElement&&el.getScreenCTM){const m=el.getScreenCTM();if(m)eff=eff*Math.hypot(m.a,m.b);}
         w.push(eff);
@@ -133,14 +136,20 @@ const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:
 /* Strook-lettermaten per desktopbreedte (zie live-polish.css): twee kolommen (stripcontainer < 758px, viewport tot ca. 1350px) 16/18, vier smalle kolommen
    (758 t/m 859px, viewport ca. 1351 t/m 1599px) 15/16, vier ruime kolommen (vanaf 860px, viewport 1600px en breder) 16/17. */
 const stripMaat=w=>w<=1350?{stripdt:16,stripdd:18}:w<1600?{stripdt:15,stripdd:16}:{stripdt:16,stripdd:17};
-const DESKTOP={kopknop:14,plaatsmeta:14,kans:14,stripoms:14,tabelknop:14,dagmm:14,vanafnu:14,voetlabel:13,themaknop:14,stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
-const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
-const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
+const DESKTOP={kopknop:14,plaatsmeta:14,kans:14,stripoms:14,tabelknop:14,dagmm:14,vanafnu:14,voetlabel:13,themaknop:14,stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,uitlegTop:16,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
+const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,uitlegTop:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
+const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,uitlegTop:14,eenheid:13,wtitel:17,wtekst:16,mlabel:14,mnote:14,terug:13};
 
 (async()=>{
   const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   let n=0;
   const controleer=(L,klasse,m,verwacht)=>{
+    // Beide uitlegrollen moeten aanwezig zijn; een ontbrekend veld mag niet
+    // stilzwijgend door de generieke optionele-rolcontrole glippen.
+    if(Object.hasOwn(verwacht,"uitleg")){
+      assert.ok(m.maten.uitleg?.n>=1,`${L}: gewone tegeluitleg ontbreekt`);
+      assert.ok(m.maten.uitlegTop?.n>=1,`${L}: uitleg in de bovenste zes tegels ontbreekt`);
+    }
     for(const [rol,px] of Object.entries(verwacht)){
       if(!m.maten[rol])continue;
       assert.equal(m.maten[rol].min,px,`${L}: ${rol} is minimaal ${m.maten[rol].min}px (verwacht ${px}px, ${klasse})`);

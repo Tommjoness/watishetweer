@@ -253,14 +253,14 @@ async function testLaden(browser,root){
       controleer(await meetTegel(page),g,taal,L);
       if(g.radarBriefing){
         const briefing=await page.locator("#brief").innerText();
-        const radarZin=taal==="en"?"According to the KNMI radar forecast, a few drops may fall in the next two hours.":"Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
-        ok(briefing.includes(radarZin),`${L}: de briefing vermeldt de radarbron bij droge modeluren: ${briefing}`);
-        const tweeUurZin=taal==="en"?"It is dry now. According to the KNMI radar forecast, a few drops may fall in the next two hours.":"Het is nu droog. Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
+        const radarZin=taal==="en"?"A few drops may fall in the next two hours.":"In de komende twee uur kunnen enkele druppels vallen.";
+        ok(briefing.includes(radarZin),`${L}: de briefing noemt geen leverancier bij droge modeluren: ${briefing}`);
+        const tweeUurZin=taal==="en"?"It is dry now. A few drops may fall in the next two hours.":"Het is nu droog. In de komende twee uur kunnen enkele druppels vallen.";
         const tweeUur=await page.evaluate(()=>({tekst:document.getElementById("nctext").textContent.trim(),naam:document.getElementById("nc").getAttribute("aria-label")||""}));
-        ok(tweeUur.tekst===tweeUurZin,`${L}: het twee-uursblok vermeldt de radarbron: ${tweeUur.tekst}`);
+        ok(tweeUur.tekst===tweeUurZin,`${L}: het twee-uursblok toont de exacte bronvrije neerslagzin: ${tweeUur.tekst}`);
         ok(tweeUur.naam.startsWith(tweeUurZin),`${L}: de toegankelijke naam van de grafiek begint met de radarzin: ${tweeUur.naam}`);
-        const zonderBron=taal==="en"?/(^|\. )A few drops may fall/:/(^|\. )In de komende twee uur kunnen enkele druppels vallen/;
-        ok(!zonderBron.test(tweeUur.tekst+" "+tweeUur.naam),`${L}: geen druppelzin zonder radarbron in het twee-uursblok: ${tweeUur.naam}`);
+        const oudeRadarbron=/Volgens de KNMI-radar|According to the KNMI radar forecast/i;
+        ok(!oudeRadarbron.test(tweeUur.tekst+" "+tweeUur.naam),`${L}: geen achterhaalde leveranciersvermelding in zichtbare tekst of toegankelijke naam: ${tweeUur.naam}`);
       }
       eerlijk(fouten,L);
     }finally{await context.close();}

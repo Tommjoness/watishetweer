@@ -153,6 +153,47 @@ async function open(browser, { lader, bundelNaam, bundel }, url, voorbereiding, 
   }
   await s.t.ctx.close();
 
+  /* Echte contact-HTML met dezelfde gebouwde taallader, inclusief statusupdates. */
+  const contactBron = fs.readFileSync(path.join(__dirname, "..", "contact", "index.html"), "utf8");
+  assert.equal(contactBron.split("</body>").length, 2, "contactbron heeft precies één body-einde");
+  const contactHtml = contactBron.replace("</body>", '<script src="/LADER" defer data-taal-lader></script></body>');
+  t = await open(browser, b, "/contact/?taal=en", null, contactHtml, { width: 390, height: 844 });
+  await t.page.waitForFunction(() => document.documentElement.hasAttribute("data-taal-klaar"), null, { timeout: 5000 });
+  const contact = await t.page.evaluate(() => ({
+    lang: document.documentElement.lang,
+    intro: document.getElementById("contact-adres").parentElement.textContent.trim(),
+    mailto: document.getElementById("contact-adres").getAttribute("href"),
+    open: document.querySelector(".contact-actions a").textContent.trim(),
+    copy: document.getElementById("kopieer-adres").textContent.trim(),
+    uitleg: document.querySelector("#kopie-status + p").textContent.trim(),
+    privacy: document.querySelector('a[href="/privacy"]')?.textContent.trim(),
+    meta: document.querySelector('meta[name="description"]').content,
+    statusRole: document.getElementById("kopie-status").getAttribute("role"),
+    statusLive: document.getElementById("kopie-status").getAttribute("aria-live"),
+    onbekend: [...(window.__WIW_TAAL_ONTBREEKT__ || [])]
+  }));
+  assert.equal(contact.lang, "en-GB", "contact: Engelse documenttaal");
+  assert.equal(contact.intro, "Do you have a question, comment or idea for watishetweer.nl? You can email support@watishetweer.nl.", "contact: complete introductie met behouden link");
+  assert.equal(contact.mailto, "mailto:support@watishetweer.nl", "contact: mailto blijft bestaan");
+  assert.equal(contact.open, "Open email", "contact: Engelse e-mailactie");
+  assert.equal(contact.copy, "Copy email address", "contact: Engelse kopieerknop");
+  assert.equal(contact.uitleg, "If your email app does not open automatically, you can select or copy the address above.", "contact: Engelse terugvaluitleg");
+  assert.equal(contact.privacy, "Privacy & data", "contact: correcte privacylink");
+  assert.equal(contact.meta, "Questions or feedback about watishetweer.nl? Find the contact email address here and copy it easily.", "contact: Engelse metabeschrijving");
+  assert.equal(contact.statusRole, "status", "contact: kopieerfeedback is een status");
+  assert.equal(contact.statusLive, "polite", "contact: kopieerfeedback is voor schermlezers aangekondigd");
+  assert.deepEqual(contact.onbekend, [], "contact: geen onvertaalde Nederlandse tekst: " + contact.onbekend.join(" | "));
+  await t.page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined }));
+  await t.page.locator("#kopieer-adres").click();
+  await t.page.waitForFunction(() => document.getElementById("kopie-status").textContent.trim() === "Could not copy the email address. Select the address above to copy it manually.");
+  await t.page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+    configurable: true, value: { writeText: async text => { window.__contactGekopieerd = text; } }
+  }));
+  await t.page.locator("#kopieer-adres").click();
+  await t.page.waitForFunction(() => document.getElementById("kopie-status").textContent.trim() === "Email address copied.");
+  assert.equal(await t.page.evaluate(() => window.__contactGekopieerd), "support@watishetweer.nl", "contact: kopieeractie geeft exact het adres door");
+  await t.ctx.close();
+
   await browser.close();
   console.log(`Taallader-browsertest geslaagd: standaard Nederlands zonder bundel, ?taal=en/nl, bewaarde keuze, geblokkeerde opslag en schakelaar ${instellingen.schakelaarZichtbaar ? "zichtbaar" : "verborgen"}.`);
 })().catch(e => { console.error(e); process.exit(1); });
