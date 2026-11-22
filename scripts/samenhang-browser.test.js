@@ -314,12 +314,13 @@ function meet(){
       const {context,page,fouten}=await open(browser,root,null,w,h,"/weer/");
       try{
         const r=await page.evaluate(()=>{
-          const knoppen=[...document.querySelectorAll("#thema [data-keuze]")].map(k=>({k:k.getAttribute("data-keuze"),p:k.getAttribute("aria-pressed"),h:k.getBoundingClientRect().height}));
+          const knoppen=[...document.querySelectorAll("#thema [data-keuze]")].map(k=>({k:k.getAttribute("data-keuze"),p:k.getAttribute("aria-pressed"),h:k.getBoundingClientRect().height,t:k.textContent.trim()}));
           const terug=document.querySelector(".terug-boven a"),h1=document.querySelector("h1");
           return {knoppen,terugBoven:!!terug&&h1&&terug.getBoundingClientRect().top<h1.getBoundingClientRect().top,oudeSchakelaar:!!document.querySelector(".wiw-theme-switch")};
         });
         assert.deepEqual(r.knoppen.map(k=>k.k),["licht","auto","donker"],w+"px /weer/: weergavekeuze Licht | Auto | Donker ontbreekt");
         assert(r.knoppen.every(k=>k.h>=43.5),w+"px /weer/: weergaveknoppen zijn geen 44px-tikdoel");
+        assert.deepEqual(r.knoppen.map(k=>k.t),["Licht","Auto","Donker"],w+"px /weer/: weergaveknoppen tonen alleen tekst, zonder zon- of maansymbool");
         assert(r.terugBoven&&!r.oudeSchakelaar,w+"px /weer/: terug-link niet bovenaan of oude schakelaar nog aanwezig");
         await page.click('#thema [data-keuze="donker"]');await sleep(150);
         assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",w+"px /weer/: Donker zet het donkere thema niet");
