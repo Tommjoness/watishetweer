@@ -154,7 +154,7 @@ assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige 
 assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
 
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
-assert(html.includes("Krijgen we een witte kerst in 2026? Vanaf 19 december per dag het verwachte sneeuwdek"),"description beantwoordt de zoekvraag en noemt de startdatum");
+assert(html.includes("Krijgen we een witte kerst in 2026? Vanaf 19 december het verwachte sneeuwdek van Groningen tot Maastricht"),"description beantwoordt de zoekvraag en noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
 assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
 /* SEO-content blijft statisch, bronverifieerbaar en in het Engels volledig vertaald. */

@@ -1132,8 +1132,8 @@
       (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven major towns and cities in the Netherlands.`],
     [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight`],
     [/^Krijgen we een witte kerst in (\d{4})\?$/, (m) => `Will we have a white Christmas in ${m[1]}?`],
-    [/^Vanaf (\d{1,2}) december per dag het verwachte sneeuwdek in De Bilt en grote steden van Groningen tot Maastricht, plus alle witte kersten sinds 1901\.$/,
-      (m) => `From ${m[1]} December: expected snow cover for each day in De Bilt and major cities from Groningen to Maastricht, plus every white Christmas since 1901.`],
+    [/^Vanaf (\d{1,2}) december het verwachte sneeuwdek van Groningen tot Maastricht, plus alle witte kersten sinds 1901\.$/,
+      (m) => `From ${m[1]} December: the expected snow cover from Groningen to Maastricht, plus every white Christmas since 1901.`],
     [/^Witte kerst (\d{4}): krijgen we sneeuw met kerst\?$/, (m) => `White Christmas ${m[1]}: will we get snow at Christmas?`],
     [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
