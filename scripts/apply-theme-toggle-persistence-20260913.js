@@ -20,9 +20,9 @@ const THEMA_PERSIST_HAAK='try{localStorage.setItem(THEMA_ACTIEF_KEY,JSON.stringi
    alleen het werkelijk actieve thema, zodat de statische /weer/-hub bij een
    Auto-voorkeur zonder flits kan aansluiten op de laatst bekeken weerpagina. */
 const SWITCH_HTML=`<button id="thema" type="button" class="wiw-theme-switch" role="switch" aria-checked="false" aria-label="Donkere weergave" title="Schakel donkere weergave in">
-          <span class="wiw-theme-icon wiw-theme-sun" aria-hidden="true">☀</span>
+          <span class="wiw-theme-icon wiw-theme-sun" aria-hidden="true"></span>
           <span class="wiw-theme-track" aria-hidden="true"><span class="wiw-theme-thumb thema-status"></span></span>
-          <span class="wiw-theme-icon wiw-theme-moon" aria-hidden="true">☾</span>
+          <span class="wiw-theme-icon wiw-theme-moon" aria-hidden="true"></span>
           <span class="sr-only">Weergave</span>
         </button>`;
 

@@ -148,8 +148,8 @@ const CSS=`
     top:auto!important;
     width:auto!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:0}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:0}
   /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
   :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
   :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
@@ -278,8 +278,8 @@ const CSS=`
     top:auto!important;
     width:auto!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:8px}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:8px}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:0}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:0}
   /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
   :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
   :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
@@ -317,7 +317,7 @@ const CSS=`
     letter-spacing:.035em!important;
   }
   #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after,
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{margin-left:6px}
+  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{margin-left:0}
 }
 `;
 
@@ -493,8 +493,8 @@ function valideerWeatherHtml(html,rel){
     '#thema-switch{\n    grid-column:1 / -1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
     '.wiw-theme-moon{\n    grid-column:3!important;\n    grid-row:1!important;\n    position:static!important',
-    '.wiw-theme-sun::after{content:"Licht";margin-left:8px}',
-    '.wiw-theme-moon::after{content:"Donker";margin-left:8px}',
+    '.wiw-theme-sun::after{content:"Licht";margin-left:0}',
+    '.wiw-theme-moon::after{content:"Donker";margin-left:0}',
     'min-height:46px!important'
   ])if(!html.includes(marker))throw new Error(rel+": mobiele segmented-control invariant ontbreekt: "+marker);
   new vm.Script(segment,{filename:rel+":theme-mobile-session"});
