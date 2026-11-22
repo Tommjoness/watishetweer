@@ -46,7 +46,7 @@ function werkActueleConditieBij(){
   const a=api.analyseerNeerslagData(S.d,120,nu);
   if(!a||!a.currentRadarWet){herstelModelConditie();return;}
   const cond=document.getElementById("cond"),ico=document.getElementById("nowicon"),mini=document.getElementById("minicond");
-  const tekst=a.soort&&a.soort!=="neerslag"?String(a.soort).charAt(0).toUpperCase()+String(a.soort).slice(1):"Neerslag";
+  const tekst=a.soort&&a.soort!=="neerslag"?(/^ij/i.test(String(a.soort))?"IJ"+String(a.soort).slice(2):String(a.soort).charAt(0).toUpperCase()+String(a.soort).slice(1)):"Neerslag";
   if(cond)cond.textContent=tekst;
   if(mini)mini.textContent=tekst;
   if(ico&&typeof icon==="function"){

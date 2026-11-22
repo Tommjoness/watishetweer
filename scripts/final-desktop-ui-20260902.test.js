@@ -23,6 +23,7 @@ let v=regenVelden({genoeg:true,kans:87,hoeveelheid:2.36,eersteTijd:"14:15",soort
 assert.deepEqual(v.map(x=>x.label),["Huidige status","Verwacht begin rond","Hoogste neerslagkans","Verwachte totale hoeveelheid","Neerslagtype"]);assert.equal(v[3].waarde,"2,4 mm");
 v=regenVelden({genoeg:false,kans:20,hoeveelheid:4.2},false);assert.equal(v.some(x=>x.label.includes("hoeveelheid")),false,"onvoldoende gedekte hoeveelheid mag niet worden getoond");
 v=regenVelden({genoeg:true,kans:0,hoeveelheid:0,soort:"regen"},false);assert.deepEqual(v,[{label:"Huidige status",waarde:"Droog"}],"volledig droog toont geen irrelevante 0% of 0,0 mm");
+v=regenVelden({genoeg:true,kans:60,hoeveelheid:1.2,eersteTijd:"18:00",soort:"ijzel"},false);assert.equal(v.find(x=>x.label==="Neerslagtype").waarde,"IJzel","IJ blijft samen een hoofdletter");
 v=regenVelden({genoeg:true,kans:25,hoeveelheid:0,soort:"regen"},false);assert.equal(v.some(x=>x.label==="Hoogste neerslagkans"&&x.waarde==="25%"),true,"echte niet-nul kans blijft zichtbaar");assert.equal(v.some(x=>x.label==="Verwachte totale hoeveelheid"&&x.waarde==="0,0 mm"),true,"bekende 0,0 mm blijft relevant naast een niet-nul kans");
 /* De modelwaarden blijven onveranderd; alleen bij weergegeven nul-kans en positieve mm verschijnt uitleg. */
 assert.equal(toontNulKansMetNeerslag([{kans:0,hoeveelheid:0.2}]),true);

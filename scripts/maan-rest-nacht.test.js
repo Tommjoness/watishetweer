@@ -11,8 +11,8 @@ const en=maakVertaler(require("../taal/en.js"));
 
 assert.equal(p.formatteerMaanTekst("maan blijft de rest van de nacht onder de horizon"),"De rest van de nacht blijft de maan onder de horizon.");
 assert.equal(p.formatteerMaanTekst("maan blijft de rest van de nacht boven de horizon"),"De rest van de nacht blijft de maan boven de horizon.");
-assert.equal(p.formatteerMaanTekst("maan blijft onder de horizon"),"Maan blijft onder de horizon.","andere nachten houden hun zin");
-assert.equal(p.formatteerMaanTekst("maan blijft boven de horizon"),"Maan blijft boven de horizon.");
+assert.equal(p.formatteerMaanTekst("maan blijft onder de horizon"),"De maan blijft onder de horizon.","andere nachten houden hun zin");
+assert.equal(p.formatteerMaanTekst("maan blijft boven de horizon"),"De maan blijft boven de horizon.");
 
 assert.equal(en.vertaal("De rest van de nacht blijft de maan onder de horizon."),"The moon stays below the horizon for the rest of the night.");
 assert.equal(en.vertaal("De rest van de nacht blijft de maan boven de horizon."),"The moon stays above the horizon for the rest of the night.");
