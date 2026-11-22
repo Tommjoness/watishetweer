@@ -84,13 +84,13 @@ function nachtVensterTijdsvorm(tekst,opt={}){
 
 function temperatuurEenheid(v){const n=num(v);return n!==null&&Math.abs(n)===1?"graad":"graden";}
 function temperatuurTekst(v){const n=num(v);return n===null?"":String(v)+" "+temperatuurEenheid(n);}
-function corrigeerGradenTekst(tekst){return String(tekst==null?"":tekst).replace(/(^|[^\d,.-])(-?1) graden\b/g,"$1$2 graad");}
+function corrigeerGradenTekst(tekst){return String(tekst==null?"":tekst).replace(/(^|[^\d,.-])(-?1) graden\b/g,(m,voor,getal,pos,bron)=>/\btussen\s+-?\d+(?:,\d+)?\s+en\s*$/i.test(bron.slice(0,pos)+voor)?m:voor+getal+" graad");}
 
-const WMO={0:"Onbewolkt",1:"Overwegend zonnig",2:"Half bewolkt",3:"Bewolkt",45:"Mist",48:"Rijpmist",51:"Lichte motregen",53:"Motregen",55:"Dichte motregen",56:"Lichte ijzelmotregen",57:"IJzelmotregen",61:"Lichte regen",63:"Regen",65:"Zware regen",66:"Lichte ijzel",67:"IJzel",71:"Lichte sneeuw",73:"Sneeuw",75:"Zware sneeuw",77:"Sneeuwkorrels",80:"Lichte regenbuien",81:"Regenbuien",82:"Zware regenbuien",85:"Lichte sneeuwbuien",86:"Zware sneeuwbuien",95:"Onweer",96:"Onweer met hagel",99:"Zwaar onweer met hagel"};
+const WMO={0:"Onbewolkt",1:"Overwegend zonnig",2:"Half bewolkt",3:"Bewolkt",45:"Mist",48:"Rijpmist",51:"Lichte motregen",53:"Motregen",55:"Dichte motregen",56:"Lichte aanvriezende motregen",57:"Aanvriezende motregen",61:"Lichte regen",63:"Regen",65:"Zware regen",66:"Lichte ijzel",67:"IJzel",71:"Lichte sneeuw",73:"Sneeuw",75:"Zware sneeuw",77:"Sneeuwkorrels",80:"Lichte regenbuien",81:"Regenbuien",82:"Zware regenbuien",85:"Lichte sneeuwbuien",86:"Zware sneeuwbuien",95:"Onweer",96:"Onweer met hagel",99:"Zwaar onweer met hagel"};
 function neerslagCode(code){const c=num(code);return c!==null&&((c>=51&&c<=82)||(c>=85&&c<=86)||c===95||c===96||c===99);}
 function dagBasis(a,basis){
   const code=num(a&&a.code),mm=num(a&&a.hoeveelheid);let t=code!==null&&WMO[code]?WMO[code]:String(basis||"Verwachting");
-  if(neerslagCode(code)&&mm!==null&&mm>=5){t=t.replace(/^Lichte\s+/i,"");if(t)t=t.charAt(0).toUpperCase()+t.slice(1);}return t;
+  if(neerslagCode(code)&&mm!==null&&mm>=5){t=t.replace(/^Lichte\s+/i,"");if(t)t=/^ij/i.test(t)?"IJ"+t.slice(2):t.charAt(0).toUpperCase()+t.slice(1);}return t;
 }
 function dagKansTekst(a,basis){
   const b=dagBasis(a,basis),k=num(a&&a.kans),soort=b.toLowerCase(),tijd=String(a&&a.eersteTijd||"");if(k===null)return b;

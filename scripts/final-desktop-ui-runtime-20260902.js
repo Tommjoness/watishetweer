@@ -77,7 +77,7 @@ function regenVelden(a,isNat){
   const heeftNeerslagsignaal=!!(isNat||eersteTijd||(kansNum!==null&&kansNum>0)||(hoeveelheidNum!==null&&hoeveelheidNum>0));
   const kans=heeftNeerslagsignaal?formatPct(a.kans):null;if(kans)velden.push({label:"Hoogste neerslagkans",waarde:kans});
   const mm=a.genoeg===false||!heeftNeerslagsignaal?null:formatMm(a.hoeveelheid);if(mm)velden.push({label:"Verwachte totale hoeveelheid",waarde:mm});
-  const soort=String(a.soort||"").trim();if(heeftNeerslagsignaal&&soort&&soort.toLowerCase()!=="neerslag")velden.push({label:"Neerslagtype",waarde:soort.charAt(0).toUpperCase()+soort.slice(1)});
+  const soort=String(a.soort||"").trim();if(heeftNeerslagsignaal&&soort&&soort.toLowerCase()!=="neerslag")velden.push({label:"Neerslagtype",waarde:/^ij/i.test(soort)?"IJ"+soort.slice(2):soort.charAt(0).toUpperCase()+soort.slice(1)});
   return velden;
 }
 

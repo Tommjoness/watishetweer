@@ -60,7 +60,7 @@ function neerslagUurBetekenis(){
     const uitleg=heeftKans&&heeftMm?" Eerst de neerslagkans, daarna het verwachte totaal in het komende uur."
       :heeftKans?" Dit is de neerslagkans voor het komende uur."
       :heeftMm?" Dit is het verwachte totaal in het komende uur.":"";
-    waarde.setAttribute("aria-label",(actueel?"Nu: ":"Komend uur: ")+tekst+"."+uitleg);
+    waarde.setAttribute("aria-label",(actueel?"Nu: ":"Komend uur: ")+(tekst==="Droog"?"droog":tekst)+"."+uitleg);
   }else waarde.removeAttribute("aria-label");
 }`;
 

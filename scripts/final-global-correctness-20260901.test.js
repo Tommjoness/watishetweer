@@ -49,11 +49,19 @@ assert.equal(G.temperatuurTekst(2),"2 graden");
 assert.equal(G.corrigeerGradenTekst("Vannacht ongeveer 1 graden."),"Vannacht ongeveer 1 graad.");
 assert.equal(G.corrigeerGradenTekst("Minimaal -1 graden, maximaal 2 graden."),"Minimaal -1 graad, maximaal 2 graden.");
 assert.equal(G.corrigeerGradenTekst("11 graden en 1,1 graden"),"11 graden en 1,1 graden","samengestelde getallen mogen niet per ongeluk enkelvoud worden");
+assert.equal(G.corrigeerGradenTekst("temperatuur tussen -7 en -1 graden, hoogste neerslagkans"),"temperatuur tussen -7 en -1 graden, hoogste neerslagkans","een bereik blijft meervoud");
+assert.equal(G.corrigeerGradenTekst("temperatuur tussen -17 en 1 graden"),"temperatuur tussen -17 en 1 graden","een bereik tot 1 blijft meervoud");
+assert.equal(G.corrigeerGradenTekst("Tussen 9 en 12 uur 1 graden."),"Tussen 9 en 12 uur 1 graad.","alleen een temperatuurbereik blijft meervoud");
+assert.equal(G.corrigeerGradenTekst("Tussen -3 en 1 graden."),"Tussen -3 en 1 graden.","bereik aan het begin van een zin");
 
 /* Dagweertype: dagelijkse WMO-code blijft het karakter bepalen. */
 assert.equal(G.dagBasis({code:81,hoeveelheid:8.7},"Lichte motregen"),"Regenbuien","Singapore WMO 81 + 8,7 mm mag geen motregen worden");
 assert.equal(G.dagKansTekst({code:81,kans:98,hoeveelheid:8.7,eersteTijd:"09:00"},"Lichte motregen"),"Zeer grote kans op regenbuien in de ochtend");
 assert.equal(G.dagBasis({code:80,hoeveelheid:7.2},"Lichte buien"),"Regenbuien","7,2 mm maakt lichte dagkarakterisering onnodig precieus");
+assert.equal(G.dagBasis({code:66,hoeveelheid:6},"Lichte ijzel"),"IJzel","IJ blijft samen een hoofdletter");
+assert.equal(G.dagBasis({code:56,hoeveelheid:6},"Lichte motregen"),"Aanvriezende motregen","één term voor aanvriezende motregen");
+assert.equal(G.dagKansTekst({code:66,kans:50,hoeveelheid:6,eersteTijd:"19:00"},"Lichte ijzel"),"IJzel mogelijk in de avond");
+assert.equal(G.dagKansTekst({code:56,kans:80,hoeveelheid:1,eersteTijd:"19:00"},"Lichte motregen"),"Grote kans op lichte aanvriezende motregen in de avond");
 assert.equal(G.dagBasis({code:51,hoeveelheid:0.3},"Lichte motregen"),"Lichte motregen");
 assert.equal(G.dagBasis({code:51,hoeveelheid:6.0},"Lichte motregen"),"Motregen","grote dagsom mag niet als slechts licht worden samengevat");
 assert.equal(G.dagBasis({code:73,hoeveelheid:3},"Regen"),"Sneeuw");

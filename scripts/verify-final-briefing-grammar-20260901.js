@@ -24,6 +24,8 @@ assert.equal(policy.corrigeerGradenTekst("0 graden en 2 graden"),"0 graden en 2 
 assert.equal(corrigeerBriefingTransportTekst("1\u00a0graden",policy.corrigeerGradenTekst),"1\u00a0graad");
 assert.equal(corrigeerBriefingTransportTekst("-1\u00a0graden",policy.corrigeerGradenTekst),"-1\u00a0graad");
 assert.equal(corrigeerBriefingTransportTekst("6\u00a0graden",policy.corrigeerGradenTekst),"6\u00a0graden");
+assert.equal(corrigeerBriefingTransportTekst("tussen -7 en -1\u00a0graden",policy.corrigeerGradenTekst),"tussen -7 en -1\u00a0graden","een bereik blijft meervoud");
+assert.equal(corrigeerBriefingTransportTekst("Tussen -3 en 1 graden",policy.corrigeerGradenTekst),"Tussen -3 en 1 graden","ook aan het begin van een zin");
 
 let aantal=0;
 for(const p of htmls(OUT)){

@@ -50,7 +50,7 @@
     "vrijwel helder": "mostly clear", "overwegend helder": "mainly clear", "helder": "clear",
     "mist": "fog", "aanvriezende mist": "freezing fog", "rijpmist": "freezing fog",
     "lichte motregen": "light drizzle", "motregen": "drizzle", "dichte motregen": "heavy drizzle", "zware motregen": "heavy drizzle",
-    "lichte ijzelmotregen": "light freezing drizzle", "ijzelmotregen": "freezing drizzle", "aanvriezende motregen": "freezing drizzle", "zware aanvriezende motregen": "heavy freezing drizzle",
+    "lichte ijzelmotregen": "light freezing drizzle", "lichte aanvriezende motregen": "light freezing drizzle", "ijzelmotregen": "freezing drizzle", "aanvriezende motregen": "freezing drizzle", "zware aanvriezende motregen": "heavy freezing drizzle",
     "lichte regen": "light rain", "regen": "rain", "zware regen": "heavy rain",
     "aanvriezende regen": "freezing rain", "zware aanvriezende regen": "heavy freezing rain", "lichte ijzel": "light freezing rain", "ijzel": "freezing rain",
     "lichte sneeuw": "light snow", "sneeuw": "snow", "zware sneeuw": "heavy snow", "sneeuwkorrels": "snow grains",
@@ -682,8 +682,8 @@
     "De rest van de nacht blijft de maan boven de horizon.": "The moon stays above the horizon for the rest of the night.",
     "de rest van de nacht boven de horizon": "above the horizon for the rest of the night",
     "de rest van de nacht onder de horizon": "below the horizon for the rest of the night",
-    "Maan blijft onder de horizon.": "The moon stays below the horizon.",
-    "Maan blijft boven de horizon.": "The moon stays above the horizon.",
+    "De maan blijft onder de horizon.": "The moon stays below the horizon.",
+    "De maan blijft boven de horizon.": "The moon stays above the horizon.",
     "maan blijft onder de horizon": "moon stays below the horizon",
     "maan blijft boven de horizon": "moon stays above the horizon",
     "Onvoldoende data": "Not enough data",
@@ -748,7 +748,7 @@
        de HTML die de server levert blijft Nederlands (geen aparte Engelse URL). */
     "Het actuele weer voor elke plek, in Nederland en wereldwijd: hoeveel graden het nu is, regen in de komende uren, het weer per uur, morgen en de 7-daagse verwachting.":
       "The current weather for any place, in the Netherlands and worldwide: how warm it is now, rain over the coming hours, the hourly weather, tomorrow and the 7-day forecast.",
-    "Bekijk het actuele weer en de 7-daagse verwachting voor grote plaatsen in Nederland.": "See the current weather and the 7-day forecast for large places in the Netherlands.",
+    "Bekijk het actuele weer en de 7-daagse verwachting voor grote plaatsen in Nederland.": "See the current weather and the 7-day forecast for major towns and cities in the Netherlands.",
     "Kies een plaats voor neerslag, lokale tijden, luchtkwaliteit en nachtzicht.": "Choose a place for precipitation, local times, air quality and stargazing.",
     "Lees hoe watishetweer.nl actuele weersinformatie en modelverwachtingen samenbrengt, welke bronnen worden gebruikt en hoe je de informatie moet lezen.":
       "Read how watishetweer.nl brings together current weather information and model forecasts, which sources are used and how to read the information.",
@@ -768,13 +768,13 @@
       "What is today's moon phase, how much of the moon is lit and when does it rise and set?",
     "Met de datums van de volgende nieuwe en volle maan.": "With the dates of the next new and full moon.",
     "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
-      "Rain, sunshine and temperature per day in seven large places, with the holiday dates.",
+      "Rain, sunshine and temperature per day in seven major towns and cities, with the holiday dates.",
     "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata.":
-      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates.",
+      "Rain, snow, sunshine and temperature per day in seven major towns and cities, with the holiday dates.",
     "Per dag regen, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
-      "Rain, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
+      "Rain, sunshine and temperature per day in seven major towns and cities, with the holiday dates for the northern, central and southern regions.",
     "Per dag regen, sneeuw, zon en temperatuur in zeven grote plaatsen, met de vakantiedata voor regio noord, midden en zuid.":
-      "Rain, snow, sunshine and temperature per day in seven large places, with the holiday dates for the northern, central and southern regions.",
+      "Rain, snow, sunshine and temperature per day in seven major towns and cities, with the holiday dates for the northern, central and southern regions.",
     "Bekijk het actuele weer, neerslag voor de komende uren, de 7-daagse verwachting, luchtkwaliteit en nachtzicht voor plaatsen wereldwijd.": "See the current weather, precipitation for the coming hours, the 7-day forecast, air quality and stargazing conditions for places worldwide.",
     "Op een later moment": "At a later time",
     "op een later moment": "at a later time",
@@ -843,7 +843,7 @@
     /* Seizoenspagina oud en nieuw (vaste teksten) */
     "Oud en nieuw": "New Year's Eve",
     "Hoe wordt het weer met oud en nieuw? Zodra de nacht binnen de 7-daagse verwachting valt, staat hier per plaats de verwachting van 22:00 tot 02:00: neerslag, wind, temperatuur en mist, voor zeven grote plaatsen verspreid over Nederland.":
-      "What will the weather be like on New Year's Eve? Once the night falls within the 7-day forecast, this page shows the forecast from 22:00 to 02:00 for each place: precipitation, wind, temperature and fog, for seven large places across the Netherlands.",
+      "What will the weather be like on New Year's Eve? Once the night falls within the 7-day forecast, this page shows the forecast from 22:00 to 02:00 for each place: precipitation, wind, temperature and fog, for seven major towns and cities across the Netherlands.",
     "Waar let je op rond middernacht?": "What matters around midnight?",
     "Rond de jaarwisseling zijn vooral neerslag, wind en zicht van belang. Bij harde windstoten waait vuurwerk sneller af. Bij weinig wind en mist blijft vuurwerkrook langer hangen, waardoor je minder ver kunt zien.":
       "Around the turn of the year, precipitation, wind and visibility matter most. In strong gusts, fireworks drift off course more easily. With little wind and fog, firework smoke lingers for longer, so you cannot see as far.",
@@ -856,7 +856,7 @@
     /* Seizoenspagina herfstvakantie (vaste teksten) */
     "Herfstvakantie": "Autumn school holiday",
     "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
-      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
+      "For each day, the forecast for rain, sunshine and temperature in seven major towns and cities.",
     "Wanneer is de herfstvakantie?": "When is the autumn school holiday?",
     "De herfstvakantie valt niet overal tegelijk: Nederland is voor de schoolvakanties ingedeeld in regio noord, midden en zuid. Dit zijn de adviesdata van het ministerie van OCW; scholen mogen daarvan afwijken. Kijk bij twijfel in de schoolgids.":
       "The autumn school holiday does not fall at the same time everywhere: for school holidays, the Netherlands is divided into a northern, central and southern region. These are the dates recommended by the Dutch Ministry of Education; schools may deviate from them. If in doubt, check your school's guide.",
@@ -868,7 +868,7 @@
     /* Seizoenspagina kerstvakantie (vaste teksten) */
     "Kerstvakantie": "Christmas school holiday",
     "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
-      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven major towns and cities.",
     "Wanneer is de kerstvakantie?": "When is the Christmas school holiday?",
     "De kerstvakantie valt in regio noord, midden en zuid tegelijk. Dit zijn de vastgestelde data van de Rijksoverheid. Scholen in het basisonderwijs en voortgezet onderwijs mogen hier alleen in bijzondere situaties met toestemming van het ministerie van OCW van afwijken. Mbo-instellingen, hogescholen en universiteiten bepalen hun vakantiedata zelf. Kijk bij twijfel in de schoolgids.":
       "The Christmas school holiday falls at the same time in the northern, central and southern regions. These are the fixed dates set by the Dutch government. Schools in primary and secondary education may only deviate from them in special circumstances, with permission from the Dutch Ministry of Education (OCW). Vocational colleges (mbo), universities of applied sciences and universities set their own holiday dates. If in doubt, check your school's guide.",
@@ -879,11 +879,11 @@
     "Meivakantie": "May school holiday",
     "Zomervakantie": "Summer school holiday",
     "Per dag de verwachting voor regen, sneeuw, zon en temperatuur in zeven grote plaatsen.":
-      "For each day, the forecast for rain, snow, sunshine and temperature in seven large places.",
+      "For each day, the forecast for rain, snow, sunshine and temperature in seven major towns and cities.",
     "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
-      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
+      "For each day, the forecast for rain, sunshine and temperature in seven major towns and cities.",
     "Per dag de verwachting voor regen, zon en temperatuur in zeven grote plaatsen.":
-      "For each day, the forecast for rain, sunshine and temperature in seven large places.",
+      "For each day, the forecast for rain, sunshine and temperature in seven major towns and cities.",
     "Wanneer is de voorjaarsvakantie?": "When is the spring school holiday?",
     "Wanneer is de meivakantie?": "When is the May school holiday?",
     "Wanneer is de zomervakantie?": "When is the summer school holiday?",
@@ -1129,11 +1129,11 @@
     [/^Weer (herfst|kerst|voorjaars|mei|zomer)vakantie (\d{4}): regen, (zon|sneeuw) en temperatuur per dag$/, (m) => `${VakantieKop[m[1]]} weather ${m[2]}: rain, ${m[3] === "zon" ? "sunshine" : "snow"} and temperature per day`],
     [/^Hoe wordt het weer met oud en nieuw (\d{4})\?$/, (m) => `What will the weather be like on New Year's Eve ${m[1]}?`],
     [/^Vanaf (\d{1,2}) december staat hier de verwachting voor neerslag, wind en mist rond middernacht in zeven grote plaatsen in Nederland\.$/,
-      (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven large places in the Netherlands.`],
+      (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven major towns and cities in the Netherlands.`],
     [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight`],
     [/^Wordt het een witte kerst in (\d{4})\?$/, (m) => `Will it be a white Christmas in ${m[1]}?`],
     [/^Vanaf (\d{1,2}) december staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland\.$/,
-      (m) => `From ${m[1]} December, this page shows the forecast for snow and temperature at Christmas, for De Bilt and large places in the Netherlands.`],
+      (m) => `From ${m[1]} December, this page shows the forecast for snow and temperature at Christmas, for De Bilt and major towns and cities in the Netherlands.`],
     [/^Witte kerst (\d{4}): kans op sneeuw met kerst$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas`],
     [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
@@ -1451,7 +1451,7 @@
     [new RegExp(`^(morgen|gisteren|ma|di|wo|do|vr|za|zo) ${T}, ${G} graad, (\\d+) procent neerslagkans$`), (m) => `${dagContext(m[1]).toLowerCase()} ${m[2]}, ${graden(m[3])}, ${m[4]} per cent chance of precipitation`],
     [new RegExp(`^${T}, ${G} graad, (\\d+) procent neerslagkans$`), (m) => `${m[1]}, ${graden(m[2])}, ${m[3]} per cent chance of precipitation`],
     [/^Komend uur: (\d+)% kans\.$/, (m) => `Next hour: ${m[1]}% chance.`],
-    [/^Komend uur: Droog\.$/, () => "Next hour: dry."],
+    [/^Komend uur: [Dd]roog\.$/, () => "Next hour: dry."],
     /* Neerslagtegel: tegenstrijdige of KNMI-toestanden met een hoeveelheid (zie neerslagTegelInhoud). */
     [new RegExp(`^Komend uur: (Onzeker|Neerslag) · ${G} mm\\.$`), (m) => `Next hour: ${m[1] === "Onzeker" ? "uncertain" : "precipitation"} · ${getal(m[2])} mm.`],
     [/^Komend uur: <0,1 mm\.$/, () => "Next hour: <0.1 mm."],
@@ -1582,7 +1582,6 @@
     [/^Luchtkwaliteit volgens het model is (zeer slecht|slecht|extreem slecht) \(Europese AQI (\d+)\)\.$/, (m) => `Modelled air quality is ${LUCHT[m[1]]} (European AQI ${m[2]}).`],
     [/^Luchtkwaliteit volgens het model is ongezond \(AQI VS (\d+)\)\.$/, (m) => `Modelled air quality is unhealthy (US AQI ${m[1]}).`],
     [/^De Amerikaanse weerdienst heeft voor deze locatie een (.+) uitgegeven\.$/, (m) => { const w = WAARSCHUWING[m[1].toLowerCase()]; return w && `The US National Weather Service has issued ${/^[aeiou]/i.test(w) ? "an" : "a"} ${w.toLowerCase()} for this location.`; }],
-    [/^Matig veel graspollen verwacht voor dit uur\.$/, () => "Moderate grass pollen levels expected for this hour."],
     [/^(Weinig|Matig veel|Veel|Zeer veel) (.+) verwacht voor dit uur\.$/, (m) => { const s = POLLENSOORT[m[2].toLowerCase()]; return s && `${alsNl("X", POLLENNIVEAU[m[1].toLowerCase()])} ${s} expected for this hour.`; }],
 
     /* Grafiekbeschrijving (schermlezer) */
