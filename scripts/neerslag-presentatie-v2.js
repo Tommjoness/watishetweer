@@ -136,7 +136,7 @@ function werkNeerslagkaartBij(){
 function actueleConditieTekst(a){
   if(!meetbareNeerslagNu(a))return null;
   const soort=String(a&&a.soort||"").trim();
-  if(soort&&soort!=="neerslag")return soort.charAt(0).toUpperCase()+soort.slice(1);
+  if(soort&&soort!=="neerslag")return /^ij/i.test(soort)?"IJ"+soort.slice(2):soort.charAt(0).toUpperCase()+soort.slice(1);
   return "Neerslag";
 }
 
