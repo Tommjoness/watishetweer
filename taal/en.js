@@ -1131,10 +1131,10 @@
     [/^Vanaf (\d{1,2}) december staat hier de verwachting voor neerslag, wind en mist rond middernacht in zeven grote plaatsen in Nederland\.$/,
       (m) => `From ${m[1]} December, this page shows the forecast for precipitation, wind and fog around midnight in seven major towns and cities in the Netherlands.`],
     [/^Weer oud en nieuw (\d{4}): neerslag, wind en mist rond middernacht$/, (m) => `New Year's Eve weather ${m[1]}: precipitation, wind and fog around midnight`],
-    [/^Wordt het een witte kerst in (\d{4})\?$/, (m) => `Will it be a white Christmas in ${m[1]}?`],
-    [/^Vanaf (\d{1,2}) december staat hier de verwachting voor sneeuw en temperatuur met kerst, voor De Bilt en grote plaatsen in Nederland\.$/,
-      (m) => `From ${m[1]} December, this page shows the forecast for snow and temperature at Christmas, for De Bilt and major towns and cities in the Netherlands.`],
-    [/^Witte kerst (\d{4}): kans op sneeuw met kerst$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas`],
+    [/^Krijgen we een witte kerst in (\d{4})\?$/, (m) => `Will we have a white Christmas in ${m[1]}?`],
+    [/^Vanaf (\d{1,2}) december per dag het verwachte sneeuwdek in De Bilt en zes andere plaatsen, plus alle witte kersten sinds 1901\.$/,
+      (m) => `From ${m[1]} December: expected snow cover for each day in De Bilt and six other places, plus every white Christmas since 1901.`],
+    [/^Witte kerst (\d{4}): krijgen we sneeuw met kerst\?$/, (m) => `White Christmas ${m[1]}: will we get snow at Christmas?`],
     [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
        achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
@@ -1254,7 +1254,7 @@
     [/^Kans op gladheid door ijzel(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of icy roads from freezing rain${m[1] ? ` from about ${m[1]}` : ""}.`],
     [/^Kans op gladheid door sneeuw(?: vanaf ongeveer (\d{2}:\d{2}))?\.$/, (m) => `Risk of slippery roads from snow${m[1] ? ` from about ${m[1]}` : ""}.`],
     [/^Kans op gladheid: natte wegen kunnen(?: vanaf ongeveer (\d{2}:\d{2}))? opvriezen\.$/, (m) => `Risk of icy patches: wet roads may freeze${m[1] ? ` from about ${m[1]}` : ""}.`],
-    [/^Witte kerst (\d{4}): kans op sneeuw met kerst \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: chance of snow at Christmas | watishetweer.nl`],
+    [/^Witte kerst (\d{4}): krijgen we sneeuw met kerst\? \| watishetweer\.nl$/, (m) => `White Christmas ${m[1]}: will we get snow at Christmas? | watishetweer.nl`],
     [/^Vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) verschijnt hier de verwachting voor (eerste kerstdag|tweede kerstdag)\.$/,
       (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
     [/^De verwachting voor (eerste kerstdag|tweede kerstdag) volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,

@@ -169,7 +169,7 @@ async function engels(browserType,label,base){
       }));
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       assert.deepEqual(r.ontbreekt,[],`${id}: alles vertaald`);
-      assert(r.titel.startsWith(sc.kop+": chance of snow at Christmas"),`${id}: titel (${r.titel})`);
+      assert(r.titel.startsWith(sc.kop+": will we get snow at Christmas?"),`${id}: titel (${r.titel})`);
       for(const z of sc.zinnen)assert(r.tekst.includes(z),`${id}: tekst bevat "${z}"`);
       assert(!/kerst|sneeuw|verwachting|Bekijk/i.test(r.tekst),`${id}: geen Nederlandse resten: ${r.tekst}`);
       if(sc.data){
