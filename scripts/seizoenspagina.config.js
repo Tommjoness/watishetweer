@@ -26,7 +26,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     ochtendUur:9,
     dagen:[{maand:12,dag:25,label:"Eerste kerstdag"},{maand:12,dag:26,label:"Tweede kerstdag"}],
     titel:"Witte kerst {jaar}: krijgen we sneeuw met kerst?",
-    beschrijving:"Krijgen we een witte kerst in {jaar}? Vanaf {datum} per dag het verwachte sneeuwdek in De Bilt en zes andere plaatsen, plus alle witte kersten sinds 1901.",
+    beschrijving:"Krijgen we een witte kerst in {jaar}? Vanaf {datum} per dag het verwachte sneeuwdek in De Bilt en grote steden van Groningen tot Maastricht, plus alle witte kersten sinds 1901.",
     intro:"Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.",
     uitleg:{
       kop:"Wanneer is het een witte kerst?",
