@@ -61,7 +61,7 @@ const REPOSITORYSECRETS = new Set(["CF_ACCESS_PREVIEW_CLIENT_ID", "CF_ACCESS_PRE
 const OUDE_REPOSITORYSECRETS = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ANALYTICS_API_TOKEN", "CLOUDFLARE_ANALYTICS_SETUP_API_TOKEN", "CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET", "KNMI_EDR_API_KEY", "METEOALARM_API_TOKEN"]);
 /* Jobs die de omgeving alleen voor secrets en de branchbeperking gebruiken en niets uitrollen: `deployment: false`.
    De echte deployjobs (productie en PR-preview) leggen wel een deployment vast. */
-const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken", "sec06-a2-access-bewijs.yml/access-bewijs"]);
+const ZONDER_DEPLOYMENT = new Set(["cloudflare-web-analytics.yml/setup", "cloudflare-human-analytics-report.yml/report", "knmi-modelverificatie.yml/verificatie", "nachtzicht-knmi-weekcontrole.yml/weekcontrole", "meteoalarm-gebieden.yml/bouw", "meteoalarm-verkenning.yml/verken", "sec06-a2-access-bewijs.yml/access-bewijs"]);
 const MET_DEPLOYMENT = new Set(["cloudflare-production.yml/deploy-production", "cloudflare-preview-deploy.yml/preview"]);
 
 function ontleed(tekst) {
