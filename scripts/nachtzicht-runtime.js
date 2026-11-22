@@ -342,8 +342,8 @@ ${urenTabel(n.uren)}`;
     st.html.maan = handtekening;
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
-    /* In volgorde van de dag: wie eerst "onder 06:12" en dan "op 17:30" leest, ziet de maan ook in die volgorde. */
-    const tijden = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ");
+    /* Tijdvolgorde en waarden blijven gelijk; de zichtbare termen zijn expliciet. */
+    const tijden = [["Maanopkomst", m.op], ["Maanondergang", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ");
     set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
     set("nz-maan-plaats", r.naam);
     set("nz-maan-standplaats", r.naam);

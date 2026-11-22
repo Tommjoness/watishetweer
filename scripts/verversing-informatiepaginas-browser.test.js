@@ -207,7 +207,7 @@ async function verberg(page,ja){
         const verwacht=await page.evaluate(()=>{
           const K=window.WeatherNowNachtzichtKern,c=JSON.parse(document.getElementById("nz-config").textContent),r=c.referentie;
           const m=K.maanOverzicht(Date.now(),r.lat,r.lon,"Europe/Amsterdam");
-          return [["op",m.op],["onder",m.onder]].filter(x=>x[1]).sort((a,b)=>a[1]<b[1]?-1:1).map(x=>x[0]+" "+x[1]).join(", ");
+          return [["Maanopkomst",m.op],["Maanondergang",m.onder]].filter(x=>x[1]).sort((a,b)=>a[1]<b[1]?-1:1).map(x=>x[0]+" "+x[1]).join(", ");
         });
         assert(ochtend.includes(verwacht),"maan: na middernacht kloppen de tijden met de nieuwe dag ("+ochtend+" vs "+verwacht+")");
         assert.notEqual(ochtend,avond,"maan: de tijden van vandaag zijn na middernacht veranderd");
