@@ -1444,6 +1444,7 @@
     [/^Toon komende (\d+) uur vanaf nu$/, (m) => `Show the next ${m[1]} hours from now`],
     [/^Temperatuur komende (\d+) uur$/, (m) => `Temperature next ${m[1]} hours`],
     [/^De komende (\d+) uur$/, (m) => `The next ${m[1]} hours`],
+    [/^Weer per uur in (.+)$/, (m) => `Hourly weather in ${plaats(m[1])}`],
     [/^Komende (\d+) uur$/, (m) => `Next ${m[1]} hours`],
     [new RegExp(`^${T}, ${G} graden, (\\d+) procent neerslagkans$`), (m) => `${m[1]}, ${graden(m[2])}, ${m[3]} per cent chance of precipitation`],
     [new RegExp(`^(morgen|gisteren|ma|di|wo|do|vr|za|zo) ${T}, ${G} graden, (\\d+) procent neerslagkans$`), (m) => `${dagContext(m[1]).toLowerCase()} ${m[2]}, ${graden(m[3])}, ${m[4]} per cent chance of precipitation`],

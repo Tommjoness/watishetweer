@@ -131,7 +131,7 @@ const NU_NIEUW=`    let nuIdx = plaatsNuIndex(TI);
        De forecastpunten zelf blijven ongewijzigd en dus gelijk aan de uurtabel. */
     if(nuIdx==null&&voorloop>0)nuIdx=-voorloop;`;
 const KOP_OUD='if(kop&&S.dag==null&&rows.length)kop.textContent="De komende "+rows.length+" uur";';
-const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent="Komende uren";';
+const KOP_NIEUW='if(kop&&S.dag==null&&S.bereik===24)kop.textContent=weatherNowPlaatsUurKop()||"Komende uren";';
 const EERSTVOLGEND_OUD='if(r.marker){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
 const EERSTVOLGEND_NIEUW='if(r.marker&&r.marker!=="Eerstvolgend"){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
 const STYLE=`

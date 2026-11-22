@@ -11,6 +11,11 @@ const PUBLIC=path.join(__dirname,"public");
 const routePad=path.join(PUBLIC,"weer","almere","index.html");
 const hubPad=path.join(PUBLIC,"weer","index.html");
 if(!fs.existsSync(routePad)||!fs.existsSync(hubPad))throw new Error("SEO-plaatsartifacts ontbreken; voer eerst postbuild uit.");
+const proefplaatsen=new Map([
+  ["/weer/amersfoort/","Amersfoort"],
+  ["/weer/den-haag/","Den Haag"],
+  ["/weer/kampen/","Kampen"]
+]);
 
 const d=bouw();
 d.latitude=52.3508;d.longitude=5.2647;d.timezone="Europe/Amsterdam";d.utc_offset_seconds=7200;
@@ -30,12 +35,15 @@ window.fetch=async function(url){
 try{Object.defineProperty(navigator,'geolocation',{value:undefined,configurable:true});}catch(e){}
 </script>`;
 
-function htmlMetStub(){return fs.readFileSync(routePad,"utf8").replace("</head>",stub+"</head>");}
+function htmlMetStub(bestand){return fs.readFileSync(bestand,"utf8").replace("</head>",stub+"</head>");}
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript",".json":"application/json",".woff2":"font/woff2",".png":"image/png",".svg":"image/svg+xml"};
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url||"/","http://127.0.0.1");
   if(url.pathname==="/weer/almere/"||url.pathname==="/weer/almere/index.html"){
-    res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(htmlMetStub());return;
+    res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(htmlMetStub(routePad));return;
+  }
+  if(proefplaatsen.has(url.pathname)){
+    res.writeHead(200,{"content-type":"text/html; charset=utf-8"});res.end(htmlMetStub(path.join(PUBLIC,url.pathname,"index.html")));return;
   }
   if(url.pathname==="/weer/"||url.pathname==="/weer/index.html"){
     res.writeHead(200,{"content-type":"text/html; charset=utf-8"});fs.createReadStream(hubPad).pipe(res);return;
@@ -52,6 +60,7 @@ async function controleer(type,naam){
   const browser=await type.launch({headless:true});
   const context=await browser.newContext({viewport:{width:390,height:844}});
   const page=await context.newPage();
+  await page.clock.setFixedTime(new Date(d.current.time+"+02:00"));
   const pageErrors=[],eigen404=[];
   page.on("pageerror",e=>pageErrors.push(String(e)));
   page.on("response",r=>{try{if(new URL(r.url()).origin===`http://127.0.0.1:${server.address().port}`&&r.status()>=400)eigen404.push(`${r.status()} ${new URL(r.url()).pathname}`);}catch(e){}});
@@ -59,6 +68,8 @@ async function controleer(type,naam){
     const basis=`http://127.0.0.1:${server.address().port}`;
     await page.goto(basis+"/weer/almere/",{waitUntil:"networkidle"});
     await page.waitForFunction(()=>document.querySelectorAll("#days .row.day").length>=5,{timeout:15000});
+    const grafiekKop=page.locator("#chartlab");
+    await grafiekKop.filter({hasText:/^Weer per uur in Almere$/}).waitFor();
     const staat=await page.evaluate(()=>{
       let structured=null;
       try{structured=JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent||"null");}catch(e){}
@@ -104,7 +115,15 @@ async function controleer(type,naam){
     assert.deepEqual(pageErrors,[],`${naam}: pageerrors op plaatsroute`);
     assert.deepEqual(eigen404,[],`${naam}: subpad-assets/API's geven 404: ${eigen404.join(", ")}`);
 
+    await page.setViewportSize({width:1280,height:900});
+    await page.waitForFunction(()=>Number(document.querySelector("#wiw-hour-panel")?.dataset.visibleHours)>0);
+    assert.equal(await grafiekKop.textContent(),"Weer per uur in Almere",`${naam}: desktop overschrijft de proefkop`);
+    await page.locator("#days .row.day:not(.kop)").nth(1).click();
+    assert.match(await grafiekKop.textContent(),/per uur$/,`${naam}: gekozen dag mist de bestaande dagkop`);
+    await page.locator("#back").click();
+    await grafiekKop.filter({hasText:/^Weer per uur in Almere$/}).waitFor();
     await page.evaluate(async()=>{await load(52.3676,4.9041,"Amsterdam",false,false,"NL");});
+    await grafiekKop.filter({hasText:/^Komende uren$/}).waitFor();
     const gedeeld=await page.evaluate(()=>{
       let structured=null;
       try{structured=JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent||"null");}catch(e){}
@@ -157,11 +176,20 @@ async function controleer(type,naam){
       assert(regs.some(r=>r.scope===basis+"/"&&/\/sw\.js$/.test(r.script)),`${naam}: plaatsroute registreert serviceworker niet op rootscope: ${JSON.stringify(regs)}`);
     }
 
+    for(const [route,plaats] of proefplaatsen){
+      await page.goto(basis+route,{waitUntil:"domcontentloaded"});
+      await page.waitForFunction(()=>Number(document.querySelector("#wiw-hour-panel")?.dataset.visibleHours)>0);
+      assert.equal(await grafiekKop.textContent(),"Weer per uur in "+plaats,`${naam}: verkeerde grafiekkop op ${route}`);
+    }
     await page.goto(basis+"/weer/",{waitUntil:"domcontentloaded"});
     const hub=await page.evaluate(()=>({title:document.title,canonical:document.querySelector('link[rel="canonical"]')?.href||"",links:[...document.querySelectorAll('.plaatsen a')].map(a=>a.getAttribute('href'))}));
     assert.equal(hub.title,"Weer per plaats in Nederland | watishetweer.nl",`${naam}: /weer/ title wijkt af`);
     assert.equal(hub.canonical,"https://watishetweer.nl/weer/",`${naam}: /weer/ canonical wijkt af`);
     assert(hub.links.length>=30&&hub.links.includes("/weer/almere/")&&hub.links.includes("/weer/amsterdam/"),`${naam}: /weer/ mist crawlbare plaatslinks`);
+
+    await page.goto(basis+"/weer/almere/?taal=en",{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.querySelectorAll("#days .row.day").length>=5,{timeout:15000});
+    await grafiekKop.filter({hasText:/^Hourly weather in Almere$/}).waitFor();
   }finally{await context.close().catch(()=>{});await browser.close().catch(()=>{});}
 }
 
