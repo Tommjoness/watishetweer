@@ -118,9 +118,45 @@ const EXTRA_STIJL = `
 .nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
 #nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}.nz-maan-beeld{flex:none;display:block;width:26px;height:26px}canvas.nz-maan-svg{display:block}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
+
+/* Afzonderlijke, gedempte maanpresentatie; Nachtzicht en parken ongewijzigd. */
+main.nz-maan-pagina{max-width:1140px;padding:36px clamp(20px,4vw,48px) 48px}
+.nz-maan-bovenbalk{display:flex;align-items:center;flex-wrap:wrap;gap:12px 24px;padding:0 0 20px;margin:0 0 22px;border-bottom:1px solid var(--rule)}
+.nz-maan-merk{font-size:16px;font-weight:700;color:var(--ink);text-decoration:none;white-space:nowrap}
+.nz-maan-bovenbalk nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-right:auto}
+.nz-maan-bovenbalk nav a{font-size:15px;min-height:44px;display:inline-flex;align-items:center}
+.nz-maan-thema{display:flex;gap:2px;padding:3px;border:1px solid var(--rule);border-radius:5px}
+.nz-maan-thema button{min-width:54px;min-height:42px;font:500 14px/1.2 "Instrument Sans",sans-serif;padding:9px;color:var(--ink-70);background:transparent;border:0;border-radius:3px;cursor:pointer}
+.nz-maan-thema button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule);font-weight:700}
+.nz-maan-thema button:focus-visible,.nz-maan-bovenbalk a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.nz-maan-pagina>h1{font-size:clamp(38px,4vw,60px);line-height:1.08}
+.nz-maan-pagina .nz-maan-inleiding{font-size:18px;line-height:1.65;max-width:56rem}
+.nz-maan-pagina .nz-maan-raster{margin-top:28px;padding-top:28px;gap:24px}
+.nz-maan-pagina .nz-maan .groot{font-size:clamp(24px,2.6vw,32px);line-height:1.25}
+.nz-maan-pagina #nz-maan-tijden{font-size:16px;line-height:1.55;color:var(--ink-70)}
+.nz-maan-pagina #nz-maan-fasen li{min-height:52px;border-bottom:1px solid var(--rule);padding:9px 0;font-size:16px;line-height:1.5}
+.nz-maan-pagina .nz-maan-tijdregel{font-size:15px;line-height:1.6;max-width:60rem;margin-top:24px}
+.nz-maan-pagina .nz-maan-uitleg{margin-top:18px;max-width:60rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6px 0}
+.nz-maan-pagina .nz-maan-uitleg summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:15px;font-weight:600}
+.nz-maan-pagina .nz-maan-uitleg p{font-size:15px;line-height:1.6}
+@media(max-width:760px){main.nz-maan-pagina{padding:24px 20px 36px}.nz-maan-bovenbalk{gap:8px 12px}.nz-maan-bovenbalk nav{order:3;flex-basis:100%}.nz-maan-thema{margin-left:auto}.nz-maan-pagina .nz-maan-raster{display:block}.nz-maan-pagina .nz-maan-raster>div+div{margin-top:24px}.nz-maan-pagina .nz-maan-inleiding{font-size:16px}}
+@media(max-width:380px){.nz-maan-merk{font-size:14px}.nz-maan-thema button{min-width:43px;padding:7px}.nz-maan-pagina .nz-maan{gap:12px}}
+
+/* Landmarks staan buiten de hoofdinhoud, maar behouden dezelfde contentbreedte. */
+header.nz-maan-bovenbalk{max-width:1140px;margin:0 auto 18px;padding:18px clamp(20px,4vw,48px);background:var(--sheet);border:1px solid var(--rule)}
+footer.nz-maan-footer{max-width:1140px;margin:16px auto 0;padding:12px clamp(20px,4vw,48px);border-top:1px solid var(--rule)}
+.nz-maan-footer nav{display:flex;gap:8px 24px;align-items:center;flex-wrap:wrap}
+.nz-maan-footer a{display:inline-flex;align-items:center;min-height:44px;font-size:14px;color:var(--ink-70)}
+.nz-maan-footer a:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media(max-width:760px){header.nz-maan-bovenbalk{padding:14px 20px;margin-bottom:14px}footer.nz-maan-footer{padding:12px 20px}}
 `;
 
-function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
+function kop({ titel, beschrijving, canonical, extra = "", breed = false, paginaClass = "" }) {
+  const maanHeader = paginaClass === "nz-maan-pagina" ? `<header class="nz-maan-bovenbalk">
+<a class="nz-maan-merk" href="/" translate="no">watishetweer.nl</a>
+<nav aria-label="Navigatie"><a href="/">Het weer</a><a href="${BASIS}">Sterren kijken</a></nav>
+<div class="nz-maan-thema" role="group" aria-label="Weergave"><button type="button" data-maan-thema="licht" aria-pressed="false">Licht</button><button type="button" data-maan-thema="auto" aria-pressed="false">Auto</button><button type="button" data-maan-thema="donker" aria-pressed="false">Donker</button></div>
+</header>` : "";
   const structured = [
     { "@context": "https://schema.org", "@type": "WebSite", name: SEO.siteName, url: SEO.canonical },
     { "@context": "https://schema.org", "@type": "WebPage", name: titel, url: canonical, isPartOf: { "@type": "WebSite", name: SEO.siteName, url: SEO.canonical } }
@@ -150,11 +186,12 @@ function kop({ titel, beschrijving, canonical, extra = "", breed = false }) {
 ${THEMA_SCRIPT}
 ${STIJL.replace("</style>", EXTRA_STIJL + "</style>")}
 ${extra}</head>
-<body><main class="kaart${breed ? " breed" : ""}">
+<body>${maanHeader}<main class="kaart${breed ? " breed" : ""}${paginaClass ? " " + esc(paginaClass) : ""}">
 `;
 }
 function staart(config, kern) {
-  return `</main>
+  const maanFooter = config.soort === "maan" ? `<footer class="nz-maan-footer"><nav aria-label="Informatie"><a href="/over/">Over deze site</a><a href="/privacy.html">Privacy &amp; gegevens</a><a href="/">Terug naar het weer</a></nav></footer>` : "";
+  return `</main>${maanFooter}
 <script type="application/json" id="nz-config">${jsonInHtml(config)}</script>
 <script>
 ${kern}
@@ -221,6 +258,8 @@ ${BRONNEN}
 ` + staart({ soort: "overzicht", tz: TIJDZONE, parken: parken.map(p => ({ slug: p.slug, lat: p.lat, lon: p.lon })) }, kern);
 }
 
+const MAAN_THEME_SCRIPT="<script>\n(()=>{\"use strict\";\n  const buttons=[...document.querySelectorAll(\"[data-maan-thema]\")];\n  const lees=(opslag,sleutel)=>{try{const raw=opslag.getItem(sleutel);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};\n  const sessie=lees(sessionStorage,\"weerbriefing.thema.sessie\");\n  const lokaal=lees(localStorage,\"weerbriefing.thema\");\n  let keuze=[\"auto\",\"licht\",\"donker\"].includes(sessie)?sessie:[\"licht\",\"donker\"].includes(lokaal)?lokaal:\"auto\";\n  for(const button of buttons){\n    const modus=button.getAttribute(\"data-maan-thema\");\n    button.setAttribute(\"aria-pressed\",String(modus===keuze));\n    button.addEventListener(\"click\",()=>{\n      if(modus===keuze)return;\n      try{sessionStorage.setItem(\"weerbriefing.thema.sessie\",JSON.stringify(modus));location.reload();}\n      catch(e){\n        keuze=modus;\n        const dark=modus===\"donker\"||(modus===\"auto\"&&matchMedia(\"(prefers-color-scheme: dark)\").matches);\n        document.documentElement.setAttribute(\"data-thema\",dark?\"donker\":\"licht\");\n        for(const k of buttons)k.setAttribute(\"aria-pressed\",String(k===button));\n      }\n    });\n  }\n})();\n</script>";
+
 function maanPagina(kern, nuMs) {
   const canonical = `https://watishetweer.nl${MAAN}`;
   const titel = "De maan vandaag: fase, opkomst en ondergang";
@@ -232,9 +271,9 @@ function maanPagina(kern, nuMs) {
   const berekendOp = new Date(nuMs).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   const tijdenMoment = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0] + " " + x[1]).join(", ") || "geen opkomst of ondergang op deze dag";
   const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
-  return kop({ titel, beschrijving, canonical, breed: true }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
+  return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
-<p>Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
+<p class="nz-maan-inleiding">Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
 <div class="nz-maan-raster">
 <div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
@@ -247,10 +286,11 @@ function maanPagina(kern, nuMs) {
 <noscript><p class="klein">De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):</p><ul>${fasenMoment}</ul></noscript>
 </div>
 </div>
-<p class="klein">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats. De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p>
+<p class="nz-maan-tijdregel">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats.</p>
+<details class="nz-maan-uitleg"><summary>Over de berekening en de afbeelding</summary><p>De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p></details>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>
-` + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
+` + MAAN_THEME_SCRIPT + staart({ soort: "maan", tz: TIJDZONE, referentie: MAAN_REFERENTIE }, kern);
 }
 
 function voegToeAanSitemap(urls) {
