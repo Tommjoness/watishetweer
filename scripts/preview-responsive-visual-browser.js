@@ -355,8 +355,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
           rect:r?{left:r.left,right:r.right,width:r.width,height:r.height,top:r.top}:null,
           segmenten:ar&&zr&&mr?{
             auto:{left:ar.left,width:ar.width,height:ar.height,top:ar.top},
-            licht:{left:zr.left,width:zr.width,height:zr.height,top:zr.top,label:getComputedStyle(zon,"::after").content,icoonLabelGap:getComputedStyle(zon,"::after").marginLeft},
-            donker:{left:mr.left,width:mr.width,height:mr.height,top:mr.top,label:getComputedStyle(maan,"::after").content,icoonLabelGap:getComputedStyle(maan,"::after").marginLeft},
+            licht:{left:zr.left,width:zr.width,height:zr.height,top:zr.top,label:(zon.textContent||"").trim(),teken:/[\u2600\u263e]/.test(zon.textContent||"")||/[\u2600\u263e]/.test(getComputedStyle(zon,"::after").content)},
+            donker:{left:mr.left,width:mr.width,height:mr.height,top:mr.top,label:(maan.textContent||"").trim(),teken:/[\u2600\u263e]/.test(maan.textContent||"")||/[\u2600\u263e]/.test(getComputedStyle(maan,"::after").content)},
             stijlen:{auto:stijl(auto),licht:stijl(zon),donker:stijl(maan)}
           }:null
         };
@@ -390,7 +390,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       assert(Math.max(Math.abs(s.auto.top-s.licht.top),Math.abs(s.auto.top-s.donker.top))<=1,`${vp.naam}: thema-opties delen niet één rij`);
       assert(/Licht/i.test(s.licht.label),`${vp.naam}: zichtbaar Licht-label ontbreekt`);
       assert(/Donker/i.test(s.donker.label),`${vp.naam}: zichtbaar Donker-label ontbreekt`);
-      assert(parseFloat(s.licht.icoonLabelGap)>=6&&parseFloat(s.donker.icoonLabelGap)>=6,`${vp.naam}: icoon-labelafstand is te klein (${s.licht.icoonLabelGap}/${s.donker.icoonLabelGap})`);
+      assert(!s.licht.teken&&!s.donker.teken,`${vp.naam}: themaknoppen tonen weer een zon- of maansymbool (eigenaar 22 nov: alleen tekst)`);
       for(const eigenschap of ["fontFamily","fontSize","fontWeight","lineHeight","letterSpacing","alignItems"]){
         const waarden=[s.stijlen.auto[eigenschap],s.stijlen.licht[eigenschap],s.stijlen.donker[eigenschap]];
         assert.equal(new Set(waarden).size,1,`${vp.naam}: typografische basis '${eigenschap}' verschilt (${waarden.join(" / ")})`);

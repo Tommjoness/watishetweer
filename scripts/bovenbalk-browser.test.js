@@ -146,7 +146,7 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         if(!telefoon)assert(c>=4.5,`${label}: contrast Nachtzicht-link ${c.toFixed(2)}:1 (${m.linkKleur} op ${m.achter})`);
         /* Gedrag: schakelaar zet donker of licht, Auto zet terug op het systeem. */
         /* Themaknoppen tonen alleen tekst: geen zon- of maansymbool, wel het label (eigenaar 22 nov). */
-        const knop=await page.evaluate(()=>{const z=document.querySelector("#thema .wiw-theme-sun"),m=document.querySelector("#thema .wiw-theme-moon"),na=e=>e?getComputedStyle(e,"::after").content.replace(/^"|"$/g,""):"";return {tekst:document.getElementById("thema").textContent,zon:na(z),maan:na(m)};});
+        const knop=await page.evaluate(()=>{const z=document.querySelector("#thema .wiw-theme-sun"),m=document.querySelector("#thema .wiw-theme-moon"),tk=e=>e?e.textContent.trim():null;return {tekst:document.getElementById("thema").textContent,zon:tk(z),maan:tk(m)};});
         assert(!/[\u2600\u263e]/.test(knop.tekst),`${label}: themaknoppen tonen nog een zon- of maansymbool: '${knop.tekst.trim()}'`);
         assert.deepEqual([knop.zon,knop.maan],taal==="en"?["Light","Dark"]:["Licht","Donker"],`${label}: labels van de themaknoppen ontbreken`);
         const begin=await page.evaluate(()=>document.documentElement.getAttribute("data-thema"));

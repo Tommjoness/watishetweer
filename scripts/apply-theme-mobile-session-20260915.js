@@ -148,11 +148,8 @@ const CSS=`
     top:auto!important;
     width:auto!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:0}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:0}
-  /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
-  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
-  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
+  /* De labels Licht en Donker staan als echte tekst in de segmenten (geen zon/maan-
+     teken meer); de vertaallaag maakt er in het Engels Light en Dark van. */
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
      visueel niet meer nodig zodra de twee expliciete segmenten zichtbaar zijn. */
   #thema.wiw-theme-segmented-20260915 .wiw-theme-track{
@@ -278,11 +275,8 @@ const CSS=`
     top:auto!important;
     width:auto!important;
   }
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Licht";margin-left:0}
-  #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Donker";margin-left:0}
-  /* CSS-tekst valt buiten de vertaallaag: in het Engels eigen woorden (audit F05). */
-  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-sun::after{content:"Light"}
-  :root:lang(en) #thema.wiw-theme-segmented-20260915 .wiw-theme-moon::after{content:"Dark"}
+  /* De labels Licht en Donker staan als echte tekst in de segmenten (geen zon/maan-
+     teken meer); de vertaallaag maakt er in het Engels Light en Dark van. */
   /* De track blijft meetbaar voor het bestaande switch-/a11y-contract, maar is
      visueel niet meer nodig zodra de twee expliciete segmenten zichtbaar zijn. */
   #thema.wiw-theme-segmented-20260915 .wiw-theme-track{
@@ -493,8 +487,8 @@ function valideerWeatherHtml(html,rel){
     '#thema-switch{\n    grid-column:1 / -1!important',
     '.wiw-theme-auto{\n    grid-column:2!important',
     '.wiw-theme-moon{\n    grid-column:3!important;\n    grid-row:1!important;\n    position:static!important',
-    '.wiw-theme-sun::after{content:"Licht";margin-left:0}',
-    '.wiw-theme-moon::after{content:"Donker";margin-left:0}',
+    'data-thema-handmatig="licht" aria-hidden="true">Licht</span>',
+    'data-thema-handmatig="donker" aria-hidden="true">Donker</span>',
     'min-height:46px!important'
   ])if(!html.includes(marker))throw new Error(rel+": mobiele segmented-control invariant ontbreekt: "+marker);
   new vm.Script(segment,{filename:rel+":theme-mobile-session"});

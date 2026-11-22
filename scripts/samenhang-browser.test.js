@@ -205,7 +205,7 @@ function meet(){
         const r=await page.evaluate(()=>{
           const zichtbaar=el=>!!el&&el.getClientRects().length>0&&getComputedStyle(el).display!=="none"&&getComputedStyle(el).visibility!=="hidden";
           const maan=[...document.querySelectorAll("#nights .nachtmaan")].filter(zichtbaar).map(el=>[...el.querySelectorAll("*")].filter(k=>zichtbaar(k)&&!k.children.length).map(k=>k.textContent.trim()).join(" "));
-          const na=sel=>{const el=document.querySelector(sel);return el?getComputedStyle(el,"::after").content:null;};
+          const na=sel=>{const el=document.querySelector(sel);return el?JSON.stringify((el.textContent||"").trim()):null;};
           return {mailto:[...document.querySelectorAll('.footer-contact a[href="mailto:support@watishetweer.nl"]')].length,
             maan,licht:na("#thema .wiw-theme-sun"),donker:na("#thema .wiw-theme-moon")};
         });
