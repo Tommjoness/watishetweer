@@ -17,7 +17,7 @@
    Er is één menu in de pagina; de zijbalk is hetzelfde element. */
 (function(root){
 "use strict";
-var RAIL_MIN=1904,RAIL_BREEDTE=136,RAIL_LUCHT=8,RAIL_BOVEN=48,RAIL_ONDER=16;
+var RAIL_MIN=1904,RAIL_BREEDTE=192,RAIL_LUCHT=8,RAIL_BOVEN=48,RAIL_ONDER=16;
 function init(){
   var doc=root.document,menu=doc.getElementById("wiw-menu");
   if(!menu||menu.getAttribute("data-wiw-menu")==="klaar")return;

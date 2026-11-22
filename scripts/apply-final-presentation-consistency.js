@@ -68,20 +68,20 @@ const Q1_DAG_MM_OUD=`  const hoeveelheid=mm!==null&&mm>=0
 const Q1_DAG_MM_NIEUW=`  const hoeveelheid=mm!==null&&(mm>=MM_MEETBAAR||(mm===0&&k!==null&&k>0))
     ? (mm===0?"0,0 mm":(typeof hoeveelheidFn==="function"?hoeveelheidFn(mm):mmTekst(mm))) : "";`;
 
-/* De Q1-owner bepaalt richting op de afgeronde zichtbare waarden. Als beide
-   waarden gelijk zijn is 17 → 17 geen trendinformatie. In dat geval tonen we
-   één waarde en benoemen we de stabiele band eerlijk als 'rond 17 °C'. */
-const TEMP_TREND_OUD=`  waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
+/* De Q1-owner bepaalt de richting op afgeronde, getoonde waarden. De
+   presentatie gebruikt voor alle drie mogelijke richtingen een betekenisvolle
+   pijl: stijgend ↗, dalend ↘ en gelijkblijvend →. Voor gelijke temperatuur
+   blijft de begeleidende tekst expliciet "rond" de getoonde waarde. */
+const TEMP_TREND_OUD=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
+  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur verandert de komende uren nauwelijks.";`;
-const TEMP_TREND_NIEUW=`  if(t.richting==="gelijk"){
-    waarde.innerHTML=String(t.van)+"<s>°C</s>";
-    sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";
-  }else{
-    waarde.innerHTML=String(t.van)+" → "+String(t.naar)+"<s>°C</s>";
-    sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer.":"Het wordt de komende uren koeler.";
-  }`;
+const TEMP_TREND_NIEUW=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
+  waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
+  sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
+    :t.richting==="daalt"?"Het wordt de komende uren koeler."
+    :"De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";`;
 
 /* Voor vandaag gebruikt unified-weather-truth terecht de resterende lokale
    daganalyse in plaats van het ruwe daily totaal. Ook daar moet een bekende nul
@@ -225,7 +225,7 @@ if(!html.includes('dagMm===0?"0,0 mm":hoeveelheidTekst(dagMm)'))
   throw new Error("Vandaag-presenteerder borgt bekende 0,0 mm niet.");
 if(!html.includes('mm===0&&k!==null&&k>0'))
   throw new Error("Q1-presenteerder onderscheidt 0% droog niet van niet-nul kans bij 0,0 mm.");
-if(!html.includes('sub.textContent="De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";'))
+if(!html.includes(':"De temperatuur blijft de komende uren rond "+String(t.van)+"\\u00a0°C.";'))
   throw new Error("Gelijke temperatuurtrend wordt niet als stabiele temperatuur gepresenteerd.");
 if(html.includes('De temperatuur verandert de komende uren nauwelijks.'))
   throw new Error("Oude vage copy voor gelijke temperatuurtrend staat nog in de artifact.");

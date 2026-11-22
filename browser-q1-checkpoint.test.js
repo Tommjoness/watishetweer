@@ -107,8 +107,11 @@ async function controleer(type,naam){
     assert.equal(diagnose.polishApi,true,naam+": mobiele polish-owner is in de geleverde runtime actief");
     assert.equal(diagnose.q1Api,true,naam+": Q1-owner is in de geleverde runtime actief");
     assert.equal(basis.trendKop,"Temperatuur komende 3 uur",naam+": tegelkop noemt de vaste horizon");
-    assert.match(basis.trendWaarde,/^-?\d+\s*→\s*-?\d+°C$/,naam+": trend toont uitsluitend twee temperaturen");
-    assert.ok(["Het wordt de komende uren warmer.","Het wordt de komende uren koeler.","De temperatuur verandert de komende uren nauwelijks."].includes(basis.trendSub),naam+": onderregel gebruikt een natuurlijke volledige zin");
+    const trendMatch=/^(-?\d+)\s*([↗↘→])\s*(-?\d+)°C$/.exec(basis.trendWaarde);
+    assert(trendMatch,naam+": trend toont uitsluitend huidige en toekomstige temperatuur");
+    const trendRichting=basis.trendSub==="Het wordt de komende uren warmer."?"↗":basis.trendSub==="Het wordt de komende uren koeler."?"↘":/^De temperatuur blijft de komende uren rond -?\d+\s*°C\.$/.test(basis.trendSub)?"→":null;
+    assert(trendRichting,naam+": onderregel gebruikt een natuurlijke volledige zin");
+    assert.equal(trendMatch[2],trendRichting,naam+": pijl en temperatuurduiding spreken elkaar niet tegen");
     assert.notEqual(basis.popDisplay,"none",naam+": droge korte termijn bewaart dezelfde negende tegelpositie");
     assert.equal(basis.popAria,"false",naam+": droge tegel blijft toegankelijk");
     assert.doesNotMatch(basis.gridClass,/q1-pop-hidden/,naam+": raster verandert niet meer tussen droge en natte steden");
@@ -140,8 +143,8 @@ async function controleer(type,naam){
       S.d.hourly.temperature_2m[i17]=oud17;S.d.hourly.temperature_2m[i19]=oud19;S.klokInstantOverride=null;klokBijwerken();
       return {voor,na};
     });
-    assert.match(trendKlok.voor,/→\s*11°C$/,naam+": 14:17 lokale tijd kiest echt uurpunt rond 17:17");
-    assert.match(trendKlok.na,/→\s*22°C$/,naam+": lokale klokverschuiving kiest nieuw echt uurpunt zonder fetch");
+    assert.match(trendKlok.voor,/[↗↘→]\s*11°C$/,naam+": 14:17 lokale tijd kiest echt uurpunt rond 17:17");
+    assert.match(trendKlok.na,/[↗↘→]\s*22°C$/,naam+": lokale klokverschuiving kiest nieuw echt uurpunt zonder fetch");
 
     /* Relevante toekomstige neerslag houdt dezelfde tegel en het finale twee-uurspaneel zichtbaar.
        De huidige status blijft correct Droog zolang het nu niet regent; de verwachting

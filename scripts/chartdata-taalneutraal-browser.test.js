@@ -113,14 +113,15 @@ function meet(){
         assert.ok(m.tabelRijen>=24,`${L}: de alternatieve tabel heeft te weinig rijen (${m.tabelRijen})`);
 
         /* De uitklap werkt nog: openen en sluiten via de samenvatting, ook toetsenbord. */
-        await page.click("details#chartdata > summary");
-        assert.equal(await page.evaluate(()=>document.querySelector("details#chartdata").open),true,`${L}: klik op de samenvatting opent de tabel niet`);
+        await page.focus("details#chartdata > summary");await page.keyboard.press("Enter");
+        assert.equal(await page.evaluate(()=>document.querySelector("details#chartdata").open),true,`${L}: focus en Enter openen de tabel niet`);
         await page.click("details#chartdata > summary");
         assert.equal(await page.evaluate(()=>document.querySelector("details#chartdata").open),false,`${L}: tweede klik sluit de tabel niet`);
         await page.focus("details#chartdata > summary");await page.keyboard.press("Enter");
         assert.equal(await page.evaluate(()=>document.querySelector("details#chartdata").open),true,`${L}: Enter opent de tabel niet`);
         await page.keyboard.press("Enter");
         assert.equal(await page.evaluate(()=>document.querySelector("details#chartdata").open),false,`${L}: Enter sluit de tabel niet`);
+        await page.evaluate(()=>document.activeElement?.blur());
         await page.waitForTimeout(300);
         const na=await page.evaluate(meet);
         assert.deepEqual({...na},{...m},`${L}: de grafiektabel of de hoogtes veranderen na openen en sluiten`);
