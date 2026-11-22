@@ -434,6 +434,14 @@
     "Vragen of feedback?": "Questions or feedback?",
     "Mail naar": "Email",
     "Mail naar support@watishetweer.nl": "Email support@watishetweer.nl",
+    /* Contactpagina: volledige zinnen, knoppen en dynamische kopieerstatus. */
+    "Contact | watishetweer.nl": "Contact | watishetweer.nl",
+    "Heb je een vraag, opmerking of idee voor watishetweer.nl? Je kunt een e-mail sturen naar support@watishetweer.nl.": "Do you have a question, comment or idea for watishetweer.nl? You can email support@watishetweer.nl.",
+    "E-mail openen": "Open email",
+    "Kopieer e-mailadres": "Copy email address",
+    "E-mailadres gekopieerd.": "Email address copied.",
+    "Kopiëren lukte niet. Selecteer het e-mailadres hierboven om het handmatig te kopiëren.": "Could not copy the email address. Select the address above to copy it manually.",
+    "Wanneer je mailprogramma niet automatisch opent, kun je het adres hierboven selecteren of kopiëren.": "If your email app does not open automatically, you can select or copy the address above.",
     "Weer per plaats": "Weather by place",
     "Populaire plaatsen in Nederland": "Popular places in the Netherlands",
     "Menu": "Menu",
@@ -748,6 +756,8 @@
       "Read how watishetweer.nl brings together current weather information and model forecasts, and which sources are used.",
     "Lees hoe watishetweer.nl omgaat met locatiegegevens, lokale opslag, bezoekstatistieken en externe databronnen.":
       "Read how watishetweer.nl handles location data, local storage, visitor statistics and external data sources.",
+    "Vragen of feedback over watishetweer.nl? Vind hier het contactadres en kopieer het eenvoudig.":
+      "Questions or feedback about watishetweer.nl? Find the contact email address here and copy it easily.",
     "Sterren kijken in Nederland: nationale parken": "Stargazing in the Netherlands: national parks",
     "Vergelijk de geschatte lichtvervuiling en de omstandigheden voor vannacht in geselecteerde Nederlandse nationale parken.":
       "Compare estimated light pollution and tonight's conditions in selected Dutch national parks.",
@@ -796,6 +806,9 @@
 
     /* Seizoenspagina witte kerst (vaste teksten) */
     "Witte kerst": "White Christmas",
+    "Verwachtingsstatus": "Forecast status",
+    "Verder ontdekken": "Keep exploring",
+    "Informatie": "Information",
     "Sterren kijken in de Nationale Parken ›": "Stargazing in the Dutch national parks ›",
     "De maan vandaag ›": "The moon today ›",
     "De maan vandaag": "The moon today",
@@ -916,7 +929,6 @@
     "De op- en ondergangstijden worden geladen.": "Loading moonrise and moonset times.",
     "De maanopkomst en maanondergang worden bij het openen berekend.": "Moonrise and moonset times are calculated when the page opens.",
     "Het weer": "Weather",
-    "Informatie": "Information",
     "Terug naar het weer": "Back to the weather",
     "Navigatie": "Navigation",
     "De komende fasen": "The coming phases",

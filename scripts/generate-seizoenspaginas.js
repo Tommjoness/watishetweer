@@ -12,6 +12,7 @@ const SEO=require("./seo-foundation.config.js");
 const {SHARE_IMAGE}=require("./seo-foundation.js");
 const {SEIZOENSPAGINAS,seizoenUrl}=require("./seizoenspagina.config.js");
 const runtime=require("./seizoenspagina-runtime.js");
+const WK=require("./witte-kerst-ontwerp-20261121.js");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 
 const OUT=path.join(__dirname,"..","public");
@@ -178,7 +179,12 @@ function pagina(cfg,buildDag){
   ];
   const {slug,beschrijving,intro,uitleg:_uitleg,...runtimeCfg}=cfg;
   const verdieping=(cfg.uitleg.vragen||[]).map(v=>`<h2>${esc(v.kop)}</h2>\n<p>${esc(v.antwoord)}</p>`).join("\n");
-  const uitleg=cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
+  const witteKerst=cfg.slug==="witte-kerst";
+  /* De bestaande twee KNMI-vragen blijven volledig aanwezig, zonder dubbele inleidingsalinea. */
+  const uitleg=witteKerst
+    ? (cfg.uitleg.vragen||[]).map(v=>`<article class="wk-qa"><h2>${esc(v.kop)}</h2><p>${esc(v.antwoord)}</p></article>`).join("\n")
+    : cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
+  const meldingHtml=`<p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>`;
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -203,27 +209,37 @@ function pagina(cfg,buildDag){
 <script type="application/ld+json">${jsonInHtml(structured)}</script>
 ${THEMA_SCRIPT}
 ${STIJL}
+${witteKerst?WK.STIJL:""}
 </head>
-<body><main class="kaart breed">
-<p><a href="/">← Terug naar het weer</a></p>
+<body>${witteKerst?'<div class="kaart breed wk-page">':'<main class="kaart breed">'}
+${witteKerst?WK.HEADER+"\n<main>":""}
+<p${witteKerst?' class="wk-return"':""}><a href="/">← Terug naar het weer</a></p>
+${witteKerst?'<section class="wk-hero"><div class="wk-hero-copy">':""}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
-<p>${esc(cfg.intro)}</p>
+<p${witteKerst?' class="wk-lead"':""}>${esc(cfg.intro)}</p>
+${witteKerst?'</div><aside class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"><h2 id="wk-status-kop">Verwachtingsstatus</h2>'+meldingHtml+'</aside></section>':""}
 <section class="seizoen-status" aria-labelledby="seizoen-kop" aria-live="polite">
 ${cfg.soort==="vakantie"?`<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio's.</p>`:""}
 <p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
-<p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>
+${witteKerst?"":meldingHtml}
 <div id="seizoen-verwachting"></div>
 </section>
+${witteKerst?'<section class="wk-guide">':""}
 <h2>${esc(cfg.uitleg.kop)}</h2>
+${witteKerst?'<div class="wk-cards">':""}
 ${uitleg}
-${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${zieOokHtml(cfg)}<h2>Het weer voor jouw plaats</h2>
+${witteKerst?"</div>":""}
+${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${witteKerst?'</section><section class="wk-related"><h2>Verder ontdekken</h2>':""}${zieOokHtml(cfg)}${witteKerst?'</section><section class="wk-weather">':""}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
-</main>
+${witteKerst?"</section>":""}
+${witteKerst?"</main>\n"+WK.FOOTER:""}
+${witteKerst?"</div>":"</main>"}
 <script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>
 ${cfg.soort==="vakantie"?`<script defer src="/${REGIO_ASSET}"></script>`:""}
 <script>
 ${RUNTIME_BRON}
 </script>
+${witteKerst?WK.THEMA_SCRIPT:""}
 </body>
 </html>
 `;

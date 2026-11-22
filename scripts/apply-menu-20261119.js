@@ -62,7 +62,7 @@ function menuHtml(vandaag){
     groep("weer","Weer en plaatsen",[{href:"/",naam:"Actueel weer"},{href:"/weer/",naam:"Weer per plaats"}])+
     groep("nacht","Sterren en nacht",[{href:"#nachtzicht",naam:"Nachtzicht vanavond"},{href:NZ.BASIS,naam:"Sterren kijken"},{href:NZ.MAAN,naam:"De maan vandaag"}])+
     groep("seizoen","Seizoenen en feestdagen",seizoenen(vandaag))+
-    groep("info","Over en informatie",[{href:"/over/",naam:"Over deze site"},{href:"/privacy",naam:"Privacy & gegevens"},{href:"mailto:support@watishetweer.nl",naam:"Contact"}])+
+    groep("info","Over en informatie",[{href:"/over/",naam:"Over deze site"},{href:"/privacy",naam:"Privacy & gegevens"},{href:"/contact/",naam:"Contact"}])+
     `</nav></details>`;
 }
 
@@ -139,15 +139,32 @@ const CSS=`
 @media(min-width:1904px){
   /* Zijbalk: hetzelfde menu, permanent open (wiw-menu-rail via de menulaag). */
   .wiw-menu>summary{display:none}
-  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:8px;right:auto;width:136px;display:block;padding:3px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
-  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:4px}
-  html.wiw-menu-rail .wiw-menu-kop{min-height:34px;gap:9px;font-size:12px;letter-spacing:.08em}
-  html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 6px 17px}
-  html.wiw-menu-rail .wiw-menu-paneel a{min-height:30px;font-size:14px;color:var(--ink-70)}
+  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:12px;right:auto;width:192px;display:block;padding:8px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
+  html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:10px}
+  html.wiw-menu-rail .wiw-menu-kop{min-height:42px;gap:9px;font-size:13px;letter-spacing:.035em;line-height:1.45}
+  html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 10px 22px}
+  html.wiw-menu-rail .wiw-menu-paneel a{min-height:40px;padding:5px 0;font-size:15px;line-height:1.35;color:var(--ink-70);overflow-wrap:normal}
   html.wiw-menu-rail .wiw-menu-paneel a:hover{color:var(--ink)}
 }
 @media(min-width:1904px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
+}
+/* Op brede schermen blijven de 1600px-premiumkolom en de
+   496px-uurtabel intact. Tussen 1904 en 2016px schuift het
+   hoofdvlak iets naar rechts om links 192px zijbalk + 8px
+   tussenruimte te reserveren; vanaf 2016px staat het weer
+   vanzelf gecentreerd. Desktop body heeft 30px zijpadding. */
+@media(min-width:1904px){
+  html.wiw-menu-rail body>.sheet:not(#wiw-desktop-premium),
+  html.wiw-menu-rail body>.seo-plaatsnav:not(#wiw-desktop-premium),
+  html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){
+    max-width:1600px!important;
+    margin-left:max(208px,calc(50vw - 800px))!important;
+    margin-right:auto!important
+  }
+  html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium){
+    max-width:1600px!important
+  }
 }
 `;
 

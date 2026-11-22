@@ -1864,12 +1864,18 @@ groep("Iconen en balk");
   {
     const {api:a2,bak:b2}=laadKern(390);
     const d2=bouw({}); d2.utc_offset_seconds=32400;      // Tokio
-    Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24});
+    // Bevries dit fixture-moment: de minuutgrens wordt apart getest in
+    // 'Live plaatsklok'. Hier bewaken we dezelfde actuele kloktekst op beide plekken.
+    Object.assign(a2.S,{d:d2,i0:14,op:Date.now(),lat:1,lon:1,label:"T",dag:null,bereik:24,
+      klokOverride:new Date("2026-07-22T12:26:30Z")});
     a2.tekenAlles(); a2.stempel();
-    const kop=(b2.place.innerHTML.match(/>(\d\d:\d\d)</)||[])[1];
+    // De nagebootste browser cachet place.innerHTML; gewijzigde tekstnodes
+    // worden alleen zichtbaar via #plaatstijd.textContent, net als in de DOM.
+    const kop=b2.plaatstijd.textContent;
     const balk=b2.minitijd.textContent;
-    check("de klok in de balk is gelijk aan die naast de plaatsnaam",kop===balk,
-      "kop "+kop+", balk "+balk);
+    const verwacht=a2.plaatsKlok();
+    check("de klok in de balk is gelijk aan die naast de plaatsnaam",kop===balk&&kop===verwacht,
+      "kop "+kop+", balk "+balk+", verwacht "+verwacht);
   }
 }
 

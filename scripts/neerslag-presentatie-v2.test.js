@@ -168,25 +168,25 @@ els.nctext.textContent="Neerslag wordt verwacht.";
 context.nowcast();
 assert.equal(els.nctext.textContent,"Het is nu droog. Vanaf ongeveer 16:20 wordt neerslag verwacht. Verwachte hoeveelheid: ongeveer 0,7 mm.");
 
-/* Alleen een spoorhoeveelheid uit de KNMI-nowcast: het twee-uursblok noemt de radar als bron,
-   zichtbaar in #nctext en vooraan in de toegankelijke naam van de grafiek. */
+/* Alleen een spoorhoeveelheid uit de KNMI-nowcast: de productcopy blijft bronvrij,
+   zowel in #nctext als in de toegankelijke naam van de grafiek. */
 {
-  const SPOORZIN="Het is nu droog. Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.";
+  const SPOORZIN="Het is nu droog. In de komende twee uur kunnen enkele druppels vallen.";
   basisAnalyse={
     genoeg:true,bronActueel:"knmi-rtcor",currentIntensiteit:0,currentWet:false,currentRadarWet:false,
     status:"SPOORHOEVEELHEID",kans:0,bronHoeveelheid:"knmi-nowcast",hoeveelheid:0.04
   };
   assert.equal(context.WeatherNowNeerslagPresentatieV2.tweeUurTekst(basisAnalyse,"Bestaand."),SPOORZIN);
   const basisZin=echtBeleid.kansZin(basisAnalyse,"de komende twee uur");
-  assert.equal(basisZin,"Volgens de KNMI-radar kunnen er de komende twee uur enkele druppels vallen.","ook de basiszin van het kansbeleid noemt de radar");
+  assert.equal(basisZin,"In de komende twee uur kunnen enkele druppels vallen.","ook de basiszin van het kansbeleid is bronvrij");
   els.nc.attrs["aria-label"]=basisZin+" De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.";
   els.nctext.textContent=basisZin;
   context.nowcast();
-  assert.equal(els.nctext.textContent,SPOORZIN,"zichtbare twee-uurszin vermeldt de KNMI-radar");
-  assert(els.nc.attrs["aria-label"].startsWith(SPOORZIN+" "),"toegankelijke naam begint met dezelfde bronzin: "+els.nc.attrs["aria-label"]);
-  assert.doesNotMatch(els.nc.attrs["aria-label"],/(^|\. )(In de komende twee uur )?kunnen enkele druppels vallen/,"geen druppelzin zonder bron in de toegankelijke naam");
+  assert.equal(els.nctext.textContent,SPOORZIN,"zichtbare twee-uurszin vermeldt geen bronnaam");
+  assert(els.nc.attrs["aria-label"].startsWith(SPOORZIN+" "),"toegankelijke naam begint met dezelfde bronvrije zin: "+els.nc.attrs["aria-label"]);
+  assert.doesNotMatch(els.nc.attrs["aria-label"],/Volgens de KNMI-radar/,"geen ongevraagde bronnaam in de toegankelijke zin");
   const vertaler=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
-  assert.equal(vertaler.vertaal(SPOORZIN),"It is dry now. According to the KNMI radar forecast, a few drops may fall in the next two hours.");
+  assert.equal(vertaler.vertaal(SPOORZIN),"It is dry now. A few drops may fall in the next two hours.");
 }
 
 basisAnalyse={
