@@ -17,7 +17,7 @@ const MARKER="/* ===== FINAL BRIEFING GRAMMAR 20260901 ===== */";
 function corrigeerBriefingTransportTekst(tekst,centraal){
   const bron=String(tekst==null?"":tekst);
   const basis=typeof centraal==="function"?centraal(bron):bron;
-  return String(basis).replace(/(^|[^\d,.-])(-?1)([\s\u00a0]+)graden\b/g,"$1$2$3graad");
+  return String(basis).replace(/(^|[^\d,.-])(-?1)([\s\u00a0]+)graden\b/g,(m,voor,getal,spatie,pos,bron)=>/\btussen\s+-?\d+(?:,\d+)?\s+en\s*$/i.test(bron.slice(0,pos)+voor)?m:voor+getal+spatie+"graad");
 }
 
 /* Deze laag draait bewust ná unified-weather-truth en final-global. De briefing-

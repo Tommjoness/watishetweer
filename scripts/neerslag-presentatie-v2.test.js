@@ -98,6 +98,7 @@ assert(!/In de komende twee uur is neerslag mogelijk/.test(els.brief.innerHTML))
 context.nowcast();
 assert.equal(els.nctext.textContent,"Er valt nu neerslag: 0,2 mm/u. Rond 15:50 wordt het naar verwachting droog.");
 assert.match(els.nc.attrs["aria-label"],/0,2 mm\/u/);
+assert.equal((els.nc.attrs["aria-label"].match(/wordt het naar verwachting droog/g)||[]).length,1,"toegankelijke naam noemt het droogmoment één keer: "+els.nc.attrs["aria-label"]);
 
 /* Zonder officiële actuele meting blijft de presentatielaag van de modelhero af.
    Dit bewaakt dat de droge-KNMI-correctie wereldwijd geen modelcondities herschrijft. */
@@ -185,6 +186,7 @@ assert.equal(els.nctext.textContent,"Het is nu droog. Vanaf ongeveer 16:20 wordt
   assert.equal(els.nctext.textContent,SPOORZIN,"zichtbare twee-uurszin vermeldt geen bronnaam");
   assert(els.nc.attrs["aria-label"].startsWith(SPOORZIN+" "),"toegankelijke naam begint met dezelfde bronvrije zin: "+els.nc.attrs["aria-label"]);
   assert.doesNotMatch(els.nc.attrs["aria-label"],/Volgens de KNMI-radar/,"geen ongevraagde bronnaam in de toegankelijke zin");
+  assert.equal(els.nc.attrs["aria-label"],SPOORZIN+" De balken tonen neerslag per kwartier, opgebouwd uit KNMI-stappen van vijf minuten.","toegankelijke naam herhaalt de oude zin niet");
   const vertaler=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
   assert.equal(vertaler.vertaal(SPOORZIN),"It is dry now. A few drops may fall in the next two hours.");
 }

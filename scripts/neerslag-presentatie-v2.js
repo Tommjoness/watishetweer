@@ -254,7 +254,8 @@ function werkTweeUurBij(){
   if(tekst)tx.textContent=tekst;
   if(grafiek&&tekst){
     const bestaand=grafiek.getAttribute&&grafiek.getAttribute("aria-label");
-    grafiek.setAttribute("aria-label",tekst+(bestaand&&bestaand.indexOf(tekst)<0?" "+bestaand:""));
+    const techniek=bestaand?(/(?:De balken tonen|Kwartierwaarden zijn) .*$/.exec(bestaand)||[""])[0]:"";
+    grafiek.setAttribute("aria-label",tekst+(techniek?" "+techniek:""));
   }
 }
 
