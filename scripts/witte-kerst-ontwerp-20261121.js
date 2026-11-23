@@ -7,7 +7,7 @@ const STIJL=String.raw`
 .kaart.breed.wk-page{max-width:1184px;padding:0 28px 48px;border:0;background:transparent}
 .wk-page{--wk-sky-a:#dfe8e8;--wk-sky-b:#e8edef;--wk-sky-c:#f6f6f3;--wk-line:#a9b9b0;--wk-overlay:rgba(255,255,255,.56)}
 html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sky-c:#1d2a2a;--wk-line:#607269;--wk-overlay:rgba(20,27,25,.86)}
-.wk-page .wk-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;min-height:92px;border-bottom:1px solid var(--rule)}
+.wk-page .wk-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;min-height:92px;border-bottom:1px solid var(--rule)}
 .wk-brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);font-size:16px;font-weight:700;letter-spacing:-.035em;text-decoration:none;white-space:nowrap}
 .wk-brandmark{position:relative;display:inline-block;width:28px;height:28px;flex:none;border:2px solid currentColor;border-radius:50%;overflow:hidden}
 .wk-brandmark:after{content:"";position:absolute;left:-5px;right:-5px;bottom:4px;height:14px;border-top:2px solid currentColor;border-radius:70% 70% 0 0;transform:rotate(-17deg)}
@@ -15,12 +15,14 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-menu summary{display:flex;align-items:center;justify-content:center;min-width:46px;min-height:46px;padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);cursor:pointer;list-style:none;font:600 13px/1.3 var(--sans)}
 .wk-menu summary::-webkit-details-marker{display:none}.wk-menu summary::marker{content:""}
 .wk-menu[open] summary{border-color:var(--wk-line)}
-.wk-menu nav{position:absolute;top:calc(100% + 6px);right:0;display:grid;min-width:225px;max-width:calc(100vw - 32px);padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);box-shadow:0 10px 26px rgba(0,0,0,.07)}
+/* G2-B: de weergavekeuze staat in het menu, niet meer als balk bovenaan. */
+.wk-menu .wk-paneel{position:absolute;top:calc(100% + 6px);right:0;display:grid;gap:10px;width:260px;max-width:calc(100vw - 32px);padding:8px 14px 14px;border:1px solid var(--rule);background:var(--sheet);box-shadow:0 10px 26px rgba(0,0,0,.07)}
+.wk-menu nav{display:grid}
 .wk-menu nav a{display:flex;align-items:center;min-height:44px;padding:7px 4px;color:var(--ink);font-size:14px;text-decoration:none;border-bottom:1px solid var(--rule)}
 .wk-menu nav a:last-child{border-bottom:0}.wk-menu nav a:hover{text-decoration:underline;text-underline-offset:3px}
-.wk-theme{justify-self:end;display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--rule);background:var(--paper);border-radius:7px}
+.wk-theme{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;padding:3px;border:1px solid var(--rule);background:var(--paper);border-radius:7px}
 .wk-theme input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.wk-theme label{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:44px;padding:7px 9px;cursor:pointer;border-radius:5px;font:500 13px/1.2 var(--sans);color:var(--ink-70)}
+.wk-theme label{display:inline-flex;align-items:center;justify-content:center;min-width:0;min-height:44px;padding:7px 9px;cursor:pointer;border-radius:5px;font:500 13px/1.2 var(--sans);color:var(--ink-70)}
 .wk-theme input:checked+label{background:var(--sheet);color:var(--ink);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .wk-theme input:focus-visible+label{outline:2px solid var(--ink);outline-offset:2px}
 .wk-return{margin:18px 0 20px!important;font-size:14px}
@@ -76,8 +78,6 @@ html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
  .wk-page .wk-header{grid-template-columns:minmax(0,1fr) auto;row-gap:12px;column-gap:12px;padding:14px 0;min-height:0}
  .wk-brand{font-size:15px}.wk-brandmark{width:26px;height:26px}
  .wk-menu{grid-column:2;grid-row:1}
- .wk-theme{grid-column:1/-1;grid-row:2;justify-self:stretch;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
- .wk-theme label{min-width:0}
  .wk-page .wk-guide>h2,.wk-page .wk-related>h2{font-size:27px}
  .wk-vragen{grid-template-columns:1fr;gap:22px}
  .wk-page .wk-qa h2{font-size:21px}
@@ -91,13 +91,15 @@ const HEADER=String.raw`
 <header class="wk-header">
 <a class="wk-brand" href="/" aria-label="watishetweer.nl" translate="no"><span class="wk-brandmark" aria-hidden="true"></span><span>watishetweer.nl</span></a>
 <details class="wk-menu"><summary>Menu</summary>
+<div class="wk-paneel">
 <nav aria-label="Menu"><a href="/">Actueel weer</a><a href="/maan/">De maan vandaag</a><a href="/nachtzicht/">Sterren kijken</a><a href="/kerstvakantie/">Kerstvakantie</a><a href="/oud-en-nieuw/">Oud en nieuw</a><a href="/over/">Over deze site</a></nav>
-</details>
 <div class="wk-theme" role="group" aria-label="Weergave kiezen">
 <input type="radio" name="wk-thema" id="wk-licht" value="licht"><label for="wk-licht">Licht</label>
 <input type="radio" name="wk-thema" id="wk-auto" value="auto" checked><label for="wk-auto">Auto</label>
 <input type="radio" name="wk-thema" id="wk-donker" value="donker"><label for="wk-donker">Donker</label>
 </div>
+</div>
+</details>
 </header>`;
 const FOOTER=String.raw`<footer class="wk-footer"><span translate="no">© watishetweer.nl</span><nav aria-label="Informatie"><a href="/over/">Over deze site</a> <span aria-hidden="true">·</span> <a href="/privacy">Privacy &amp; gegevens</a></nav></footer>`;
 const THEMA_SCRIPT=String.raw`<script>

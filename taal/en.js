@@ -1263,6 +1263,8 @@
       (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
     [/^De verwachting voor (eerste kerstdag|tweede kerstdag) volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
       (m) => `The ${KERSTDAG[m[1]]} forecast follows on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
+    [/^Verwachting vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december) · tweede kerstdag volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/,
+      (m) => `Forecast from ${dagVol(m[1])} ${m[2]} ${maand(m[3])} · Boxing Day follows on ${dagVol(m[4])} ${m[5]} ${maand(m[6])}`],
     [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
     /* Groot aftelgetal: het getal staat los, de rest ernaast (ontwerpronde 7 oktober). */
     [/^(\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}`],

@@ -63,7 +63,7 @@ const metOntbrekendeDiepte=start=>antwoord(start,(p,i)=>i===0?{
 }:null);
 
 const SCENARIOS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"81 dagen tot eerste kerstdag",melding:/^Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag\. De verwachting voor tweede kerstdag volgt op zondag 20 december\.$/,tabellen:0,fetch:0}},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",verwacht:{kop:"Witte kerst 2026",aftellen:"81 dagen tot eerste kerstdag",melding:/^Verwachting vanaf zaterdag 19 december · tweede kerstdag volgt op zondag 20 december$/,tabellen:0,fetch:0}},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),verwacht:{kop:"Witte kerst 2026",aftellen:"4 dagen tot eerste kerstdag",samenvatting:"Volgens de huidige verwachting ligt er op beide kerstdagen sneeuw in De Bilt. Blijft dat zo, dan is het officieel een witte kerst.",tabellen:2,fetch:1,cel:"Sneeuwdek, 4 cm"}},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),verwacht:{tabellen:1,fetch:1,later:"Tweede kerstdag: de verwachting verschijnt op zondag 20 december."}},
   {naam:"onbekend",nu:"2026-12-21T09:00:00Z",data:metOntbrekendeDiepte("2026-12-21"),verwacht:{samenvatting:"Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar.",tabellen:2,fetch:1,cel:"Sneeuwdek onbekend"}},
@@ -140,7 +140,7 @@ async function controleer(browserType,label,base){
 
 /* Engels: alles vertaald, links en plaatsnamen blijven staan. */
 const ENGELS=[
-  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day","The forecast for Christmas Day will appear here from Saturday 19 December.","The Boxing Day forecast follows on Sunday 20 December."]},
+  {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day","Forecast from Saturday 19 December · Boxing Day follows on Sunday 20 December"]},
   {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site"]},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),kop:"White Christmas 2026",zinnen:["Boxing Day: the forecast will appear on Sunday 20 December."]}
 ];
@@ -243,13 +243,15 @@ async function controleerOntwerp(browserType,label,base){
       assert(g2b.labelGrootte>=12,id+": jaartallen minstens 12px");
       assert.equal(g2b.verlopen,0,id+": geen verlopen of gloed");
       assert.deepEqual(g2b.volledigOmkaderd,[],id+": geen omkaderde vlakken (kaart in kaart)");
-      assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
-      const maat=await page.locator(".wk-theme label").evaluateAll(a=>a.map(x=>x.getBoundingClientRect().height));
-      assert(maat.every(x=>x>=44),id+": alle themadoelen minstens 44px");
+      /* G2-B: de weergavekeuze zit in het menu, niet als balk bovenaan. */
+      assert.equal(await page.locator(".wk-menu .wk-theme").count(),1,id+": weergavekeuze staat in het menu");
+      assert(!await page.locator(".wk-theme").isVisible(),id+": weergavekeuze niet zichtbaar zolang het menu dicht is");
       await page.locator(".wk-menu > summary").click();
       assert(await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu open");
-      await page.locator(".wk-menu > summary").click();
-      assert(!await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu dicht");
+      assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
+      const maat=await page.locator(".wk-theme label").evaluateAll(a=>a.map(x=>x.getBoundingClientRect()));
+      assert(maat.every(x=>x.height>=44),id+": alle themadoelen minstens 44px");
+      assert(maat.every(x=>x.left>=0&&x.right<=breedte),id+": themakeuzes binnen het scherm");
       await page.locator('label[for="wk-donker"]').click();
       assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": donker werkt");
       assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"donker",id+": keuze opgeslagen");
@@ -275,6 +277,8 @@ async function controleerOntwerp(browserType,label,base){
       await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       assert.equal(await page.locator("html").getAttribute("data-thema"),null,id+": Auto volgt licht systeem");
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+": geen horizontale overflow");
+      await page.locator(".wk-menu > summary").click();
+      assert(!await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu dicht");
       assert.deepEqual(fouten,[],id+": geen JavaScript-fouten");
       await context.close();
     }

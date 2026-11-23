@@ -42,7 +42,7 @@ assert.equal(t.jaar,2026);
 assert.equal(t.fase,"ver");
 assert.equal(t.vanaf,"2026-12-19");
 /* Audit 6 oktober (F03): eerste kerstdag verschijnt op 19, tweede op 20 december. */
-assert.equal(R.meldingTekst(t,kerst),"Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december.");
+assert.equal(R.meldingTekst(t,kerst),"Verwachting vanaf zaterdag 19 december · tweede kerstdag volgt op zondag 20 december");
 assert.deepEqual(R.toestand("2026-12-19",kerst).dagen.map(d=>d.zichtbaar),[true,false],"19 december: alleen eerste kerstdag");
 assert.deepEqual(R.toestand("2026-12-20",kerst).dagen.map(d=>d.zichtbaar),[true,true],"20 december: beide kerstdagen");
 assert.equal(R.meldingTekst(R.toestand("2026-12-21",kerst),kerst),"","binnen het venster geen aparte melding boven de tabel");
@@ -138,6 +138,7 @@ const url=R.verwachtingUrl(kerst);
 assert(url.startsWith("https://api.open-meteo.com/v1/forecast?latitude=52.0989,"),url);
 assert(url.includes("&hourly=snow_depth")&&url.includes("&forecast_days=7")&&url.includes("&timezone=Europe%2FAmsterdam"),url);
 
+const vertalerKerst0=()=>require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
 /* Statische pagina op een builddag ver voor kerst. */
 const html=pagina(kerst,"2026-10-05");
 assert(html.includes("<title>Witte kerst 2026: krijgen we sneeuw met kerst? | watishetweer.nl</title>"));
@@ -178,7 +179,8 @@ assert.equal((html.match(/id="seizoen-verwachting"/g)||[]).length,1,"één data-
 assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige ontwerpstudie'),"geen slogan of ontwerpnotities");
 assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
 
-assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
+assert(html.includes("Verwachting vanaf zaterdag 19 december · tweede kerstdag volgt op zondag 20 december</p>"),"kort antwoord met beide datums");
+assert.equal(vertalerKerst0().vertaal("Verwachting vanaf zaterdag 19 december · tweede kerstdag volgt op zondag 20 december"),"Forecast from Saturday 19 December · Boxing Day follows on Sunday 20 December","kort antwoord ook in het Engels");
 assert(html.includes("Krijgen we een witte kerst in 2026? Vanaf 19 december het verwachte sneeuwdek van Groningen tot Maastricht"),"description beantwoordt de zoekvraag en noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
 assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
