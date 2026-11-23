@@ -22,7 +22,7 @@ const CSP_META=/<meta http-equiv="Content-Security-Policy" content="[^"]*">\s*/g
 const FONT_PRELOADS=[
   {href:"/instrument-sans-latin-400-normal.woff2",tag:'<link rel="preload" href="/instrument-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'},
   {href:"/instrument-sans-latin-500-normal.woff2",tag:'<link rel="preload" href="/instrument-sans-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>'},
-  {href:"/bodoni-moda-latin-400-normal.woff2",tag:'<link rel="preload" href="/bodoni-moda-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'}
+  {href:"/instrument-sans-latin-600-normal.woff2",tag:'<link rel="preload" href="/instrument-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>'}
 ];
 const DELIVERY_META='<meta name="weather-delivery" content="external-minified-v1">';
 const SCRIPT_RE=/<script([^>]*)>([\s\S]*?)<\/script>/gi;

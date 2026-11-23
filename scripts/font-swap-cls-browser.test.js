@@ -2,7 +2,7 @@
 
 /* Webfontwissel zonder layoutverschuiving.
    Op een trage koude load toont de browser eerst een systeemfont en wisselt
-   pas later naar Instrument Sans en Bodoni Moda (font-display:swap). Zonder
+   pas later naar Instrument Sans (font-display:swap; Bodoni Moda viel weg met G2). Zonder
    reservefonts op maat breekt de tekst na de wissel anders af: op productie
    schoof /weer/utrecht/ op 390px daardoor ~24px (CLS 0,10). Deze test houdt
    de webfonts bewust 2,5 s tegen en eist dat de wissel vrijwel niets
@@ -119,12 +119,15 @@ function cls(entries){
         const meting=await page.evaluate(()=>({
           shifts:window.__shifts,
           reserve:[...document.fonts].filter(f=>/Fallback/.test(f.family)&&f.status==="loaded").map(f=>f.family.replace(/["']/g,"")),
-          mono:[...document.fonts].filter(f=>/DM Mono/.test(f.family)&&f.status!=="unloaded").map(f=>f.family.replace(/["']/g,"")+":"+f.status)
+          mono:[...document.fonts].filter(f=>/DM Mono/.test(f.family)&&f.status!=="unloaded").map(f=>f.family.replace(/["']/g,"")+":"+f.status),
+          bodoni:[...document.fonts].filter(f=>/Bodoni/.test(f.family)&&f.status!=="unloaded").map(f=>f.family.replace(/["']/g,"")+":"+f.status)
         }));
         const label=`${route} op ${breedte}px`;
         assert(voorWissel.brief>40&&!voorWissel.webfont,`${label}: de brief moet al zichtbaar zijn vóór het webfont binnen is (brief ${voorWissel.brief} tekens, webfont ${voorWissel.webfont})`);
         assert(meting.reserve.includes("Instrument Sans Fallback"),`${label}: Instrument Sans Fallback vond geen lokaal systeemfont (${JSON.stringify(meting.reserve)})`);
-        assert(meting.reserve.some(f=>f.startsWith("Bodoni Moda Fallback")),`${label}: geen Bodoni-reserve geladen (${JSON.stringify(meting.reserve)})`);
+        /* Sinds G2 (23 november) staan koppen en grote cijfers in Instrument
+           Sans: Bodoni Moda en zijn reserves horen niet meer geladen te worden. */
+        assert.deepEqual(meting.bodoni,[],`${label}: Bodoni Moda wordt nog geladen terwijl geen tekst het gebruikt (${JSON.stringify(meting.bodoni)})`);
         /* Data staat sinds de typografielaag in de gewone schreefloze letter:
            DM Mono en zijn reserve horen dus niet meer geladen te worden. */
         assert.deepEqual(meting.mono,[],`${label}: DM Mono wordt nog geladen terwijl geen tekst het gebruikt (${JSON.stringify(meting.mono)})`);

@@ -208,7 +208,8 @@ try{
       const breedNacht=w>=1360;
       /* Zichtbare kolommen: onder 1360px staat de maantekst onder Beste zichtperiode (de zesde kolom is dan 0px breed). */
       if(n("night-columns")!==(breedNacht?6:5))throw new Error(`${w}px: Nachtzicht heeft ${v("night-columns")} zichtbare kolommen i.p.v. ${breedNacht?"zes":"vijf"}`);
-      const verwachteNachtKop="NACHT ZICHTSCORE BEWOLKING BEOORDELING BESTE ZICHTPERIODE"+(breedNacht?" MAAN":"");
+      /* G2 (23 november): kolomkoppen in gewone schrijfwijze in plaats van hoofdletters. */
+      const verwachteNachtKop="Nacht Zichtscore Bewolking Beoordeling Beste zichtperiode"+(breedNacht?" Maan":"");
       if(v("night-head")!==verwachteNachtKop)throw new Error(`${w}px: Nachtzicht-header onjuist: ${v("night-head")}`);
       if(v("night-dom-head")!==v("night-head"))throw new Error(`${w}px: semantische Nachtzicht-kopvolgorde wijkt visueel af (${v("night-dom-head")})`);
       if(n("assessment-visible")!==1)throw new Error(`${w}px: Beoordeling-header is niet zichtbaar`);
@@ -243,7 +244,8 @@ try{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       /* 23 komende uren (uurgrens, #429); geen monolettertype meer sinds de typografieronde van 25 september. */
       if(n("all-rows")!==23)throw new Error(`${w}px: mobiele uurtabel toont niet de 23 komende uren (${v("all-rows")} rijen)`);
-      if(!/Bodoni Moda/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
+      /* Sinds G2 (23 november) staat ook de grote temperatuur in Instrument Sans; Bodoni mag niet terugkomen. */
+      if(!/^(?:["']|&quot;)?Instrument Sans/i.test(v("hero-family"))||/Bodoni/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
     }
     console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1360?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }

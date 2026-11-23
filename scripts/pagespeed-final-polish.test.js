@@ -17,7 +17,7 @@ assert.equal(faviconHead,false,"faviconowner mag vóór zijn late runtime geen i
 for(const font of [
   "/instrument-sans-latin-400-normal.woff2",
   "/instrument-sans-latin-500-normal.woff2",
-  "/bodoni-moda-latin-400-normal.woff2"
+  "/instrument-sans-latin-600-normal.woff2"
 ])assert(delivery.includes(font),"delivery-owner mist kritieke fontpreload: "+font);
 assert(delivery.includes('const stijlPos=bron.search(/<style\\b/i);'),"fontpreloads zijn niet expliciet vóór het eerste stijlblok gepositioneerd");
 

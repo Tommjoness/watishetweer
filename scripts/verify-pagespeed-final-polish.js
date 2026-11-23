@@ -16,7 +16,7 @@ assert.ok(eersteStijl>0,"homepage bevat geen controleerbaar stijlblok");
 const fonts=[
   "/instrument-sans-latin-400-normal.woff2",
   "/instrument-sans-latin-500-normal.woff2",
-  "/bodoni-moda-latin-400-normal.woff2"
+  "/instrument-sans-latin-600-normal.woff2"
 ];
 for(const href of fonts){
   const patroon=new RegExp('rel="preload" href="'+href.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'"','g');

@@ -21,13 +21,15 @@ groep.setAttribute("aria-label","Neerslagperioden met tijdvak en hoeveelheid per
   const hard=hardenRuntime(bron);
   const font400='rel="preload" href="/instrument-sans-latin-400-normal.woff2"';
   const font500='rel="preload" href="/instrument-sans-latin-500-normal.woff2"';
+  const font600='rel="preload" href="/instrument-sans-latin-600-normal.woff2"';
   const bodoni400='rel="preload" href="/bodoni-moda-latin-400-normal.woff2"';
   assert(hard.includes(font400),"Instrument Sans 400 preload ontbreekt");
   assert(hard.includes(font500),"Instrument Sans 500 preload ontbreekt terwijl die weight in de kritieke mobiele keten staat");
-  assert(hard.includes(bodoni400),"Bodoni preload ontbreekt");
+  assert(hard.includes(font600),"Instrument Sans 600 preload ontbreekt terwijl de koppen (G2) die weight gebruiken");
+  assert(!hard.includes(bodoni400),"Bodoni wordt sinds G2 niet meer gebruikt en mag niet meer gepreload worden");
   const eersteStijl=hard.indexOf("<style>");
   assert(eersteStijl>0,"eerste stijlblok ontbreekt in geharde testartifact");
-  for(const preload of [font400,font500,bodoni400])assert(hard.indexOf(preload)<eersteStijl,"kritieke fontpreload moet vóór het eerste stijlblok staan: "+preload);
+  for(const preload of [font400,font500,font600])assert(hard.indexOf(preload)<eersteStijl,"kritieke fontpreload moet vóór het eerste stijlblok staan: "+preload);
   assert(hard.includes('groep.setAttribute("aria-hidden","true")'),"regenperiodegroep is niet decoratief voor accessibility tree");
   assert(!hard.includes('horizontaal.setAttribute("aria-label"'),"ongeldige aria-label op SVG-line bleef staan");
   assert(hard.includes("Neerslagperioden: "),"exacte regenperiodesamenvatting verhuist niet naar het SVG-label");
