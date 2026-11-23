@@ -5,7 +5,9 @@
    - geen zichtbare tekst (ook SVG-tekst in de grafiek) in Bodoni Moda;
    - geen kopjes in afgedwongen hoofdletters;
    - geen zichtbare tekst onder 12px (bewust verborgen tekst telt niet);
-   - koppen 600, de grote temperatuur 400 en de weersomschrijving 500.
+   - paginakop in Newsreader 500, grote temperatuur in Newsreader 400,
+     weersomschrijving in Newsreader 500, lopende tekst in Instrument Sans;
+   - het webfont Newsreader is echt geladen (niet de reserve).
    Draait op het finale artifact (npm run build:cloudflare). */
 
 const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
@@ -42,9 +44,11 @@ function meet(){
     bodoni:tekst.filter(e=>/Bodoni/i.test(getComputedStyle(e).fontFamily)).map(kort),
     hoofdletters:tekst.filter(e=>getComputedStyle(e).textTransform==="uppercase").map(kort),
     klein:tekst.filter(e=>parseFloat(getComputedStyle(e).fontSize)<12).map(e=>kort(e)+" "+getComputedStyle(e).fontSize),
-    h1:h1&&zichtbaar(h1)?getComputedStyle(h1).fontWeight:null,
-    t:t&&zichtbaar(t)?getComputedStyle(t).fontWeight:null,
-    cond:cond&&zichtbaar(cond)?getComputedStyle(cond).fontWeight:null,
+    h1:h1&&zichtbaar(h1)?getComputedStyle(h1).fontWeight+"|"+getComputedStyle(h1).fontFamily.split(",")[0].replace(/["']/g,""):null,
+    t:t&&zichtbaar(t)?getComputedStyle(t).fontWeight+"|"+getComputedStyle(t).fontFamily.split(",")[0].replace(/["']/g,""):null,
+    cond:cond&&zichtbaar(cond)?getComputedStyle(cond).fontWeight+"|"+getComputedStyle(cond).fontFamily.split(",")[0].replace(/["']/g,""):null,
+    body:getComputedStyle(document.body).fontFamily.split(",")[0].replace(/["']/g,"").trim(),
+    newsreader:[...document.fonts].some(f=>f.family.replace(/["']/g,"")==="Newsreader"&&f.status==="loaded"),
     hier:(()=>{const e=document.getElementById("here");if(!e||!zichtbaar(e))return null;return getComputedStyle(e).textTransform+"/"+getComputedStyle(e,"::first-letter").textTransform;})(),
     tijd:(()=>{const e=document.getElementById("plaatstijd");return e&&zichtbaar(e)?getComputedStyle(e).fontWeight:null;})(),
     teksten:tekst.length
@@ -73,10 +77,12 @@ function meet(){
         assert.deepEqual(m.bodoni,[],label+": tekst staat nog in Bodoni Moda: "+JSON.stringify(m.bodoni));
         assert.deepEqual(m.hoofdletters,[],label+": kopjes staan nog in afgedwongen hoofdletters: "+JSON.stringify(m.hoofdletters));
         assert.deepEqual(m.klein,[],label+": zichtbare tekst onder 12px: "+JSON.stringify(m.klein));
-        assert.equal(m.h1,"600",label+": kop niet in gewicht 600");
+        assert.equal(m.h1,"500|Newsreader",label+": paginakop niet in Newsreader 500");
+        assert.equal(m.body,"Instrument Sans",label+": lopende tekst niet in Instrument Sans");
+        assert(m.newsreader,label+": webfont Newsreader is niet geladen");
         if(WEER.includes(pad)){
-          assert.equal(m.t,"400",label+": grote temperatuur niet in gewicht 400");
-          assert.equal(m.cond,"500",label+": weersomschrijving niet in gewicht 500");
+          assert.equal(m.t,"400|Newsreader",label+": grote temperatuur niet in Newsreader 400");
+          assert.equal(m.cond,"500|Newsreader",label+": weersomschrijving niet in Newsreader 500");
           assert.equal(m.hier,"lowercase/uppercase",label+": locatieknop toont niet \"Mijn locatie\"");
           if(m.tijd!==null)assert.equal(m.tijd,"400",label+": tijd naast de plaatsnaam is niet 400");
         }
@@ -85,5 +91,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("G2-typografie OK op "+n+" weergaven ("+PAGINAS.length+" paginatypes, NL/EN, 390/1366px, licht/donker): geen Bodoni, geen hoofdletterkopjes, niets onder 12px, koppen 600, temperatuur 400.");
+  console.log("G2-typografie OK op "+n+" weergaven ("+PAGINAS.length+" paginatypes, NL/EN, 390/1366px, licht/donker): geen Bodoni, geen hoofdletterkopjes, niets onder 12px, koppen en temperatuur in Newsreader, de rest in Instrument Sans.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

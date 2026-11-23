@@ -7,7 +7,9 @@ const SHELL = [
   "./instrument-sans-latin-500-normal.woff2",
   "./instrument-sans-latin-600-normal.woff2",
   "./dm-mono-latin-400-normal.woff2",
-  "./dm-mono-latin-500-normal.woff2"
+  "./dm-mono-latin-500-normal.woff2",
+  "./newsreader-latin-400-normal.woff2",
+  "./newsreader-latin-500-normal.woff2"
               ];
 const SHELL_VERPLICHT = new Set(["./","./index.html"]);
 

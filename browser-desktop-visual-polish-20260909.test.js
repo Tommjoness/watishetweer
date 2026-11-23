@@ -244,8 +244,8 @@ try{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       /* 23 komende uren (uurgrens, #429); geen monolettertype meer sinds de typografieronde van 25 september. */
       if(n("all-rows")!==23)throw new Error(`${w}px: mobiele uurtabel toont niet de 23 komende uren (${v("all-rows")} rijen)`);
-      /* Sinds G2 (23 november) staat ook de grote temperatuur in Instrument Sans; Bodoni mag niet terugkomen. */
-      if(!/^(?:["']|&quot;)?Instrument Sans/i.test(v("hero-family"))||/Bodoni/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
+      /* Sinds G2 (23 november) staat de grote temperatuur in Newsreader; Bodoni mag niet terugkomen. */
+      if(!/^(?:["']|&quot;)?Newsreader/i.test(v("hero-family"))||/Bodoni/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
     }
     console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1360?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }

@@ -5,11 +5,19 @@ const path=require("path");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {OUT,htmlBestanden}=require("./apply-kleur-20261012.js");
 
-/* G2-A typografie (eigenaar 22 en 23 november, ontwerp "G2" akkoord).
-   - Eén letter: koppen, plaatsnaam en grote cijfers stonden in Bodoni Moda.
-     --serif wijst nu naar --sans (Instrument Sans). Koppen krijgen 600 met
-     iets strakkere letterafstand (-0,02em); de grote temperatuur en de grote
-     aftelcijfers blijven dun (400); de weersomschrijving (#cond) 500.
+/* G2-A typografie (eigenaar 22 en 23 november, ontwerp "G2" akkoord; koplettertype
+   Newsreader gekozen op 23 november).
+   - Bodoni Moda verdwijnt. --serif wijst naar --sans (Instrument Sans): de
+     kleine koppen en labels zijn schreefloos, 600, letterafstand -0,02em.
+   - Eén redactionele letter met karakter, spaarzaam: Newsreader (--display)
+     voor de paginakop (h1), de plaatsnaam, de A–Z-koppen, de koppen van
+     Witte kerst, de maanfase, de weersomschrijving (500) en de grote
+     temperatuur en aftelcijfers (400). Zelf gehost (OFL-1.1), latin 400/500.
+   - Reserveletters op maat ("Newsreader Fallback ...") houden de regelval
+     gelijk tot het webfont binnen is: breedte en verticale maten afgeleid
+     uit de fontmetriek van Newsreader 500 tegen Times/Liberation Serif, met
+     dezelfde methode en verhoudingen als de bestaande Bodoni-reserves
+     (Georgia en Noto Serif via die verhoudingen).
    - SVG-tekst met font-family="Bodoni Moda" (temperatuurlabels in de
      grafiek) houdt dat attribuut, omdat runtime en tests die labels eraan
      herkennen. CSS gaat voor op het presentatieattribuut, dus ook die
@@ -21,8 +29,8 @@ const {OUT,htmlBestanden}=require("./apply-kleur-20261012.js");
    - "Mijn Locatie" wordt "Mijn locatie" (zie de regel voor #here).
    - Geen zichtbare tekst onder 12px: de weergaveknoppen op /weer/ en het
      statuskopje van Witte kerst stonden op 11px.
-   - Bodoni wordt niet meer gepreload (platform-output-cleanup); de 600 van
-     Instrument Sans wel, omdat de koppen die nu gebruiken.
+   - Bodoni wordt niet meer gepreload (platform-output-cleanup); Newsreader
+     400 en 500 wel, omdat plaatsnaam, kop en temperatuur in beeld staan.
    Alle regels hebben :not(#wiw-g2) en !important, omdat ze bestaande lagen
    met hogere specificiteit moeten overschrijven. */
 const STYLE_ID="wiw-g2-typografie-20261123";
@@ -44,14 +52,27 @@ const DUN=["#t","#t *",".deg","#plaatstijd",".seizoen-aftellen",".seizoen-aftell
 /* Een gewone selectorlijst (geen :is()), zodat iedere selector zijn eigen
    specificiteit houdt en specifiekere koppen voorgaan op de basisregel h2. */
 const lijst=a=>a.map(s=>"html body "+s+":not(#wiw-g2)").join(",");
+const DISPLAY=[
+  "h1","#place",'h2[id^="kop-"]',".wk-page .wk-guide>h2",".wk-page .wk-related>h2",".wk-page .wk-qa h2",".nz-maan .groot"
+];
+const DISPLAY_GROOT=["#t","#t *",".deg",".seizoen-aftellen",".seizoen-aftellen *"];
+const FONTFACES=[400,500].map(w=>`@font-face{font-family:'Newsreader';src:url('/newsreader-latin-${w}-normal.woff2') format('woff2');font-weight:${w};font-display:swap}`).join("\n")+`
+@font-face{font-family:'Newsreader Fallback Georgia';src:local('Georgia');size-adjust:99.1%;ascent-override:74.2%;descent-override:26.7%;line-gap-override:0%}
+@font-face{font-family:'Newsreader Fallback';src:local('Times New Roman'),local('TimesNewRomanPSMT'),local('Liberation Serif');size-adjust:108.8%;ascent-override:67.6%;descent-override:24.4%;line-gap-override:0%}
+@font-face{font-family:'Newsreader Fallback Noto';src:local('Noto Serif');size-adjust:91.9%;ascent-override:80%;descent-override:28.8%;line-gap-override:0%}`;
+const DISPLAY_STAPEL="'Newsreader','Newsreader Fallback Georgia','Newsreader Fallback','Newsreader Fallback Noto',Georgia,'Times New Roman',serif";
 
 const CSS=`
-html:root:not(#wiw-g2){--serif:var(--sans)!important}
+${FONTFACES}
+html:root:not(#wiw-g2){--serif:var(--sans)!important;--display:${DISPLAY_STAPEL}}
 html body svg text[font-family*="Bodoni"]:not(#wiw-g2){font-family:var(--sans)!important}
 ${lijst(HOOFDLETTERS)}{text-transform:none!important;letter-spacing:0!important;font-weight:600!important}
 ${lijst(KOPPEN)}{font-weight:600!important;letter-spacing:-.02em!important}
 ${lijst(DUN)}{font-weight:400!important;letter-spacing:-.02em!important}
 html body #cond:not(#wiw-g2),html body #minicond:not(#wiw-g2){font-weight:500!important;letter-spacing:0!important}
+${lijst(DISPLAY)}{font-family:var(--display)!important;font-weight:500!important;letter-spacing:-.01em!important}
+${lijst(DISPLAY_GROOT)}{font-family:var(--display)!important;font-weight:400!important;letter-spacing:-.02em!important}
+html body #cond:not(#wiw-g2){font-family:var(--display)!important}
 html body .hub-weergave button:not(#wiw-g2),html body #wk-status-kop:not(#wiw-g2){font-size:12px!important}
 /* De locatieknop is "<span>Mijn </span>Locatie", omdat tot 900px alleen het
    tweede woord past. In hoofdletters viel de hoofdletter L niet op; in gewone
@@ -79,9 +100,9 @@ function main(){
   }
   if(!geraakt)throw new Error("Geen pagina geraakt door de G2-typografielaag.");
   const cache=vernieuwServiceworkerCache(OUT,"g2-typografie-20261123");
-  console.log("G2-typografie toegepast op "+geraakt+" pagina's: één letter, koppen 600, grote cijfers 400, geen hoofdletterkopjes, minimaal 12px; cache "+cache+".");
+  console.log("G2-typografie toegepast op "+geraakt+" pagina's: Newsreader voor koppen en grote cijfers, Instrument Sans voor de rest, geen hoofdletterkopjes, minimaal 12px; cache "+cache+".");
   return {geraakt};
 }
 
 if(require.main===module)main();
-module.exports={OUT,STYLE_ID,CSS,HOOFDLETTERS,KOPPEN,DUN,pasToe,doelpagina,main};
+module.exports={OUT,STYLE_ID,CSS,HOOFDLETTERS,KOPPEN,DUN,DISPLAY,DISPLAY_GROOT,pasToe,doelpagina,main};

@@ -430,8 +430,8 @@ function meet(){
       const {context,page}=await open(browser,root,null,390,844,pad);
       try{
         const r=await page.evaluate(()=>({body:getComputedStyle(document.body).fontFamily,h1:getComputedStyle(document.querySelector("h1")).fontFamily,h1gewicht:getComputedStyle(document.querySelector("h1")).fontWeight,kort:document.querySelectorAll("ul.kort li").length,merk:/Merk en sitenaam|vaste merk- en sitenaam/.test(document.body.textContent)}));
-        /* G2 (23 november): één siteletter; de kop in Instrument Sans 600. */
-        assert(/Instrument Sans/.test(r.body)&&/^["']?Instrument Sans/.test(r.h1)&&!/Bodoni/.test(r.h1)&&r.h1gewicht==="600",pad+": gebruikt de siteletters niet: "+JSON.stringify(r));
+        /* G2 (23 november): lopende tekst Instrument Sans, de kop in Newsreader 500. */
+        assert(/Instrument Sans/.test(r.body)&&/^["']?Newsreader/.test(r.h1)&&!/Bodoni/.test(r.h1)&&r.h1gewicht==="500",pad+": gebruikt de siteletters niet: "+JSON.stringify(r));
         assert(!r.merk,pad+": merk- en sitenaamregel staat er nog");
         if(pad==="/privacy.html")assert.equal(r.kort,4,pad+": samenvatting in het kort ontbreekt");
         console.log("SAMENHANG "+pad+": siteletters"+(pad==="/privacy.html"?", samenvatting in vier punten":"")+".");
