@@ -140,7 +140,7 @@ assert(url.includes("&hourly=snow_depth")&&url.includes("&forecast_days=7")&&url
 
 /* Statische pagina op een builddag ver voor kerst. */
 const html=pagina(kerst,"2026-10-05");
-assert(html.includes("<title>Witte kerst 2026: kans op sneeuw met kerst | watishetweer.nl</title>"));
+assert(html.includes("<title>Witte kerst 2026: krijgen we sneeuw met kerst? | watishetweer.nl</title>"));
 assert(html.includes('<link rel="canonical" href="https://watishetweer.nl/witte-kerst/">'));
 assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 /* Ontwerp uitsluitend voor Witte kerst; broncontracten, taal en runtime blijven intact. */
@@ -154,7 +154,7 @@ assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige 
 assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
 
 assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
-assert(html.includes("Vanaf 19 december staat hier de verwachting"),"description noemt de startdatum");
+assert(html.includes("Krijgen we een witte kerst in 2026? Vanaf 19 december het verwachte sneeuwdek van Groningen tot Maastricht"),"description beantwoordt de zoekvraag en noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
 assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
 /* SEO-content blijft statisch, bronverifieerbaar en in het Engels volledig vertaald. */

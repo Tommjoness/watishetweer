@@ -136,7 +136,7 @@ function werkNeerslagkaartBij(){
 function actueleConditieTekst(a){
   if(!meetbareNeerslagNu(a))return null;
   const soort=String(a&&a.soort||"").trim();
-  if(soort&&soort!=="neerslag")return soort.charAt(0).toUpperCase()+soort.slice(1);
+  if(soort&&soort!=="neerslag")return /^ij/i.test(soort)?"IJ"+soort.slice(2):soort.charAt(0).toUpperCase()+soort.slice(1);
   return "Neerslag";
 }
 
@@ -254,7 +254,8 @@ function werkTweeUurBij(){
   if(tekst)tx.textContent=tekst;
   if(grafiek&&tekst){
     const bestaand=grafiek.getAttribute&&grafiek.getAttribute("aria-label");
-    grafiek.setAttribute("aria-label",tekst+(bestaand&&bestaand.indexOf(tekst)<0?" "+bestaand:""));
+    const techniek=bestaand?(/(?:De balken tonen|Kwartierwaarden zijn) .*$/.exec(bestaand)||[""])[0]:"";
+    grafiek.setAttribute("aria-label",tekst+(techniek?" "+techniek:""));
   }
 }
 

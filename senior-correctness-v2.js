@@ -14,7 +14,7 @@ const num=v=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v))?Number(
 const clampNum=(v,a,b)=>Math.max(a,Math.min(b,v));
 const natCode=code=>{code=Number(code);return code>=51&&code<=99;};
 const mistCode=code=>Number(code)===45||Number(code)===48;
-const hoofdletter=t=>{t=String(t||"");return t?t.charAt(0).toUpperCase()+t.slice(1):t;};
+const hoofdletter=t=>{t=String(t||"");return t?(/^ij/i.test(t)?"IJ"+t.slice(2):t.charAt(0).toUpperCase()+t.slice(1)):t;};
 const kleineStart=t=>{t=String(t||"");return t?(/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1)):t;};
 
 /* Open-Meteo gebruikt bij poolnacht twee gelijke lokale middernachten en bij

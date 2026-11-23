@@ -746,7 +746,11 @@ if(typeof document!=="undefined" && typeof S!=="undefined"){
         const w=waars[0];
         // Noemt de titel het niveau al ("Code geel: windstoten"), dan niet nog
         // eens "(geel)" in de kop.
-        const titelNoemtNiveau=!!w.niveau&&String(w.titel||"").toLowerCase().split(/[^a-zà-ÿ]+/).includes(String(w.niveau).toLowerCase());
+        // Ook "Gele waarschuwing voor mist" en de Engelse brontitel "Yellow warning for fog" noemen het niveau al.
+        const niveauNl=String(w.niveau||"").toLowerCase(),titelKlein=String(w.titel||"").toLowerCase();
+        const niveauVormen={geel:["geel","gele"],oranje:["oranje"],rood:["rood","rode"]}[niveauNl]||[niveauNl];
+        const niveauEn={geel:"yellow",oranje:"orange",rood:"red"}[niveauNl];
+        const titelNoemtNiveau=!!w.niveau&&(titelKlein.split(/[^a-zà-ÿ]+/).some(woord=>niveauVormen.includes(woord))||(!!niveauEn&&titelKlein.startsWith(niveauEn+" warning")));
         const waarschKop=w.niveauIsOfficieel===false||titelNoemtNiveau
           ?"Officiële weerwaarschuwing"
           :"Officiële weerwaarschuwing"+(w.niveau?" ("+esc(w.niveau)+")":"");

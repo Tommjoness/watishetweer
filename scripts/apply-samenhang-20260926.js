@@ -40,9 +40,9 @@ html body .wiw-hour-table th:nth-child(5),html body .wiw-hour-table td:nth-child
 
 const HUB_KNOP_OUD_START='<button id="thema" type="button" class="wiw-theme-switch" role="switch"';
 const HUB_KNOP_NIEUW='<div id="thema" class="hub-weergave" role="group" aria-label="Weergave kiezen">'
-  +'<button type="button" data-keuze="licht" aria-pressed="false"><span aria-hidden="true">☀</span> Licht</button>'
+  +'<button type="button" data-keuze="licht" aria-pressed="false">Licht</button>'
   +'<button type="button" data-keuze="auto" aria-pressed="true" title="Automatisch: volgt de licht/donker-instelling van je apparaat">Auto</button>'
-  +'<button type="button" data-keuze="donker" aria-pressed="false"><span aria-hidden="true">☾</span> Donker</button></div>';
+  +'<button type="button" data-keuze="donker" aria-pressed="false">Donker</button></div>';
 const HUB_INTRO='<p>Kies een plaats voor het actuele weer, neerslag in de komende uren en de 7-daagse verwachting.</p>';
 const HUB_ZOEK='<label class="hub-zoek"><span class="sr-only">Zoek een plaats in de lijst</span>'
   +'<input type="search" id="hub-zoek" placeholder="Zoek een plaats" autocomplete="off" spellcheck="false"></label>'

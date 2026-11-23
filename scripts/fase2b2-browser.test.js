@@ -68,6 +68,8 @@ async function open(browser,srv,taal,breedte,schema){
               const t=await page.evaluate(()=>document.body.innerText+"\n"+[...document.querySelectorAll("[aria-label],[title]")].map(e=>(e.getAttribute("aria-label")||"")+" "+(e.getAttribute("title")||"")).join("\n"));
               const fout=[...t.matchAll(/.{0,30}\b[a-z]*iJ[a-z]*.{0,20}/g)].map(x=>x[0].replace(/\s+/g," "));
               assert.deepEqual(fout,[],`${naam} ${breedte}px: "iJ" met kleine i in de tekst`);
+              const ij=[...t.matchAll(/.{0,30}\bIj[a-z]+.{0,20}/g)].map(x=>x[0].replace(/\s+/g," "));
+              assert.deepEqual(ij,[],`${naam} ${breedte}px: "Ij" in plaats van "IJ" aan het begin van een woord`);
               assert.ok(/\b[Ii]jzel\w*/.test(t)||/\bIJzel\w*/.test(t),`${naam} ${breedte}px: de ijzelomschrijving staat niet op de pagina`);
               assert.deepEqual(fouten,[],`${naam} ${breedte}px: scriptfouten`);
               n++;

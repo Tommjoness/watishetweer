@@ -27,8 +27,7 @@ assert(CSS.includes("min-width:216px!important"),"de desktop/tablet-control mist
 assert.equal((CSS.match(/#thema-switch\{[\s\S]*?z-index:1!important/g)||[]).length,2,"de volledige switchlaag moet onder de aparte Auto-knop blijven");
 assert(CSS.includes(".wiw-theme-auto{\n    grid-column:2!important"),"Auto staat niet in het middelste segment");
 assert(CSS.includes(".wiw-theme-moon{\n    grid-column:3!important;\n    grid-row:1!important;\n    position:static!important"),"Donker staat niet als zichtbaar derde gridsegment");
-assert(CSS.includes('.wiw-theme-sun::after{content:"Licht";margin-left:8px}'),"Licht-label of icoonafstand ontbreekt");
-assert(CSS.includes('.wiw-theme-moon::after{content:"Donker";margin-left:8px}'),"Donker-label of icoonafstand ontbreekt");
+assert(!/wiw-theme-(sun|moon)::after\{content:/.test(CSS),"themalabels horen als echte (vertaalbare) tekst in de segmenten, niet als CSS-content");
 assert(!CSS.includes("font-weight:600!important"),"actieve optie mag typografisch niet zwaarder worden");
 assert(CSS.includes("box-shadow:inset 0 -1px 0 var(--ink-45)!important"),"subtiele geselecteerde staat ontbreekt");
 assert(CSS.includes("min-height:46px!important"),"mobiele themakeuze mist ruim touchdoel");

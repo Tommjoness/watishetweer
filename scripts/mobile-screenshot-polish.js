@@ -183,8 +183,8 @@ function formatteerMaanTekst(tekst){
   m=/^maan (?:komt )?op(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maanopkomst om "+m[1]+".";
   m=/^maan (?:gaat )?onder(?: om)? (\d{2}:\d{2})$/i.exec(t);if(m)return "Maanondergang om "+m[1]+".";
   m=/^maan blijft de rest van de nacht (onder|boven) de horizon$/i.exec(t);if(m)return "De rest van de nacht blijft de maan "+m[1].toLowerCase()+" de horizon.";
-  if(/^maan blijft onder de horizon$/i.test(t))return "Maan blijft onder de horizon.";
-  if(/^maan blijft boven de horizon$/i.test(t))return "Maan blijft boven de horizon.";
+  if(/^maan blijft onder de horizon$/i.test(t))return "De maan blijft onder de horizon.";
+  if(/^maan blijft boven de horizon$/i.test(t))return "De maan blijft boven de horizon.";
   return t?(/^[Mm]aan:/.test(t)?t:"Maan: "+(/^IJ/.test(t)?"ij"+t.slice(2):t.charAt(0).toLowerCase()+t.slice(1))):"";
 }
 function nachtMetaDelen(tekst){
