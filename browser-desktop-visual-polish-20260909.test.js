@@ -135,7 +135,8 @@ function meet(){
     const aqBox=R(aq),aqParent=R(aq.parentElement);zet("aq-width",aqBox.width);zet("aq-parent-width",aqParent.width);zet("aq-center-delta",Math.abs((aqBox.left+aqBox.right-aqParent.left-aqParent.right)/2));
     zet("gap-chart-days",R(dTitle).top-R(layout).bottom);zet("gap-days-night",R(nTitle).top-R(days).bottom);zet("gap-night-air",R(aqTitle).top-R(nights).bottom);
     const numerieken=[document.getElementById("t"),document.getElementById("minitemp"),document.querySelector(".sval"),nRow.querySelector(".score"),document.querySelector(".wiw-hour-temp .wiw-hour-primary"),dRow.querySelector(".dmin"),dRow.querySelector(".dmax")].filter(Boolean);
-    const numeriekGoed=numerieken.length===7&&numerieken.every(el=>{const s=C(el);return /Instrument Sans/i.test(s.fontFamily)&&/tabular-nums/i.test(s.fontVariantNumeric)&&(/lining-nums/i.test(s.fontVariantNumeric)||/lnum/i.test(s.fontFeatureSettings));});
+    /* Sinds G2 (23 november) staat de grote temperatuur (#t) in Newsreader; de overige consumentencijfers blijven Instrument Sans. Allemaal tabular en lining. */
+    const numeriekGoed=numerieken.length===7&&numerieken.every(el=>{const s=C(el);const letter=el.id==="t"?/^["']?Newsreader/i:/Instrument Sans/i;return letter.test(s.fontFamily)&&/tabular-nums/i.test(s.fontVariantNumeric)&&(/lining-nums/i.test(s.fontVariantNumeric)||/lnum/i.test(s.fontFeatureSettings));});
     zet("numerals",numeriekGoed?"ok":numerieken.map(el=>[el.id||el.className,C(el).fontFamily,C(el).fontVariantNumeric,C(el).fontFeatureSettings].join("/")).join("|"));
     zet("hero-family",C(document.getElementById("t")).fontFamily);zet("mini-family",C(document.getElementById("minitemp")).fontFamily);
     zet("footer-font",parseFloat(C(footer).fontSize));zet("footer-margin",parseFloat(C(footer).marginTop)||0);zet("footer-padding",parseFloat(C(footer).paddingTop)||0);zet("aq-footer-gap",R(footer).top-R(aq).bottom);
