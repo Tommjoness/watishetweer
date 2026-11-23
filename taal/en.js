@@ -1642,7 +1642,10 @@
   ];
 
   /* Korte vormen voor smalle kolomkoppen (tabellen, Zeven dagen, Nachtzicht). */
-  const koppen = { "Neerslag": "Precip.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels",
+  /* "Temperatuur" → "Temp." (G2, 23 november): zonder hoofdletterkop is de Nederlandse uurtabel smaller en passen
+     regen en wind op één regel; in het Engels gebeurde dat pas met deze korte kop ("Temperature" was ~40px breder dan
+     de cijfers eronder). Zo tonen NL en EN met dezelfde data evenveel uurrijen (uurtabel-ondervlak-browser.test.js). */
+  const koppen = { "Neerslag": "Precip.", "Temperatuur": "Temp.", "Zichtscore": "Score", "Bewolking": "Cloud", "Windstoot": "Gust", "Gevoel": "Feels",
     /* Labels van de mobiele detailkaart (.tip-strook dt): "neerslag" is daar "precip." en blijft overal elders "precipitation". */
     "richting": "direction", "neerslag": "precip." };
   const kopSelector = "th, .row.kop > *, .tip-strook dt";

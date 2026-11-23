@@ -17,11 +17,12 @@ assert.equal(faviconHead,false,"faviconowner mag vóór zijn late runtime geen i
 for(const font of [
   "/instrument-sans-latin-400-normal.woff2",
   "/instrument-sans-latin-500-normal.woff2",
-  "/bodoni-moda-latin-400-normal.woff2"
+  "/newsreader-latin-400-normal.woff2",
+  "/newsreader-latin-500-normal.woff2"
 ])assert(delivery.includes(font),"delivery-owner mist kritieke fontpreload: "+font);
 assert(delivery.includes('const stijlPos=bron.search(/<style\\b/i);'),"fontpreloads zijn niet expliciet vóór het eerste stijlblok gepositioneerd");
 
 assert(pkg.scripts.test.endsWith("node scripts/verify-pagespeed-final-polish.js"),"npm test eindigt niet met PageSpeed artifactverificatie");
 assert(pkg.scripts.postbuild.endsWith("node scripts/verify-pagespeed-final-polish.js"),"postbuild eindigt niet met PageSpeed artifactverificatie");
 
-console.log("PageSpeed broncontract groen: favicon is niet pre-paint, drie kritieke fonts worden vroeg gepreload en het finale artifact wordt in test én postbuild geverifieerd.");
+console.log("PageSpeed broncontract groen: favicon is niet pre-paint, vier kritieke fonts worden vroeg gepreload en het finale artifact wordt in test én postbuild geverifieerd.");

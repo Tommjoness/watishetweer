@@ -135,7 +135,8 @@ function meet(){
     const aqBox=R(aq),aqParent=R(aq.parentElement);zet("aq-width",aqBox.width);zet("aq-parent-width",aqParent.width);zet("aq-center-delta",Math.abs((aqBox.left+aqBox.right-aqParent.left-aqParent.right)/2));
     zet("gap-chart-days",R(dTitle).top-R(layout).bottom);zet("gap-days-night",R(nTitle).top-R(days).bottom);zet("gap-night-air",R(aqTitle).top-R(nights).bottom);
     const numerieken=[document.getElementById("t"),document.getElementById("minitemp"),document.querySelector(".sval"),nRow.querySelector(".score"),document.querySelector(".wiw-hour-temp .wiw-hour-primary"),dRow.querySelector(".dmin"),dRow.querySelector(".dmax")].filter(Boolean);
-    const numeriekGoed=numerieken.length===7&&numerieken.every(el=>{const s=C(el);return /Instrument Sans/i.test(s.fontFamily)&&/tabular-nums/i.test(s.fontVariantNumeric)&&(/lining-nums/i.test(s.fontVariantNumeric)||/lnum/i.test(s.fontFeatureSettings));});
+    /* Sinds G2 (23 november) staat de grote temperatuur (#t) in Newsreader; de overige consumentencijfers blijven Instrument Sans. Allemaal tabular en lining. */
+    const numeriekGoed=numerieken.length===7&&numerieken.every(el=>{const s=C(el);const letter=el.id==="t"?/^["']?Newsreader/i:/Instrument Sans/i;return letter.test(s.fontFamily)&&/tabular-nums/i.test(s.fontVariantNumeric)&&(/lining-nums/i.test(s.fontVariantNumeric)||/lnum/i.test(s.fontFeatureSettings));});
     zet("numerals",numeriekGoed?"ok":numerieken.map(el=>[el.id||el.className,C(el).fontFamily,C(el).fontVariantNumeric,C(el).fontFeatureSettings].join("/")).join("|"));
     zet("hero-family",C(document.getElementById("t")).fontFamily);zet("mini-family",C(document.getElementById("minitemp")).fontFamily);
     zet("footer-font",parseFloat(C(footer).fontSize));zet("footer-margin",parseFloat(C(footer).marginTop)||0);zet("footer-padding",parseFloat(C(footer).paddingTop)||0);zet("aq-footer-gap",R(footer).top-R(aq).bottom);
@@ -208,7 +209,8 @@ try{
       const breedNacht=w>=1360;
       /* Zichtbare kolommen: onder 1360px staat de maantekst onder Beste zichtperiode (de zesde kolom is dan 0px breed). */
       if(n("night-columns")!==(breedNacht?6:5))throw new Error(`${w}px: Nachtzicht heeft ${v("night-columns")} zichtbare kolommen i.p.v. ${breedNacht?"zes":"vijf"}`);
-      const verwachteNachtKop="NACHT ZICHTSCORE BEWOLKING BEOORDELING BESTE ZICHTPERIODE"+(breedNacht?" MAAN":"");
+      /* G2 (23 november): kolomkoppen in gewone schrijfwijze in plaats van hoofdletters. */
+      const verwachteNachtKop="Nacht Zichtscore Bewolking Beoordeling Beste zichtperiode"+(breedNacht?" Maan":"");
       if(v("night-head")!==verwachteNachtKop)throw new Error(`${w}px: Nachtzicht-header onjuist: ${v("night-head")}`);
       if(v("night-dom-head")!==v("night-head"))throw new Error(`${w}px: semantische Nachtzicht-kopvolgorde wijkt visueel af (${v("night-dom-head")})`);
       if(n("assessment-visible")!==1)throw new Error(`${w}px: Beoordeling-header is niet zichtbaar`);
@@ -243,7 +245,8 @@ try{
       if(n("assessment-visible")!==0)throw new Error(`${w}px: desktopheader lekt naar mobiel`);
       /* 23 komende uren (uurgrens, #429); geen monolettertype meer sinds de typografieronde van 25 september. */
       if(n("all-rows")!==23)throw new Error(`${w}px: mobiele uurtabel toont niet de 23 komende uren (${v("all-rows")} rijen)`);
-      if(!/Bodoni Moda/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
+      /* Sinds G2 (23 november) staat de grote temperatuur in Newsreader; Bodoni mag niet terugkomen. */
+      if(!/^(?:["']|&quot;)?Newsreader/i.test(v("hero-family"))||/Bodoni/i.test(v("hero-family"))||!/Instrument Sans/i.test(v("mini-family"))||/Mono/i.test(v("mini-family")))throw new Error(`${w}px: mobiele typografie wijkt af (${v("hero-family")}/${v("mini-family")})`);
     }
     console.log(`${w}px desktop-polish groen: overflow ${v("overflow")}px${w>=1100?`, ${v("rows")} gedeelde hoogtegestuurde uren, ${w>=1360?"zes":"vijf"} Nachtzicht-kolommen en sectiegap ${v("gap-chart-days")}px`:", mobiele layout intact"}.`);
   }

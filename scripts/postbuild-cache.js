@@ -12,7 +12,8 @@ const CACHE_BRONNEN=Object.freeze([
   "index.html","manifest.json","icon-192.png","icon-512.png","icon-maskable-512.png",
   "bodoni-moda-latin-400-normal.woff2","bodoni-moda-latin-500-normal.woff2",
   "instrument-sans-latin-400-normal.woff2","instrument-sans-latin-500-normal.woff2",
-  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2"
+  "instrument-sans-latin-600-normal.woff2","dm-mono-latin-400-normal.woff2","dm-mono-latin-500-normal.woff2",
+  "newsreader-latin-400-normal.woff2","newsreader-latin-500-normal.woff2"
 ]);
 const CACHE_ID_PATTERN=/(?:weerbriefing|watishetweer)-(?:v\d+|[0-9a-f]{12})/g;
 
