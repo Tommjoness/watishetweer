@@ -58,7 +58,7 @@ function meet(){
 (async()=>{
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
   const root=`http://127.0.0.1:${server.address().port}`;
-  const browser=await chromium.launch({headless:true,...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   let n=0;
   try{
     for(const pad of PAGINAS)for(const taal of ["nl","en"])for(const breedte of [390,1366])for(const schema of ["light","dark"]){
