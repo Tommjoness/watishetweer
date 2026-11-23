@@ -4,6 +4,8 @@ Nederlandstalige weerapp voor `watishetweer.nl`. De applicatie combineert actuel
 
 ## Productie en build
 
+Voor bouwen en testen is Node.js 22.12.0 of nieuwer vereist, overeenkomstig de gelockte Wrangler-versie. De kwaliteitsketen gebruikt Node 22 en de productiedeploy Node 24.
+
 Cloudflare Pages is het enige productieplatform. De productieflow draait vanuit GitHub Actions en bouwt met:
 
 ```bash
