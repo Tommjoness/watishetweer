@@ -12,7 +12,7 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-brandmark{position:relative;display:inline-block;width:28px;height:28px;flex:none;border:2px solid currentColor;border-radius:50%;overflow:hidden}
 .wk-brandmark:after{content:"";position:absolute;left:-5px;right:-5px;bottom:4px;height:14px;border-top:2px solid currentColor;border-radius:70% 70% 0 0;transform:rotate(-17deg)}
 .wk-menu{justify-self:end;position:relative;z-index:3}
-.wk-menu summary{display:flex;align-items:center;justify-content:center;min-width:46px;min-height:46px;padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);cursor:pointer;list-style:none;font:600 13px/1.3 "Instrument Sans",sans-serif}
+.wk-menu summary{display:flex;align-items:center;justify-content:center;min-width:46px;min-height:46px;padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);cursor:pointer;list-style:none;font:600 13px/1.3 var(--sans)}
 .wk-menu summary::-webkit-details-marker{display:none}.wk-menu summary::marker{content:""}
 .wk-menu[open] summary{border-color:var(--wk-line)}
 .wk-menu nav{position:absolute;top:calc(100% + 6px);right:0;display:grid;min-width:225px;max-width:calc(100vw - 32px);padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);box-shadow:0 10px 26px rgba(0,0,0,.07)}
@@ -20,7 +20,7 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-menu nav a:last-child{border-bottom:0}.wk-menu nav a:hover{text-decoration:underline;text-underline-offset:3px}
 .wk-theme{justify-self:end;display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--rule);background:var(--paper);border-radius:7px}
 .wk-theme input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.wk-theme label{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:44px;padding:7px 9px;cursor:pointer;border-radius:5px;font:500 13px/1.2 "Instrument Sans",sans-serif;color:var(--ink-70)}
+.wk-theme label{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:44px;padding:7px 9px;cursor:pointer;border-radius:5px;font:500 13px/1.2 var(--sans);color:var(--ink-70)}
 .wk-theme input:checked+label{background:var(--sheet);color:var(--ink);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .wk-theme input:focus-visible+label{outline:2px solid var(--ink);outline-offset:2px}
 .wk-return{margin:18px 0 20px!important;font-size:14px}
@@ -28,21 +28,21 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-hero{isolation:isolate;position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(250px,.8fr);gap:32px;align-items:end;min-height:390px;padding:48px 44px;border:1px solid var(--wk-line);overflow:hidden;background:linear-gradient(115deg,var(--wk-sky-c),var(--wk-sky-a) 62%,var(--wk-sky-b))}
 .wk-hero:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 75% 17%,rgba(255,255,255,.21),transparent 67%),linear-gradient(180deg,transparent 68%,rgba(255,255,255,.08))}
 .wk-hero-copy{min-width:0}
-.wk-page .wk-hero h1{font:400 clamp(44px,5vw,72px)/1.04 "Bodoni Moda",Georgia,serif;letter-spacing:-.035em;max-width:11ch;margin:0 0 22px}
+.wk-page .wk-hero h1{font:400 clamp(44px,5vw,72px)/1.04 var(--serif);letter-spacing:-.035em;max-width:11ch;margin:0 0 22px}
 .wk-page .wk-lead{font-size:17px;line-height:1.55;color:var(--ink-70);max-width:47ch;margin:0}
 html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
 .wk-note{align-self:end;min-width:0;padding:24px 25px;border:1px solid var(--wk-line);background:var(--wk-overlay)}
 .wk-note:has(#seizoen-melding[hidden]){display:none}
-.wk-page .wk-note h2{font:700 11px/1.4 "Instrument Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70);margin:0 0 14px}
-.wk-page .wk-note p{font:400 19px/1.45 "Instrument Sans",sans-serif;color:var(--ink);margin:0}
+.wk-page .wk-note h2{font:700 11px/1.4 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70);margin:0 0 14px}
+.wk-page .wk-note p{font:400 19px/1.45 var(--sans);color:var(--ink);margin:0}
 .wk-page .seizoen-status{margin:26px 0 34px;padding:0;border-top:0}
 .wk-page .seizoen-status:has(#seizoen-aftellen[hidden]):has(#seizoen-verwachting:empty){margin:0}
 .wk-page .seizoen-aftellen{margin:0 0 18px}
 .wk-page .wk-guide{margin-top:34px}
-.wk-page .wk-guide>h2,.wk-page .wk-related>h2{font:400 32px/1.15 "Bodoni Moda",Georgia,serif;max-width:none;margin:0 0 18px}
+.wk-page .wk-guide>h2,.wk-page .wk-related>h2{font:400 32px/1.15 var(--serif);max-width:none;margin:0 0 18px}
 .wk-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .wk-qa{min-width:0;background:var(--sheet);border:1px solid var(--rule);padding:26px 28px}
-.wk-page .wk-qa h2{font:400 24px/1.18 "Bodoni Moda",Georgia,serif;margin:0 0 14px;max-width:none}
+.wk-page .wk-qa h2{font:400 24px/1.18 var(--serif);margin:0 0 14px;max-width:none}
 .wk-page .wk-qa p{font-size:15px;line-height:1.65;color:var(--ink-70);margin:0 0 12px;max-width:none}
 .wk-page .wk-qa p:last-child{margin-bottom:0}
 .wk-page .wk-guide .klein{margin-top:14px}
