@@ -169,6 +169,10 @@ async function engels(browserType,label,base){
       }));
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       assert.deepEqual(r.ontbreekt,[],`${id}: alles vertaald`);
+      /* De vertaallaag mag geen lege vormelementen weghalen (tijdlijn en logo). */
+      const vorm=await page.evaluate(()=>({pt:document.querySelectorAll(".wk-pt").length,st:document.querySelectorAll(".wk-st").length,lijn:document.querySelectorAll(".wk-lijn").length,jl:document.querySelectorAll(".wk-jl").length,logo:document.querySelectorAll(".wk-brandmark").length,label:document.querySelector(".wk-baan").getAttribute("aria-label")}));
+      assert.deepEqual([vorm.pt,vorm.st,vorm.lijn,vorm.jl,vorm.logo],[8,8,1,8,1],`${id}: tijdlijn en logo blijven compleet (${JSON.stringify(vorm)})`);
+      assert(/^Timeline of official white Christmases since 1901: /.test(vorm.label),`${id}: tekstalternatief tijdlijn vertaald`);
       assert(r.titel.startsWith(sc.kop+": will we get snow at Christmas?"),`${id}: titel (${r.titel})`);
       for(const z of sc.zinnen)assert(r.tekst.includes(z),`${id}: tekst bevat "${z}"`);
       assert(!/kerst|sneeuw|verwachting|Bekijk/i.test(r.tekst),`${id}: geen Nederlandse resten: ${r.tekst}`);
@@ -205,8 +209,40 @@ async function controleerOntwerp(browserType,label,base){
       assert.equal(await page.getByRole("region",{name:"Witte kerst 2026",exact:true}).count(),1,id+": één regio met de paginanaam");
       assert.equal(await page.locator("#seizoen-melding").count(),1,id+": één runtimebericht");
       assert.equal(await page.locator("#seizoen-melding").locator('xpath=ancestor::*[@aria-live="polite"][1]').count(),1,id+": statusbericht heeft beleefde live-aankondiging");
-      assert.equal(await page.locator(".wk-cards article").count(),2,id+": twee KNMI-uitlegkaarten");
-      assert.equal(await page.locator(".wk-note .wk-dot").count(),0,id+": geen nulachtig statusicoon");
+      assert.equal(await page.locator(".wk-vragen article").count(),2,id+": twee KNMI-uitlegvragen");
+      assert.equal(await page.locator(".wk-dot").count(),0,id+": geen nulachtig statusicoon");
+      /* G2-B: eerst het antwoord, dan de tijdlijn; geen verlopen of gloed, geen kaart in een kaart. */
+      const g2b=await page.evaluate(()=>{
+        const r=e=>e.getBoundingClientRect();
+        const kop=document.getElementById("seizoen-kop"),label=document.getElementById("seizoen-label"),melding=document.getElementById("seizoen-melding");
+        const baan=document.querySelector(".wk-baan"),jl=[...document.querySelectorAll(".wk-jl")],pt=[...document.querySelectorAll(".wk-pt")];
+        const botst=(a,b)=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
+        const vakken=jl.map(r);
+        let overlap=0;for(let i=0;i<vakken.length;i++)for(let k=i+1;k<vakken.length;k++)if(botst(vakken[i],vakken[k]))overlap++;
+        const lijnY=r(document.querySelector(".wk-lijn")).top;
+        const kaders=[...document.querySelectorAll("main *")].filter(e=>{const s=getComputedStyle(e);return /gradient/.test(s.backgroundImage)});
+        const omkaderd=[...document.querySelectorAll("main section, main article, main aside, main div")].filter(e=>{const s=getComputedStyle(e);return ["Top","Right","Bottom","Left"].every(z=>parseFloat(s["border"+z+"Width"])>0)});
+        return {
+          labelZichtbaar:!!label&&!label.hidden&&r(label).height>0,labelTekst:label&&label.textContent,
+          antwoordOnderKop:r(melding).top-r(kop).bottom,antwoordVoorTijdlijn:r(melding).bottom<=r(baan).top,
+          tijdlijnVoorLead:r(baan).bottom<=r(document.querySelector(".wk-lead")).top,
+          stippen:pt.length,jaartallen:jl.map(e=>e.textContent).join(","),overlap,
+          labelsZichtbaar:vakken.every(v=>v.width>0&&v.left>=0&&v.right<=innerWidth),
+          labelsBuitenLijn:vakken.every(v=>v.bottom<lijnY-3||v.top>lijnY+3),
+          labelGrootte:Math.min(...jl.map(e=>parseFloat(getComputedStyle(e).fontSize))),
+          verlopen:kaders.length,volledigOmkaderd:omkaderd.map(e=>e.className||e.tagName)
+        };
+      });
+      assert(g2b.labelZichtbaar&&g2b.labelTekst==="Nog te vroeg",id+": kort antwoord zichtbaar ("+g2b.labelTekst+")");
+      assert(g2b.antwoordOnderKop>=0&&g2b.antwoordOnderKop<80,id+": antwoord direct onder de paginakop ("+g2b.antwoordOnderKop+"px)");
+      assert(g2b.antwoordVoorTijdlijn&&g2b.tijdlijnVoorLead,id+": volgorde antwoord, tijdlijn, inleiding");
+      assert.equal(g2b.stippen,8,id+": acht stippen");
+      assert.equal(g2b.jaartallen,"1906,1938,1940,1950,1964,1981,2009,2010",id+": alle acht jaartallen");
+      assert.equal(g2b.overlap,0,id+": jaartallen overlappen elkaar niet");
+      assert(g2b.labelsZichtbaar&&g2b.labelsBuitenLijn,id+": jaartallen binnen beeld en los van de tijdlijn");
+      assert(g2b.labelGrootte>=12,id+": jaartallen minstens 12px");
+      assert.equal(g2b.verlopen,0,id+": geen verlopen of gloed");
+      assert.deepEqual(g2b.volledigOmkaderd,[],id+": geen omkaderde vlakken (kaart in kaart)");
       assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
       const maat=await page.locator(".wk-theme label").evaluateAll(a=>a.map(x=>x.getBoundingClientRect().height));
       assert(maat.every(x=>x>=44),id+": alle themadoelen minstens 44px");

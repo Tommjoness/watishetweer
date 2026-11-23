@@ -100,6 +100,7 @@ function meldingTekst(t,cfg){
   return "";
 }
 
+function labelTekst(t,cfg){return t.fase==="ver"&&cfg.teksten&&cfg.teksten.labelVer?cfg.teksten.labelVer:"";}
 function getal(v){return typeof v==="number"&&Number.isFinite(v)?v:null;}
 function komma(v,dec){return v.toFixed(dec).replace(".",",");}
 function cm(v){return v<1?"minder dan 1 cm":`${Math.round(v)} cm`;}
@@ -640,6 +641,9 @@ async function start(opt){
   }
   const melding=document.getElementById("seizoen-melding");
   if(melding){melding.textContent=meldingTekst(t,cfg);melding.hidden=!melding.textContent;}
+  /* Optioneel kort label boven de melding (alleen pagina's met teksten.labelVer, zoals Witte kerst). */
+  const label=document.getElementById("seizoen-label");
+  if(label){label.textContent=labelTekst(t,cfg);label.hidden=!label.textContent;}
   const doel=document.getElementById("seizoen-verwachting");
   if(!doel)return;
   if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();doel.removeAttribute("aria-busy");delete doel.dataset.focus;return;}
@@ -673,7 +677,7 @@ async function start(opt){
   }
 }
 
-const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,vakantieregioVoorPlaats,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord,reserveBronTekst};
+const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,vakantieregioVoorPlaats,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,labelTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord,reserveBronTekst};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

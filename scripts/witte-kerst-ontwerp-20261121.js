@@ -25,24 +25,39 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-theme input:focus-visible+label{outline:2px solid var(--ink);outline-offset:2px}
 .wk-return{margin:18px 0 20px!important;font-size:14px}
 .wk-return a{text-underline-offset:3px}
-.wk-hero{isolation:isolate;position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(250px,.8fr);gap:32px;align-items:end;min-height:390px;padding:48px 44px;border:1px solid var(--wk-line);overflow:hidden;background:linear-gradient(115deg,var(--wk-sky-c),var(--wk-sky-a) 62%,var(--wk-sky-b))}
-.wk-hero:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 75% 17%,rgba(255,255,255,.21),transparent 67%),linear-gradient(180deg,transparent 68%,rgba(255,255,255,.08))}
-.wk-hero-copy{min-width:0}
-.wk-page .wk-hero h1{font:400 clamp(44px,5vw,72px)/1.04 var(--serif);letter-spacing:-.035em;max-width:11ch;margin:0 0 22px}
-.wk-page .wk-lead{font-size:17px;line-height:1.55;color:var(--ink-70);max-width:47ch;margin:0}
+/* G2-B (eigenaar 22 en 23 november): eerst het antwoord, dan de tijdlijn; geen blauwe kaart,
+   geen gloed en geen kaart in een kaart. Eén vlak met dunne lijnen. */
+.wk-page h1#seizoen-kop{font-size:clamp(34px,4.4vw,52px);line-height:1.08;margin:6px 0 16px;max-width:none}
+.wk-page .seizoen-status.wk-antwoord{margin:0 0 30px;padding:16px 0 20px;border-top:2px solid var(--ink);border-bottom:1px solid var(--rule)}
+.wk-status{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px}
+.wk-status[hidden],.wk-status:not(:has(:not([hidden]))){display:none}
+.wk-label{display:inline-flex;align-items:center;min-height:28px;padding:4px 11px;border:1px solid var(--ink);border-radius:999px;font:600 13px/1.2 var(--sans);white-space:nowrap}
+.wk-label[hidden]{display:none}
+.wk-page .wk-status #seizoen-melding{flex:1 1 30ch;min-width:0;max-width:62ch;margin:0;font:500 clamp(17px,1.7vw,20px)/1.4 var(--sans);color:var(--ink)}
+.wk-page .wk-antwoord .seizoen-aftellen{margin:14px 0 0}
+.wk-page .wk-antwoord #seizoen-verwachting:not(:empty){margin-top:14px}
+.wk-tijdlijn{margin:0 0 30px}
+.wk-page .wk-tijdlijn h2{font:600 17px/1.3 var(--sans);margin:0 0 6px;max-width:none}
+.wk-as{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
+.wk-eind{font:400 12px/1 var(--sans);color:var(--ink-70);font-variant-numeric:tabular-nums lining-nums}
+.wk-baan{position:relative;height:112px}
+.wk-baan .wk-vorm,.wk-baan .wk-jaren{position:absolute;inset:0}
+.wk-baan .wk-lijn{position:absolute;left:0;right:0;top:54px;border-top:1.5px solid var(--ink-70)}
+.wk-baan .wk-pt{position:absolute;top:50px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--ink)}
+.wk-baan .wk-st{position:absolute;width:0;border-left:1px solid var(--ink-70)}
+.wk-baan .wk-jl{position:absolute;transform:translateX(-50%);font:600 12px/1 var(--sans);color:var(--ink);font-variant-numeric:tabular-nums lining-nums;white-space:nowrap}
+.wk-st.r0{top:59px;height:12px}.wk-jl.r0{top:73px}
+.wk-st.r1{top:38px;height:12px}.wk-jl.r1{top:24px}
+.wk-st.r2{top:59px;height:28px}.wk-jl.r2{top:89px}
+.wk-st.r3{top:22px;height:28px}.wk-jl.r3{top:8px}
+.wk-page .wk-tijdlijn-voet{margin:2px 0 0;font-size:14px;line-height:1.45;color:var(--ink-70)}
+.wk-page .wk-lead{font-size:16px;line-height:1.6;color:var(--ink-70);max-width:62ch;margin:0 0 6px}
 html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
-.wk-note{align-self:end;min-width:0;padding:24px 25px;border:1px solid var(--wk-line);background:var(--wk-overlay)}
-.wk-note:has(#seizoen-melding[hidden]){display:none}
-.wk-page .wk-note h2{font:700 11px/1.4 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70);margin:0 0 14px}
-.wk-page .wk-note p{font:400 19px/1.45 var(--sans);color:var(--ink);margin:0}
-.wk-page .seizoen-status{margin:26px 0 34px;padding:0;border-top:0}
-.wk-page .seizoen-status:has(#seizoen-aftellen[hidden]):has(#seizoen-verwachting:empty){margin:0}
-.wk-page .seizoen-aftellen{margin:0 0 18px}
-.wk-page .wk-guide{margin-top:34px}
-.wk-page .wk-guide>h2,.wk-page .wk-related>h2{font:400 32px/1.15 var(--serif);max-width:none;margin:0 0 18px}
-.wk-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.wk-qa{min-width:0;background:var(--sheet);border:1px solid var(--rule);padding:26px 28px}
-.wk-page .wk-qa h2{font:400 24px/1.18 var(--serif);margin:0 0 14px;max-width:none}
+.wk-page .wk-guide{margin-top:30px;padding-top:26px;border-top:1px solid var(--rule)}
+.wk-page .wk-guide>h2,.wk-page .wk-related>h2{font:400 30px/1.15 var(--serif);max-width:none;margin:0 0 16px}
+.wk-vragen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 36px}
+.wk-qa{min-width:0}
+.wk-page .wk-qa h2{font:400 22px/1.2 var(--serif);margin:0 0 10px;max-width:none}
 .wk-page .wk-qa p{font-size:15px;line-height:1.65;color:var(--ink-70);margin:0 0 12px;max-width:none}
 .wk-page .wk-qa p:last-child{margin-bottom:0}
 .wk-page .wk-guide .klein{margin-top:14px}
@@ -56,10 +71,6 @@ html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
 .wk-footer nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .wk-footer nav a{display:inline-flex;align-items:center;min-height:44px;color:var(--ink-70)}
 .wk-page a:focus-visible,.wk-page summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-@media(max-width:900px){
- .wk-hero{grid-template-columns:1fr;padding:36px 32px;gap:24px}
- .wk-note{max-width:600px}
-}
 @media(max-width:600px){
  .kaart.breed.wk-page{padding:0 16px 28px}
  .wk-page .wk-header{grid-template-columns:minmax(0,1fr) auto;row-gap:12px;column-gap:12px;padding:14px 0;min-height:0}
@@ -67,22 +78,18 @@ html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
  .wk-menu{grid-column:2;grid-row:1}
  .wk-theme{grid-column:1/-1;grid-row:2;justify-self:stretch;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
  .wk-theme label{min-width:0}
- .wk-hero{padding:31px 25px;gap:23px}
- .wk-page .wk-hero h1{font-size:clamp(39px,11.5vw,52px)}
- .wk-page .wk-lead{font-size:16px}
- .wk-note{padding:19px 20px}.wk-page .wk-note p{font-size:17px}
- .wk-page .wk-guide>h2,.wk-page .wk-related>h2{font-size:29px}
- .wk-cards{grid-template-columns:1fr;gap:12px}
- .wk-qa{padding:22px}.wk-page .wk-qa h2{font-size:25px}
+ .wk-page .wk-guide>h2,.wk-page .wk-related>h2{font-size:27px}
+ .wk-vragen{grid-template-columns:1fr;gap:22px}
+ .wk-page .wk-qa h2{font-size:21px}
  .wk-page .wk-related .seizoen-zieook a{flex:1 1 125px}
  .wk-footer{align-items:flex-start;flex-direction:column;gap:2px}
 }
-@media(max-width:345px){.wk-hero{padding:28px 21px}.wk-brand{font-size:14px}.wk-page .wk-hero h1{font-size:39px}}
+@media(max-width:345px){.wk-brand{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.wk-page *{scroll-behavior:auto}}
 </style>`;
 const HEADER=String.raw`
 <header class="wk-header">
-<a class="wk-brand" href="/" aria-label="watishetweer.nl"><span class="wk-brandmark" aria-hidden="true"></span><span translate="no">watishetweer.nl</span></a>
+<a class="wk-brand" href="/" aria-label="watishetweer.nl" translate="no"><span class="wk-brandmark" aria-hidden="true"></span><span>watishetweer.nl</span></a>
 <details class="wk-menu"><summary>Menu</summary>
 <nav aria-label="Menu"><a href="/">Actueel weer</a><a href="/maan/">De maan vandaag</a><a href="/nachtzicht/">Sterren kijken</a><a href="/kerstvakantie/">Kerstvakantie</a><a href="/oud-en-nieuw/">Oud en nieuw</a><a href="/over/">Over deze site</a></nav>
 </details>
@@ -118,4 +125,35 @@ const THEMA_SCRIPT=String.raw`<script>
  pas();
 }catch(e){}})();
 </script>`;
-module.exports={STIJL,HEADER,FOOTER,THEMA_SCRIPT};
+/* Tijdlijn van de officiële witte kersten (G2-B). Statisch bij de build; posities in procenten.
+   Ieder jaartal hangt met een streepje aan zijn stip, in één van vier rijen (onder/boven, kort/lang).
+   De rij wordt gekozen voor de smalste baan (ongeveer 200px bij 320px schermbreedte) met minstens
+   36px tussen labels in dezelfde rij; op bredere schermen wordt de afstand alleen groter. */
+const RIJEN=[{boven:false,lang:false},{boven:true,lang:false},{boven:false,lang:true},{boven:true,lang:true}];
+function tijdlijnRijen(jaren,begin,eind,smalste=200,minAfstand=36){
+  const laatst=RIJEN.map(()=>-Infinity);
+  return jaren.map(j=>{
+    const x=(j-begin)/(eind-begin)*smalste;
+    let r=laatst.findIndex(l=>x-l>=minAfstand);
+    if(r<0)throw new Error(`Tijdlijn witte kerst: geen vrije rij voor ${j}`);
+    laatst[r]=x;
+    return r;
+  });
+}
+function lijstNl(a){return a.length<2?a.join(""):a.slice(0,-1).join(", ")+" en "+a[a.length-1];}
+function tijdlijnHtml(jaren,eind,begin=1901){
+  if(!Array.isArray(jaren)||!jaren.length)throw new Error("Tijdlijn witte kerst: geen jaren");
+  if(jaren.some((j,i)=>!Number.isInteger(j)||j<begin||j>eind||(i&&j<=jaren[i-1])))throw new Error("Tijdlijn witte kerst: jaren niet oplopend binnen "+begin+"–"+eind);
+  const rijen=tijdlijnRijen(jaren,begin,eind);
+  const pct=j=>((j-begin)/(eind-begin)*100).toFixed(3)+"%";
+  /* Vormen (lijn, stippen, streepjes) en jaartallen in aparte lagen: de Engelse vertaallaag bouwt een
+     zinsblok opnieuw op en laat lege elementen daarin vallen. */
+  const vormen=jaren.map((j,i)=>`<span class="wk-pt" style="left:${pct(j)}"></span><span class="wk-st r${rijen[i]}" style="left:${pct(j)}"></span>`).join("");
+  const labels=jaren.map((j,i)=>`<span class="wk-jl r${rijen[i]}" style="left:${pct(j)}">${j}</span>`).join("");
+  return `<section class="wk-tijdlijn" aria-labelledby="wk-tijdlijn-kop">
+<h2 id="wk-tijdlijn-kop">${jaren.length} officiële witte kersten sinds ${begin}</h2>
+<div class="wk-as"><span class="wk-eind" aria-hidden="true">${begin}</span><div class="wk-baan" role="img" aria-label="Tijdlijn van de officiële witte kersten sinds ${begin}: ${lijstNl(jaren)}."><div class="wk-vorm"><span class="wk-lijn"></span>${vormen}</div><div class="wk-jaren">${labels}</div></div><span class="wk-eind" aria-hidden="true">${eind}</span></div>
+<p class="wk-tijdlijn-voet">Laatste officiële witte kerst: ${jaren[jaren.length-1]}. Bron: KNMI.</p>
+</section>`;
+}
+module.exports={STIJL,HEADER,FOOTER,THEMA_SCRIPT,tijdlijnHtml,tijdlijnRijen};
