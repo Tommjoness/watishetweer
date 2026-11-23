@@ -45,8 +45,9 @@ const SEIZOENSPAGINAS=Object.freeze([
     teksten:{
       /* Kort antwoord boven de melding zolang de kerstdagen buiten de verwachting vallen (G2-B). */
       labelVer:"Nog te vroeg",
-      /* Kort antwoord (G2-B, eigenaar 23 november): de datum waarop de verwachting verschijnt. */
-      ver:"Verwachting vanaf {datum} · tweede kerstdag volgt op {datum2}",
+      /* Kort antwoord (G2-B, eigenaar 23 november): de datum waarop de verwachting verschijnt.
+         Harde spatie vóór de punt: een regel begint nooit met "·". */
+      ver:"Verwachting vanaf {datum}\u00a0· tweede kerstdag volgt op {datum2}",
       aftellenMeer:"Nog {n} dagen tot {dag}.",
       aftellenGetal:"dagen tot {dag}",
       aftellenMorgen:"Morgen is het {dag}.",
