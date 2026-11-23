@@ -39,7 +39,7 @@ const CSS=`
 #nowicon svg.ico{width:58px!important;height:58px!important}
 #nights .row.night:not(.kop) .sbar{height:5px!important;border-radius:3px!important;background:var(--rule)!important;overflow:hidden!important}
 #nights .row.night:not(.kop) .sbar i{height:5px!important;border-radius:3px!important;display:block!important}
-#chart text[font-family^="Bodoni"]{font-family:"Instrument Sans","Instrument Sans Fallback",system-ui,sans-serif!important;font-variant-numeric:tabular-nums;font-weight:500}
+#chart text[font-family^="Bodoni"]{font-family:var(--sans)!important;font-variant-numeric:tabular-nums;font-weight:500}
 /* Iconenset stijl A (akkoord eigenaar 15 oktober): op telefoon en tablet staat
    de weeromschrijving van de dag in kleine grijze tekst onder de dagnaam, zodat
    de betekenis nooit alleen van het icoon afhangt. Hoogstens twee regels; de

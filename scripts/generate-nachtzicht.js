@@ -60,7 +60,7 @@ const EXTRA_STIJL = `
 .nz-n .nz-w{color:var(--ink)}.nz-lbl{display:none}.nz-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}tr.nz-niet td.nz-n{padding-right:20px}@media(max-width:600px){.nz-park-kop{font-size:30px;line-height:1.15}}
 .nz-opnieuw{display:block;margin-top:8px;min-height:44px;padding:8px 16px;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--ink);cursor:pointer}
 .nz-score{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-.nz-cijfer{font:500 44px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.nz-cijfer{font:500 44px/1 var(--sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .nz-oordeel{display:grid;gap:2px}.nz-oordeel b{font-size:18px;font-weight:600;color:var(--ink)}.nz-oordeel span{color:var(--ink-70)}
 .nz-feiten{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;margin:18px 0 0}
 .nz-feiten div{border:1px solid var(--rule);padding:10px 12px}
@@ -115,7 +115,7 @@ const EXTRA_STIJL = `
 #nz-nachten{margin-top:22px}
 .nz-maan{display:flex;gap:20px;align-items:center;margin:22px 0 0;padding:18px 0 0;border-top:1px solid var(--rule)}
 .nz-maan .nz-maan-svg{width:120px;height:120px;flex:none;display:block}#nz-maan-schijf{flex:none;width:120px;height:120px}
-.nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 "Bodoni Moda",Georgia,serif;color:var(--ink);margin:0 0 4px}
+.nz-maan p{margin:4px 0}.nz-maan .groot{font:400 24px/1.25 var(--serif);color:var(--ink);margin:0 0 4px}
 #nz-maan-fasen{margin:10px 0 0;padding:0;list-style:none;color:var(--ink-70)}#nz-maan-fasen li{display:flex;gap:12px;align-items:center;padding:6px 0}#nz-maan-fasen .nz-maan-svg{flex:none}.nz-maan-beeld{flex:none;display:block;width:26px;height:26px}canvas.nz-maan-svg{display:block}#nz-maan-fasen b{color:var(--ink);font-weight:500}
 @media(max-width:600px){#nz-nachten thead{display:none}#nz-nachten tr{display:grid;grid-template-columns:auto 1fr;column-gap:12px;padding:9px 0;border-bottom:1px solid var(--rule)}#nz-nachten th,#nz-nachten td{border:0;padding:0}#nz-nachten td.nz-zin{grid-column:1/-1;margin-top:3px}.nz-tabel table{font-size:14px}.nz-cijfer{font-size:38px}.nz-tijden span:nth-child(even){visibility:hidden}}
 
@@ -126,7 +126,7 @@ main.nz-maan-pagina{max-width:1140px;padding:36px clamp(20px,4vw,48px) 48px}
 .nz-maan-bovenbalk nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-right:auto}
 .nz-maan-bovenbalk nav a{font-size:15px;min-height:44px;display:inline-flex;align-items:center}
 .nz-maan-thema{display:flex;gap:2px;padding:3px;border:1px solid var(--rule);border-radius:5px}
-.nz-maan-thema button{min-width:54px;min-height:42px;font:500 14px/1.2 "Instrument Sans",sans-serif;padding:9px;color:var(--ink-70);background:transparent;border:0;border-radius:3px;cursor:pointer}
+.nz-maan-thema button{min-width:54px;min-height:42px;font:500 14px/1.2 var(--sans);padding:9px;color:var(--ink-70);background:transparent;border:0;border-radius:3px;cursor:pointer}
 .nz-maan-thema button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule);font-weight:700}
 .nz-maan-thema button:focus-visible,.nz-maan-bovenbalk a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .nz-maan-pagina>h1{font-size:clamp(38px,4vw,60px);line-height:1.08}
