@@ -110,7 +110,8 @@ function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.
         const minDoel=w<=900?44:36,minThema=w<=430?45.5:w<=900?43.5:35.5;
         const telefoon=w<=480;
         assert(m.link&&m.linkZichtbaar&&m.link.height>=minDoel-0.5&&m.link.width>=44,`${label}: logo is geen ${minDoel}px-doel (${m.link&&Math.round(m.link.width)}x${m.link&&Math.round(m.link.height)})`);
-        assert(m.menu&&Math.abs(m.menu.left-m.balk.left)<=1&&m.link.left>=m.menu.right&&Math.abs((m.link.top+m.link.bottom)/2-(m.menu.top+m.menu.bottom)/2)<=3,`${label}: menuknop niet vooraan of logo niet ernaast op dezelfde rij`);
+        /* Tot 900px begint de balk met de menuknop; vanaf 901px heeft de balk de binnenmarge van het vel (zie de uitlijning hieronder). */
+        assert(m.menu&&(w>=901||Math.abs(m.menu.left-m.balk.left)<=1)&&m.link.left>=m.menu.right&&Math.abs((m.link.top+m.link.bottom)/2-(m.menu.top+m.menu.bottom)/2)<=3,`${label}: menuknop niet vooraan of logo niet ernaast op dezelfde rij`);
         assert.equal(m.linkTekst,"watishetweer.nl",`${label}: naam naast het logo '${m.linkTekst}'`);
         if(telefoon)assert(m.nachtNav,`${label}: Nachtzicht is op telefoon niet bereikbaar via de snelnavigatie`);
         if(w>=901){

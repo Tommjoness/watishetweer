@@ -100,7 +100,9 @@ async function axMenu(page){
     const nav=nodes.find(n=>!n.ignored&&waarde(n.role)==="navigation"&&waarde(n.name)==="Menu");
     const byId=new Map(nodes.map(n=>[n.nodeId,n]));
     const onder=(n,f,uit=[])=>{for(const c of (n&&n.childIds)||[]){const k=byId.get(c);if(!k)continue;if(f(k))uit.push(k);onder(k,f,uit);}return uit;};
-    const groepen=nav?onder(nav,isKnop).map(n=>({naam:String(waarde(n.name)||"").trim(),uitgeklapt:prop(n,"expanded")})):[];
+    /* Groepstitels zijn de uitklapbare <summary>'s; sinds K2 staan ook de weergaveknoppen (gewone knoppen) in de navigatie. */
+    const isTitel=n=>!n.ignored&&/^(DisclosureTriangle|DisclosureTriangleGrouped)$/.test(waarde(n.role));
+    const groepen=nav?onder(nav,isTitel).map(n=>({naam:String(waarde(n.name)||"").trim(),uitgeklapt:prop(n,"expanded")})):[];
     const lijsten=nav?onder(nav,n=>!n.ignored&&waarde(n.role)==="list"):[];
     const links=nav?onder(nav,n=>!n.ignored&&waarde(n.role)==="link"):[];
     return {knopRol:knop&&waarde(knop.role),uitgeklapt:knop?prop(knop,"expanded"):undefined,nav:!!nav,groepen,lijsten:lijsten.map(l=>String(waarde(l.name)||"")),links:links.length};
@@ -285,6 +287,7 @@ async function loopGroepen(page,label,eis){
           /* Weergavekeuze in het open menu onder de groepen, met dezelfde maten als voorheen in de bovenbalk. */
           assert(o.thema&&o.themaOnderGroepen&&o.thema.left>=o.paneel.left&&o.thema.right<=o.paneel.right+1,`${label}: Licht/Auto/Donker staat niet onder de groepen in het menupaneel`);
           assert(o.thema.width>=242,`${label}: Licht/Auto/Donker te smal (${Math.round(o.thema.width)}px)`);
+          const keuzeBreedte=o.thema.width;
           assert(!o.themaGeknipt,`${label}: woord in Licht/Auto/Donker afgeknipt`);
           /* Contract indeling-browser.test.js: boven 430px ieder vakje minstens 86px. */
           if(w>430)assert(o.segs.every(x=>x>=86),`${label}: vakjes Licht/Auto/Donker te smal: ${o.segs.map(Math.round).join("/")}`);
@@ -335,7 +338,7 @@ async function loopGroepen(page,label,eis){
           await page.click("#thema .wiw-theme-moon");await page.reload({waitUntil:"domcontentloaded"});await page.waitForSelector("#wiw-menu");await sleep(400);
           assert.equal(await t(),"donker",`${label}: gekozen Donker blijft niet na herladen`);
           await page.click("#wiw-menu > summary");await sleep(100);await page.click("#thema-auto");
-          regels.push(`${label}: knop ${Math.round(m.knop.width)}×${Math.round(m.knop.height)}, logo ernaast, keuze in het menu ${Math.round(o.thema.width)}px, temperatuur op ${Math.round(m.hero.ptop)}px, 4 titels (≥${minDoel}px), iedere groep apart open, Escape/Enter/Tab/Spatie/buiten/link OK`);
+          regels.push(`${label}: knop ${Math.round(m.knop.width)}×${Math.round(m.knop.height)}, logo ernaast, keuze in het menu ${Math.round(keuzeBreedte)}px, temperatuur op ${Math.round(m.hero.ptop)}px, 4 titels (≥${minDoel}px), iedere groep apart open, Escape/Enter/Tab/Spatie/buiten/link OK`);
         }
         assert.deepEqual(fouten,[],`${label}: runtimefouten ${fouten.join(" | ")}`);
       }finally{await context.close();}

@@ -45,6 +45,7 @@ html[data-thema="donker"] .wiw-bovenbalk{--wiw-sk-stip:#d2455d}
 .wiw-weer-merk:hover span{text-decoration:underline;text-underline-offset:4px}
 .wiw-weer-merk .wiw-sk-logo{flex:none;display:block}
 @media(min-width:901px){.wiw-weer-merk{min-height:36px}}
+@media(min-width:901px) and (pointer:coarse){.wiw-weer-merk{min-height:44px}}
 @media(max-width:600px){.wiw-weer-merk{font-size:19px}}
 @media(max-width:345px){.wiw-weer-merk{font-size:17px}.wiw-weer-merk .wiw-sk-logo{width:28px}}
 /* Weergavekeuze in het menupaneel, onder de groepen (zelfde opmaak als de gedeelde kop van de subpagina's). */
