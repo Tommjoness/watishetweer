@@ -51,7 +51,10 @@ html[data-thema="donker"] .wiw-bovenbalk{--wiw-sk-stip:#d2455d}
 /* Weergavekeuze in het menupaneel, onder de groepen (zelfde opmaak als de gedeelde kop van de subpagina's). */
 html body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-boven{display:block;flex:none;margin:0;min-width:0;border-top:1px solid var(--rule);padding:12px 0 14px}
 html body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-label{display:block;margin:0 0 8px;font:600 13px/1 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink-70)}
-html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:100%!important;min-width:0!important;max-width:100%!important}
+/* Breedte zo dat de binnenmaat (zonder de rand van 2 × 1px) deelbaar is door drie: drie gelijke vakjes
+   zonder afrondingsrest, zodat de licht/donker-schakelaar precies de hele driewegbediening overspant
+   (preview-responsive-visual-browser.js, ≤2px verschil). Zonder round() blijft width:100% gelden. */
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-control.wiw-theme-segmented-20260915{width:100%!important;width:calc(round(down,100% - 2px,3px) + 2px)!important;min-width:0!important;max-width:100%!important}
 /* 320px: smallere binnenmarge in het paneel, zodat Licht/Auto/Donker met woorden minstens 242px breed blijft
    (contract menu-browser.test.js, zoals voorheen in de bovenbalk). */
 @media(max-width:345px){html body .wiw-bovenbalk .wiw-menu-paneel{padding-left:10px;padding-right:10px}}
