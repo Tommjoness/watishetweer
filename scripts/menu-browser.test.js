@@ -254,7 +254,11 @@ async function loopGroepen(page,label,eis){
           /* Groep dichtklikken onderaan: de zijbalk blijft netjes boven het einde van het vel. */
           await page.click(KOP(2));await sleep(200);
           const o2=await page.evaluate(meet);
-          assert(o2.paneel.bottom<=o2.sheet.bottom-15&&o2.paneel.top>=-1,`${label}: zijbalk na dichtklikken onderaan verkeerd geplaatst (${Math.round(o2.paneel.top)}–${Math.round(o2.paneel.bottom)})`);
+          /* Sinds K2 staan alle groepen open: in een laag venster (1920×640) is de zijbalk hoger dan de ruimte boven het
+             einde van het vel. Dan schuift hij (bestaand gedrag) met het vel mee omhoog en sluit hij precies aan op het einde
+             van het vel; past hij wel, dan blijft hij helemaal in beeld. */
+          const past=48+o2.paneel.height+16<=o2.sheet.bottom+1;
+          assert(o2.paneel.bottom<=o2.sheet.bottom-15&&(past?o2.paneel.top>=-1:Math.abs(o2.paneel.bottom-(o2.sheet.bottom-16))<=2),`${label}: zijbalk na dichtklikken onderaan verkeerd geplaatst (${Math.round(o2.paneel.top)}–${Math.round(o2.paneel.bottom)}, vel tot ${Math.round(o2.sheet.bottom)}, ${past?"past":"past niet, hoort aan te sluiten"})`);
           /* Wisselen van venstergrootte: zijbalk -> uitklapmenu (alles dicht, één groep tegelijk) -> zijbalk (alles open) */
           await page.setViewportSize({width:1366,height:768});await sleep(300);
           const k=await page.evaluate(meet);
