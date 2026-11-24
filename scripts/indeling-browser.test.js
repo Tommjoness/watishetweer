@@ -91,11 +91,10 @@ function meet(){
   const aq=document.getElementById("aq"),aqTegels=aq?[...aq.children].filter(el=>el.classList.contains("stat")):[];
   const ink=getComputedStyle(document.body).color;
   const klein=[...document.querySelectorAll(".stats>.stat>.eyebrow,#modelrisico .modelrisico-label")].filter(el=>el.getBoundingClientRect().height>0&&parseFloat(getComputedStyle(el).fontSize)<10.95).map(el=>el.textContent.trim()+" "+getComputedStyle(el).fontSize);
-  const schakelaar=[...document.querySelectorAll(".wiw-bovenbalk #thema .wiw-theme-icon, .wiw-bovenbalk #thema .wiw-theme-auto")].map(el=>Math.round(el.getBoundingClientRect().width));
   return {stats:box(stats),model:box(document.getElementById("modelrisico")),chart:box(svg),
     kolommen:new Set(tegels.map(t=>Math.round(t.getBoundingClientRect().left))).size,
     aqInspring:aq&&aqTegels.length?Math.round(aqTegels[0].getBoundingClientRect().left-aq.getBoundingClientRect().left):null,
-    aqKleur:aqTegels.map(t=>{const v=t.querySelector(".sval");return v?getComputedStyle(v).color:null;}).filter(Boolean),ink,klein,schakelaar,
+    aqKleur:aqTegels.map(t=>{const v=t.querySelector(".sval");return v?getComputedStyle(v).color:null;}).filter(Boolean),ink,klein,
     dauwpunt:(document.getElementById("humsub")||{}).textContent||"",
     rijen:[...rijen.values()].filter(r=>r.length>1),band,nacht,brief:(brief&&brief.textContent||"").replace(/\s+/g," ").trim(),
     overflow:document.documentElement.scrollWidth-innerWidth};
@@ -142,7 +141,15 @@ function meet(){
         assert.deepEqual(m.klein,[],label+": tekst kleiner dan 11px");
         assert(m.aqKleur.length&&m.aqKleur.every(k=>k===m.ink),label+": luchtwaarden niet in inkt: "+m.aqKleur.join(", "));
         if(/Dauwpunt/.test(m.dauwpunt))assert(/\d\u00a0°C/.test(m.dauwpunt)&&!/\d °C/.test(m.dauwpunt),label+": dauwpunt zonder vaste spatie: "+m.dauwpunt);
-        if(w>430)assert(m.schakelaar.length>=3&&m.schakelaar.every(b=>b>=86),label+": vakjes van de weergave-schakelaar te smal: "+m.schakelaar.join("/"));
+        /* Sinds K2 (eigenaar 24 november) staat de schakelaar in het menu (zijbalk vanaf 1904px: altijd open):
+           gemeten zoals de bezoeker hem ziet, in het geopende menu. */
+        if(w>430){
+          const dicht=!await page.locator("#wiw-menu").evaluate(d=>d.open);
+          if(dicht){await page.click("#wiw-menu > summary");await sleep(150);}
+          const schakelaar=await page.evaluate(()=>[...document.querySelectorAll(".wiw-bovenbalk #thema .wiw-theme-icon, .wiw-bovenbalk #thema .wiw-theme-auto")].filter(el=>el.checkVisibility()).map(el=>Math.round(el.getBoundingClientRect().width)));
+          assert(schakelaar.length>=3&&schakelaar.every(b=>b>=86),label+": vakjes van de weergave-schakelaar te smal: "+schakelaar.join("/"));
+          if(dicht){await page.keyboard.press("Escape");await sleep(100);}
+        }
         /* Dagweergave: terugknop leesbaar en op de telefoon goed te raken. */
         const rij=await page.$$("#days .row.day");
         if(rij[3]){

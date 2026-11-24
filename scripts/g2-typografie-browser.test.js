@@ -44,7 +44,10 @@ function meet(){
     bodoni:tekst.filter(e=>/Bodoni/i.test(getComputedStyle(e).fontFamily)).map(kort),
     hoofdletters:tekst.filter(e=>getComputedStyle(e).textTransform==="uppercase").map(kort),
     klein:tekst.filter(e=>parseFloat(getComputedStyle(e).fontSize)<12).map(e=>kort(e)+" "+getComputedStyle(e).fontSize),
-    h1:h1&&zichtbaar(h1)?getComputedStyle(h1).fontWeight+"|"+getComputedStyle(h1).fontFamily.split(",")[0].replace(/["']/g,""):null,
+    /* Homepage (K2, eigenaar 24 november): de h1 "watishetweer.nl" blijft voor zoekmachines en schermlezers maar is
+       visueel verborgen; de zichtbare naam is dan het logo in de bovenbalk, dat dezelfde eis krijgt. */
+    h1:(()=>{const k=h1&&h1.classList.contains("wiw-h1-verborgen")?document.querySelector(".wiw-bovenbalk .wiw-weer-merk"):h1;return k&&zichtbaar(k)?getComputedStyle(k).fontWeight+"|"+getComputedStyle(k).fontFamily.split(",")[0].replace(/["']/g,""):null;})(),
+    h1Tekst:h1?h1.textContent.trim():"",
     t:t&&zichtbaar(t)?getComputedStyle(t).fontWeight+"|"+getComputedStyle(t).fontFamily.split(",")[0].replace(/["']/g,""):null,
     cond:cond&&zichtbaar(cond)?getComputedStyle(cond).fontWeight+"|"+getComputedStyle(cond).fontFamily.split(",")[0].replace(/["']/g,""):null,
     body:getComputedStyle(document.body).fontFamily.split(",")[0].replace(/["']/g,"").trim(),
@@ -78,6 +81,7 @@ function meet(){
         assert.deepEqual(m.hoofdletters,[],label+": kopjes staan nog in afgedwongen hoofdletters: "+JSON.stringify(m.hoofdletters));
         assert.deepEqual(m.klein,[],label+": zichtbare tekst onder 12px: "+JSON.stringify(m.klein));
         assert.equal(m.h1,"500|Newsreader",label+": paginakop niet in Newsreader 500");
+        assert(m.h1Tekst,label+": de pagina heeft geen h1 meer");
         assert.equal(m.body,"Instrument Sans",label+": lopende tekst niet in Instrument Sans");
         assert(m.newsreader,label+": webfont Newsreader is niet geladen");
         if(WEER.includes(pad)){

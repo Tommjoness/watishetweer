@@ -58,9 +58,19 @@ const SCRIPT_BRON=`(()=>{"use strict";
   const menu=doc.getElementById("wiw-menu");if(!menu)return;
   const knop=menu.querySelector(":scope > summary");
   const groepen=[...menu.querySelectorAll(".wiw-menu-groep")];
-  groepen.forEach(g=>g.addEventListener("toggle",()=>{if(g.open)groepen.forEach(o=>{if(o!==g&&o.open)o.open=false;});}));
-  doc.addEventListener("keydown",e=>{if((e.key==="Escape"||e.key==="Esc")&&menu.open){menu.open=false;if(knop)knop.focus();}});
-  doc.addEventListener("click",e=>{if(!menu.open)return;if(!menu.contains(e.target)){menu.open=false;return;}if(e.target.closest&&e.target.closest(".wiw-menu-paneel a"))menu.open=false;});
+  /* Zijbalk "Snel naar" vanaf 1440px (K2): menu en alle groepen open, vast links naast de inhoud. */
+  const railMq=typeof matchMedia==="function"?matchMedia("(min-width: 1440px)"):null;
+  const rail=()=>!!(railMq&&railMq.matches);
+  const zetRail=()=>{
+    if(rail()){html.classList.add("wiw-sk-rail");menu.open=true;groepen.forEach(g=>{g.removeAttribute("name");g.open=true;});}
+    else if(html.classList.contains("wiw-sk-rail")){html.classList.remove("wiw-sk-rail");menu.open=false;groepen.forEach(g=>{g.open=false;g.setAttribute("name","wiw-menu-groep");});}
+  };
+  groepen.forEach(g=>g.addEventListener("toggle",()=>{if(g.open&&!rail())groepen.forEach(o=>{if(o!==g&&o.open)o.open=false;});}));
+  if(knop)knop.addEventListener("click",e=>{if(rail())e.preventDefault();});
+  doc.addEventListener("keydown",e=>{if((e.key==="Escape"||e.key==="Esc")&&menu.open&&!rail()){menu.open=false;if(knop)knop.focus();}});
+  doc.addEventListener("click",e=>{if(!menu.open||rail())return;if(!menu.contains(e.target)){menu.open=false;return;}if(e.target.closest&&e.target.closest(".wiw-menu-paneel a"))menu.open=false;});
+  if(railMq){if(typeof railMq.addEventListener==="function")railMq.addEventListener("change",zetRail);else if(typeof railMq.addListener==="function")railMq.addListener(zetRail);}
+  zetRail();
 })();
 `;
 const SCRIPT_NAAM="sitekop-"+crypto.createHash("sha256").update(SCRIPT_BRON).digest("hex").slice(0,12)+".js";
@@ -74,7 +84,7 @@ function kopHtml(vandaag,thema){
   const menu=menuHtml(vandaag).replace('<a href="#nachtzicht">','<a href="/#nachtzicht">');
   if(!menu.endsWith("</nav></details>"))throw new Error("Menu-opbouw onverwacht; kan de weergavekeuze niet toevoegen.");
   /* Weergavekeuze onderaan in het (uitklap)paneel, onder de vier groepen. */
-  const metThema=menu.slice(0,-"</nav></details>".length)+`<div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div></nav></details>`;
+  const metThema=menu.replace('<nav class="wiw-menu-paneel" aria-label="Menu">','<nav class="wiw-menu-paneel" aria-label="Menu"><p class="wiw-rail-kop" aria-hidden="true">Snel naar</p>').slice(0,-"</nav></details>".length)+`<div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div></nav></details>`;
   return `<header class="wiw-sitekop" id="${KOP_ID}">${metThema}<a class="wiw-sk-merk" href="/" translate="no" aria-label="watishetweer.nl">${LOGO}<span>watishetweer.nl</span></a></header>`;
 }
 
@@ -121,6 +131,31 @@ html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(.wk-page):not(#wiw-
 html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(#wiw-sk),html body main.wrap:not(#wiw-sk){border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 @media(max-width:600px){.wiw-sitekop{padding:10px 16px;gap:12px}.wiw-sk-merk{font-size:19px}.wiw-sitekop .wiw-menu-paneel{max-width:calc(100vw - 32px)}.wiw-sk-terug{padding:0 16px}}
 @media(max-width:345px){.wiw-sk-merk{font-size:17px}.wiw-sk-logo{width:28px}}
+/* Uitklapmenu (K2): schaduw en een gedimde pagina erachter, zodat het niet los over de inhoud hangt. */
+html:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu-paneel{box-shadow:0 18px 48px rgba(20,32,25,.18),0 2px 6px rgba(20,32,25,.08)}
+html:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{content:"";position:fixed;inset:0;z-index:55;background:rgba(20,32,25,.22);pointer-events:none}
+html[data-thema="donker"]:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}
+@media(prefers-color-scheme:dark){html:not([data-thema="licht"]):not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}}
+.wiw-sitekop .wiw-menu>summary{position:relative;z-index:61}
+/* Zijbalk "Snel naar" vanaf 1440px (K2, eigenaar 24 november): vast links, alle groepen open, weergavekeuze
+   eronder. De inhoud schuift alleen zoveel naar rechts als nodig (de breedste inhoud is 1184px) en wordt
+   tot 1476px hooguit 36px smaller; vanaf 1768px staat hij weer precies in het midden. Zonder JavaScript
+   blijft het gewone menu (de zijbalk hangt aan de klasse wiw-sk-rail van het kopscript). */
+.wiw-rail-kop{display:none}
+html.wiw-sk-rail body:not(#wiw-sk){padding-left:max(0px,min(292px,calc(1768px - 100vw)))!important}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu>summary{display:none}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel{position:fixed;top:16px;left:16px;width:276px;max-width:none;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);padding:8px;border:0;background:transparent;box-shadow:none}
+html.wiw-sk-rail .wiw-rail-kop{display:block;margin:4px 0 6px;font:500 22px/1.2 var(--display,"Newsreader",Georgia,serif);color:var(--ink,#152019)}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:10px}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-kop{min-height:42px;cursor:default;font-size:13px}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-kop::before{display:none}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel ul{padding:0 0 10px 0}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel a{min-height:40px;color:var(--ink-70,#4a5650)}
+html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel a:hover{color:var(--ink,#152019)}
+/* De weergavekeuze vult de zijbalk, ook waar een pagina (Weer per plaats) een eigen breedte voor #thema heeft. */
+html.wiw-sk-rail .wiw-sitekop #thema{box-sizing:border-box;width:auto!important;min-width:0!important;max-width:100%!important}
+/* Lage laptopschermen (1440×900, 1536×864): compacter, zodat de weergavekeuze zonder scrollen in beeld staat. */
+@media(max-height:960px){html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel{top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px)}html.wiw-sk-rail .wiw-rail-kop{margin:0 0 2px;font-size:20px}html.wiw-sk-rail .wiw-sitekop .wiw-menu-kop{min-height:34px}html.wiw-sk-rail .wiw-sitekop .wiw-menu-groep+.wiw-menu-groep{margin-top:4px}html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel ul{padding-bottom:4px}html.wiw-sk-rail .wiw-sitekop .wiw-menu-paneel a{min-height:32px}html.wiw-sk-rail .wiw-sk-weergave{padding-top:8px}}
 @media print{.wiw-sitekop{display:none}}
 `;
 

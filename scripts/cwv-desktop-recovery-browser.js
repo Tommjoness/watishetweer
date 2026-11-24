@@ -296,6 +296,8 @@ async function run(){
         const chart=await page.locator("#chart").boundingBox();
         for(let i=1;i<=8;i++)await page.mouse.move(chart.x+chart.width*i/10,chart.y+chart.height/2,{steps:2});
         await page.waitForTimeout(600);
+        /* Sinds K2 staat de weergavekeuze in het menu: de interactie opent het menu en klikt dan de keuze. */
+        if(!await page.locator("#wiw-menu").evaluate(d=>d.open)){await page.locator("#wiw-menu > summary").click();await page.waitForTimeout(200);}
         await page.locator("#thema").click();await page.waitForTimeout(600);
         const profile=(await session.send("Profiler.stop")).profile;
         fs.writeFileSync(path.join(REPORT,"interactions-"+width+".cpuprofile"),JSON.stringify(profile));
@@ -303,6 +305,7 @@ async function run(){
         fs.writeFileSync(path.join(REPORT,"interactions-"+width+".json"),JSON.stringify(metrics,null,2));
         console.log("CWV_INTERACTIONS "+JSON.stringify({width,cpuRate:4,events:metrics.events,frames:metrics.frames.slice(-12)}));
         await session.send("Emulation.setCPUThrottlingRate",{rate:1});
+        if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.locator("#wiw-menu > summary").click();
         await page.locator("#thema").click();
         await page.screenshot({path:path.join(REPORT,"amsterdam-"+width+".png"),fullPage:true});
       }

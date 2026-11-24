@@ -212,7 +212,8 @@ server.listen(0, async () => {
       assert(first.uitleg,`${width}px: technische toelichting blijft bereikbaar`);
       assert(first.overflow<=1,`${width}px: geen horizontale paginaoverflow (${first.overflow}px)`);
       assert.strictEqual(first.auto,"true",`${width}px: nieuwe bezoeker kiest Auto`);
-      await page.locator("#wiw-menu > summary").click();
+      /* Vanaf 1440px staat het menu op subpagina's al open als zijbalk "Snel naar" (K2); anders eerst openen. */
+      if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.locator("#wiw-menu > summary").click();
       await page.locator('#thema [data-keuze="donker"]').click();
       await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="donker");
       assert.strictEqual(await page.locator('#thema [data-keuze="donker"]').getAttribute("aria-pressed"),"true",`${width}px: Donker is geselecteerd`);

@@ -11,8 +11,11 @@ async function check(type,naam,breedte){
   const browser=await type.launch({headless:true}),page=await browser.newPage({viewport:{width:breedte,height:900}}),errors=[];page.on("pageerror",e=>errors.push(String(e)));
   try{
     await page.goto("http://127.0.0.1:"+server.address().port+"/",{waitUntil:"domcontentloaded"});
-    await page.waitForSelector("#thema");
+    /* Sinds K2 (eigenaar 24 november) staat de weergavekeuze in het menu: aanwezig, maar pas zichtbaar als het menu open is. */
+    await page.waitForSelector("#thema",{state:"attached"});
     await page.waitForFunction(()=>document.documentElement.dataset.appBootstrap==="ready"&&!document.getElementById("thema-auto")?.disabled,null,{timeout:10000});
+    /* Meet de weergavekeuze zoals de bezoeker hem ziet: in het geopende menu (in de zijbalk staat hij al open). */
+    if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.click("#wiw-menu > summary");
     const init=await page.evaluate(()=>{
       const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),f=document.querySelector('link[rel="icon"]'),s=getComputedStyle(groep),t=getComputedStyle(document.querySelector(".tools"));
       return {

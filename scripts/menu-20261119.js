@@ -12,12 +12,13 @@
    - bij het verkleinen van het venster onder 1904px gaat het menu weer dicht;
    - de vier groepen zijn zelf ook <details> (titel klikbaar, links na een
      klik); er staat er één tegelijk open (name-attribuut, met dezelfde regel
-     hier voor browsers zonder dat attribuut). In de zijbalk sluit Escape de
-     groep waar de focus in staat.
+     hier voor browsers zonder dat attribuut). In de zijbalk ("Snel naar",
+     276px, K2) staan alle groepen open; Escape sluit de groep waar de focus
+     in staat.
    Er is één menu in de pagina; de zijbalk is hetzelfde element. */
 (function(root){
 "use strict";
-var RAIL_MIN=1904,RAIL_BREEDTE=192,RAIL_LUCHT=8,RAIL_BOVEN=48,RAIL_ONDER=16;
+var RAIL_MIN=1904,RAIL_BREEDTE=276,RAIL_LUCHT=8,RAIL_BOVEN=48,RAIL_ONDER=16;
 function init(){
   var doc=root.document,menu=doc.getElementById("wiw-menu");
   if(!menu||menu.getAttribute("data-wiw-menu")==="klaar")return;
@@ -37,15 +38,22 @@ function init(){
     paneel.style.transform=over>0?"translateY("+(-Math.ceil(over))+"px)":"";
   }
   function plan(){if(!gepland){gepland=true;(root.requestAnimationFrame||setTimeout)(plaats);}}
+  var groepen=Array.prototype.slice.call(menu.querySelectorAll(".wiw-menu-groep"));
+  /* Zijbalk "Snel naar" (K2, eigenaar 24 november): alle groepen uitgeklapt, dus
+     zonder name-attribuut (anders houdt de browser er maar één open). */
   function zetModus(){
-    if(rail()){html.classList.add("wiw-menu-rail");menu.open=true;}
-    else if(html.classList.contains("wiw-menu-rail")){html.classList.remove("wiw-menu-rail");menu.open=false;}
+    if(rail()){
+      html.classList.add("wiw-menu-rail");menu.open=true;
+      groepen.forEach(function(g){g.removeAttribute("name");g.open=true;});
+    }else if(html.classList.contains("wiw-menu-rail")){
+      html.classList.remove("wiw-menu-rail");menu.open=false;
+      groepen.forEach(function(g){g.open=false;g.setAttribute("name","wiw-menu-groep");});
+    }
     plaats();
   }
-  var groepen=Array.prototype.slice.call(menu.querySelectorAll(".wiw-menu-groep"));
   groepen.forEach(function(g){
     g.addEventListener("toggle",function(){
-      if(g.open)groepen.forEach(function(o){if(o!==g&&o.open)o.open=false;});
+      if(g.open&&!rail())groepen.forEach(function(o){if(o!==g&&o.open)o.open=false;});
       plan();
     });
   });

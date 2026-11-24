@@ -7,7 +7,9 @@
      vier groepen zodra het menu open is (drie knoppen van minstens 44px, binnen beeld);
    - Donker/Licht werkt en wordt bewaard; Escape sluit het menu en zet de focus terug;
    - er is een weg terug (naar het weer, of op parkpagina's naar de parken);
-   - de inhoud staat niet in een kader; geen horizontale overflow en geen runtimefouten.
+   - de inhoud staat niet in een kader; geen horizontale overflow en geen runtimefouten;
+   - vanaf 1440px (K2): zijbalk "Snel naar" links, alle groepen open, weergavekeuze eronder,
+     niets van kop of inhoud eronder; daaronder het uitklapmenu met gedimde achtergrond.
    Plus de 404-pagina zoals cloudflare-output.js hem publiceert. Draait op het finale artifact. */
 
 const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
@@ -119,6 +121,64 @@ function meet(){
         n++;
       }finally{await context.close();}
     }
+    /* Zijbalk "Snel naar" vanaf 1440px (K2, eigenaar 24 november): vast links, alle groepen open, weergavekeuze
+       eronder; niets van de kop of de inhoud eronder; uitklapmenu met gedimde achtergrond daaronder; wisselen met de
+       venstergrootte. */
+    for(const pad of ["/maan/","/witte-kerst/","/weer/","/over/","/nachtzicht/hoge-veluwe/","/bestaat-niet/"])for(const [breedte,taal] of [[1440,"nl"],[1920,"nl"],[1536,"en"]]){
+      if(pad==="/bestaat-niet/"&&taal==="en")continue;
+      const context=await browser.newContext({viewport:{width:breedte,height:900},colorScheme:"light",locale:taal==="en"?"en-GB":"nl-NL",serviceWorkers:"block"});
+      const page=await context.newPage();const fouten=[];
+      page.on("pageerror",e=>fouten.push(e.message));
+      await page.route("**/*",r=>r.request().url().startsWith(root)?r.continue():r.abort());
+      const label=`zijbalk ${pad} ${taal} ${breedte}px`;
+      try{
+        await page.goto(root+pad+(taal==="en"?"?taal=en":""),{waitUntil:"load"});
+        await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(600);
+        const zijbalk=()=>page.evaluate(()=>{
+          const r=e=>{if(!e||!e.getClientRects().length)return null;const b=e.getBoundingClientRect();return {l:b.left,t:b.top,r:b.right,b:b.bottom,w:b.width,h:b.height};};
+          const zie=e=>!!e&&e.checkVisibility();
+          const menu=document.getElementById("wiw-menu"),p=menu.querySelector(".wiw-menu-paneel"),knop=menu.querySelector(":scope > summary"),merk=document.querySelector(".wiw-sk-merk");
+          const pr=r(p);
+          const inhoud=[...document.querySelectorAll("main *,.kaart *,.wk-page *,.wiw-sk-terug *,.wiw-sk-merk")].filter(e=>!p.contains(e)&&zie(e)&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()));
+          const overlap=pr?inhoud.filter(e=>{const b=e.getBoundingClientRect();return b.left<pr.r-1&&b.right>pr.l+1&&b.top<pr.b-1&&b.bottom>pr.t+1;}).map(e=>e.textContent.trim().slice(0,30)):["geen paneel"];
+          return {rail:document.documentElement.classList.contains("wiw-sk-rail"),open:menu.open,knop:zie(knop),paneel:pr,paneelZicht:zie(p),
+            kop:(p.querySelector(".wiw-rail-kop")||{}).textContent||"",kopZicht:zie(p.querySelector(".wiw-rail-kop")),
+            groepen:[...menu.querySelectorAll(".wiw-menu-groep")].map(g=>g.open),links:[...p.querySelectorAll("a")].filter(zie).length,
+            knoppen:[...document.querySelectorAll("#thema button")].map(k=>({z:zie(k),...(r(k)||{})})),merk:r(merk),overlap,
+            dim:getComputedStyle(menu,"::after").content,breed:document.documentElement.scrollWidth-innerWidth,accordeon:[...menu.querySelectorAll(".wiw-menu-groep")].filter(g=>g.getAttribute("name")==="wiw-menu-groep").length};
+        });
+        let z=await zijbalk();
+        assert(z.rail&&z.open&&!z.knop&&z.paneelZicht,label+": zijbalk niet actief of menuknop nog zichtbaar "+JSON.stringify({rail:z.rail,open:z.open,knop:z.knop}));
+        assert(z.kopZicht&&z.kop===(taal==="en"?"Quick links":"Snel naar"),label+": kop van de zijbalk ontbreekt of is niet vertaald ('"+z.kop+"')");
+        assert(z.groepen.length===4&&z.groepen.every(Boolean),label+": niet alle vier groepen open");
+        assert.equal(z.links,15,label+": niet alle 15 bestemmingen zichtbaar");
+        assert(z.paneel.l>=8&&z.paneel.b<=900+1,label+": zijbalk valt buiten het venster "+JSON.stringify(z.paneel));
+        assert.deepEqual(z.overlap,[],label+": zijbalk ligt over de kop of de inhoud");
+        assert(z.merk&&z.merk.l>=z.paneel.r,label+": logo staat onder de zijbalk");
+        assert(z.knoppen.length===3&&z.knoppen.every(k=>k.z&&k.h>=44&&k.l>=z.paneel.l-1&&k.r<=z.paneel.r+1),label+": weergaveknoppen niet zichtbaar in de zijbalk of te klein "+JSON.stringify(z.knoppen));
+        assert(z.breed<=0,label+": horizontale overflow ("+z.breed+"px)");
+        assert.equal(z.dim,"none",label+": zijbalk dimt de pagina");
+        await page.click('#wiw-sitekop [data-keuze="donker"]');await page.waitForTimeout(150);
+        assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",label+": Donker werkt niet in de zijbalk");
+        await page.keyboard.press("Escape");await page.mouse.click(breedte-20,880);await page.waitForTimeout(150);
+        z=await zijbalk();
+        assert(z.rail&&z.open&&z.paneelZicht,label+": Escape of klik ernaast sluit de zijbalk");
+        await page.click('#wiw-sitekop [data-keuze="auto"]');
+        /* Smaller venster: gewoon uitklapmenu met gedimde achtergrond; breder: zijbalk terug. */
+        await page.setViewportSize({width:1366,height:900});await page.waitForTimeout(300);
+        z=await zijbalk();
+        assert(!z.rail&&!z.open&&z.knop&&z.groepen.every(g=>!g)&&z.accordeon===4,label+" → 1366: niet terug naar een dichte menuknop met accordeon");
+        await page.click("#wiw-menu > summary");await page.waitForTimeout(150);
+        z=await zijbalk();
+        assert(z.open&&z.dim!=="none"&&z.dim!=="normal",label+" → 1366: open uitklapmenu dimt de pagina niet");
+        await page.keyboard.press("Escape");
+        await page.setViewportSize({width:breedte,height:900});await page.waitForTimeout(300);
+        z=await zijbalk();
+        assert(z.rail&&z.open&&z.groepen.every(Boolean),label+": zijbalk niet terug na vergroten");
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        n++;
+      }finally{await context.close();}
+    }
   }finally{await browser.close();server.close();}
-  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader.");
+  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1440px zonder overlap, uitklapmenu met gedimde achtergrond.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
