@@ -14,6 +14,14 @@ for (const naam of ["_headers", "_routes.json", "404.html"]) {
   fs.copyFileSync(bron, doel);
 }
 
+/* De 404 krijgt dezelfde gedeelde kop als de andere subpagina's (K1, eigenaar 24 november). */
+{
+  const SK = require("./apply-sitekop-20261124.js");
+  const doel = path.join(publicDir, "404.html");
+  if (!fs.existsSync(path.join(publicDir, SK.SCRIPT_NAAM))) throw new Error(`Sitekopscript ontbreekt in public/: ${SK.SCRIPT_NAAM}`);
+  fs.writeFileSync(doel, SK.pasToe(fs.readFileSync(doel, "utf8"), "404.html", SK.vandaagNl()), "utf8");
+}
+
 for (const naam of ["functions", "cloudflare"]) {
   const ongewenst = path.join(publicDir, naam);
   if (fs.existsSync(ongewenst)) throw new Error(`Platformbroncode staat nog in public/: ${naam}`);

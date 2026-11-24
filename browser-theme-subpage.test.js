@@ -36,18 +36,20 @@ const server=http.createServer((req,res)=>{
   res.writeHead(404);res.end("not found");
 });
 
+/* Sinds K1 (eigenaar 24 november) staat de inhoud niet meer in een kader: de kaart is in elk thema transparant;
+   de paginakleur (achtergrond) volgt het thema. */
 const gevallen=[
-  {keuze:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
-  {keuze:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
-  {keuze:"auto",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
-  {keuze:"rood",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
+  {keuze:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:"auto",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:"rood",thema:null,achtergrond:"rgb(244, 245, 243)",kaart:"rgba(0, 0, 0, 0)"},
   /* Auto volgt het systeem: donker toestel, donkere pagina. */
-  {keuze:"auto",schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
-  {keuze:null,schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
+  {keuze:"auto",schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:null,schema:"dark",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgba(0, 0, 0, 0)"},
   /* De keuze van deze browsersessie (de weerpagina bewaart die in sessionStorage) gaat voor. */
-  {keuze:null,sessie:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgb(19, 23, 22)"},
-  {keuze:"donker",sessie:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"},
-  {keuze:null,sessie:"licht",schema:"dark",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgb(255, 255, 255)"}
+  {keuze:null,sessie:"donker",thema:"donker",achtergrond:"rgb(12, 15, 14)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:"donker",sessie:"licht",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgba(0, 0, 0, 0)"},
+  {keuze:null,sessie:"licht",schema:"dark",thema:"licht",achtergrond:"rgb(244, 245, 243)",kaart:"rgba(0, 0, 0, 0)"}
 ];
 const PAGINAS=[{pad:"/privacy.html",titel:"Privacy & gegevens"},{pad:"/over/",titel:"Over watishetweer.nl"}];
 

@@ -174,8 +174,8 @@ async function engels(browserType,label,base){
       }));
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       assert.deepEqual(r.ontbreekt,[],`${id}: alles vertaald`);
-      /* De vertaallaag mag geen lege vormelementen weghalen (tijdlijn en logo). */
-      const vorm=await page.evaluate(()=>({pt:document.querySelectorAll(".wk-pt").length,st:document.querySelectorAll(".wk-st").length,lijn:document.querySelectorAll(".wk-lijn").length,jl:document.querySelectorAll(".wk-jl").length,logo:document.querySelectorAll(".wk-brandmark").length,label:document.querySelector(".wk-baan").getAttribute("aria-label")}));
+      /* De vertaallaag mag geen lege vormelementen weghalen (tijdlijn en logo; sinds K1 het logo met stip in de sitekop). */
+      const vorm=await page.evaluate(()=>({pt:document.querySelectorAll(".wk-pt").length,st:document.querySelectorAll(".wk-st").length,lijn:document.querySelectorAll(".wk-lijn").length,jl:document.querySelectorAll(".wk-jl").length,logo:document.querySelectorAll("#wiw-sitekop .wiw-sk-logo circle").length,label:document.querySelector(".wk-baan").getAttribute("aria-label")}));
       assert.deepEqual([vorm.pt,vorm.st,vorm.lijn,vorm.jl,vorm.logo],[8,8,1,8,1],`${id}: tijdlijn en logo blijven compleet (${JSON.stringify(vorm)})`);
       assert(/^Timeline of official white Christmases since 1901: /.test(vorm.label),`${id}: tekstalternatief tijdlijn vertaald`);
       assert(r.titel.startsWith(sc.kop+": will we get snow at Christmas?"),`${id}: titel (${r.titel})`);
@@ -248,42 +248,42 @@ async function controleerOntwerp(browserType,label,base){
       assert(g2b.labelGrootte>=12,id+": jaartallen minstens 12px");
       assert.equal(g2b.verlopen,0,id+": geen verlopen of gloed");
       assert.deepEqual(g2b.volledigOmkaderd,[],id+": geen omkaderde vlakken (kaart in kaart)");
-      /* G2-B: de weergavekeuze zit in het menu, niet als balk bovenaan. */
-      assert.equal(await page.locator(".wk-menu .wk-theme").count(),1,id+": weergavekeuze staat in het menu");
-      assert(!await page.locator(".wk-theme").isVisible(),id+": weergavekeuze niet zichtbaar zolang het menu dicht is");
-      await page.locator(".wk-menu > summary").click();
-      assert(await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu open");
-      assert((await page.locator(".wk-theme label").all()).length===3,id+": drie themakeuzes");
-      const maat=await page.locator(".wk-theme label").evaluateAll(a=>a.map(x=>x.getBoundingClientRect()));
+      /* Weergavekeuze in het gedeelde menu (G2-B, sinds K1 de sitekop), niet als balk bovenaan. */
+      assert.equal(await page.locator("#wiw-sitekop #wiw-menu .wiw-sk-weergave #thema").count(),1,id+": weergavekeuze staat in het menu");
+      assert(!await page.locator("#thema").isVisible(),id+": weergavekeuze niet zichtbaar zolang het menu dicht is");
+      await page.locator("#wiw-menu > summary").click();
+      assert(await page.locator("#wiw-menu").evaluate(x=>x.open),id+": menu open");
+      assert((await page.locator("#thema button").all()).length===3,id+": drie themakeuzes");
+      const maat=await page.locator("#thema button").evaluateAll(a=>a.map(x=>x.getBoundingClientRect()));
       assert(maat.every(x=>x.height>=44),id+": alle themadoelen minstens 44px");
       assert(maat.every(x=>x.left>=0&&x.right<=breedte),id+": themakeuzes binnen het scherm");
-      await page.locator('label[for="wk-donker"]').click();
+      await page.locator('#thema [data-keuze="donker"]').click();
       assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": donker werkt");
       assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"donker",id+": keuze opgeslagen");
-      await page.locator('label[for="wk-licht"]').click();
+      await page.locator('#thema [data-keuze="licht"]').click();
       assert.equal(await page.locator("html").getAttribute("data-thema"),"licht",id+": licht werkt");
-      await page.locator('label[for="wk-auto"]').click();
-      assert(await page.locator("#wk-auto").isChecked(),id+": auto geselecteerd");
+      await page.locator('#thema [data-keuze="auto"]').click();
+      assert.equal(await page.locator('#thema [data-keuze="auto"]').getAttribute("aria-pressed"),"true",id+": auto geselecteerd");
       assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"auto",id+": auto opgeslagen");
       /* Systeemthema wisselt na handmatige keuze: beide themahulpjes mogen elkaar niet overschrijven. */
-      await page.locator('label[for="wk-donker"]').click();
+      await page.locator('#thema [data-keuze="donker"]').click();
       await page.emulateMedia({colorScheme:"dark"});
       await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       await page.emulateMedia({colorScheme:"light"});
       await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": handmatig Donker overleeft systeemwissel");
-      await page.locator('label[for="wk-licht"]').click();
+      await page.locator('#thema [data-keuze="licht"]').click();
       await page.emulateMedia({colorScheme:"dark"});
       await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       assert.equal(await page.locator("html").getAttribute("data-thema"),"licht",id+": handmatig Licht overleeft systeemwissel");
-      await page.locator('label[for="wk-auto"]').click();
+      await page.locator('#thema [data-keuze="auto"]').click();
       assert.equal(await page.locator("html").getAttribute("data-thema"),"donker",id+": Auto volgt donker systeem");
       await page.emulateMedia({colorScheme:"light"});
       await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       assert.equal(await page.locator("html").getAttribute("data-thema"),null,id+": Auto volgt licht systeem");
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+": geen horizontale overflow");
-      await page.locator(".wk-menu > summary").click();
-      assert(!await page.locator(".wk-menu").evaluate(x=>x.open),id+": menu dicht");
+      await page.locator("#wiw-menu > summary").click();
+      assert(!await page.locator("#wiw-menu").evaluate(x=>x.open),id+": menu dicht");
       assert.deepEqual(fouten,[],id+": geen JavaScript-fouten");
       await context.close();
     }

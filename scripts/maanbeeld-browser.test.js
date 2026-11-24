@@ -198,24 +198,29 @@ server.listen(0, async () => {
       page.on("pageerror",e=>fouten.push(String(e)));
       await page.goto(`http://127.0.0.1:${port}/maan/`,{waitUntil:"load"});
       const first=await page.evaluate(()=>({
-        buttons:document.querySelectorAll("[data-maan-thema]").length,
+        buttons:document.querySelectorAll("#wiw-sitekop #thema [data-keuze]").length,
+        oudeKnoppen:document.querySelectorAll("[data-maan-thema]").length,
         main:document.querySelectorAll("main.nz-maan-pagina").length,
         uitleg:!!document.querySelector("details.nz-maan-uitleg > summary"),
         overflow:document.documentElement.scrollWidth-innerWidth,
-        auto:document.querySelector('[data-maan-thema="auto"]')?.getAttribute("aria-pressed")
+        auto:document.querySelector('#thema [data-keuze="auto"]')?.getAttribute("aria-pressed")
       }));
-      assert.strictEqual(first.buttons,3,`${width}px: precies drie themaknoppen`);
+      /* Sinds K1 staat de weergavekeuze in het gedeelde menu (zonder herladen); de eigen maanknoppen zijn weg. */
+      assert.strictEqual(first.buttons,3,`${width}px: precies drie themaknoppen in het menu`);
+      assert.strictEqual(first.oudeKnoppen,0,`${width}px: geen eigen maanknoppen meer`);
       assert.strictEqual(first.main,1,`${width}px: precies één maanhoofdinhoud`);
       assert(first.uitleg,`${width}px: technische toelichting blijft bereikbaar`);
       assert(first.overflow<=1,`${width}px: geen horizontale paginaoverflow (${first.overflow}px)`);
       assert.strictEqual(first.auto,"true",`${width}px: nieuwe bezoeker kiest Auto`);
-      await page.locator('[data-maan-thema="donker"]').click();
+      await page.locator("#wiw-menu > summary").click();
+      await page.locator('#thema [data-keuze="donker"]').click();
       await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="donker");
-      assert.strictEqual(await page.locator('[data-maan-thema="donker"]').getAttribute("aria-pressed"),"true",`${width}px: Donker is geselecteerd`);
-      await page.locator('[data-maan-thema="licht"]').click();
+      assert.strictEqual(await page.locator('#thema [data-keuze="donker"]').getAttribute("aria-pressed"),"true",`${width}px: Donker is geselecteerd`);
+      await page.locator('#thema [data-keuze="licht"]').click();
       await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="licht");
-      assert.strictEqual(await page.locator('[data-maan-thema="licht"]').getAttribute("aria-pressed"),"true",`${width}px: Licht is geselecteerd`);
-      await page.locator('[data-maan-thema="auto"]').click();
+      assert.strictEqual(await page.locator('#thema [data-keuze="licht"]').getAttribute("aria-pressed"),"true",`${width}px: Licht is geselecteerd`);
+      await page.locator('#thema [data-keuze="auto"]').click();
+      await page.keyboard.press("Escape");
       await page.waitForFunction(()=>!document.documentElement.hasAttribute("data-thema"));
       await page.emulateMedia({colorScheme:"dark"});
       await page.waitForFunction(()=>document.documentElement.getAttribute("data-thema")==="donker");
