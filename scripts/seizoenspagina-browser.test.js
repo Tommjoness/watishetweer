@@ -104,6 +104,9 @@ async function controleer(browserType,label,base){
         getal:(()=>{const e=document.querySelector("#seizoen-aftellen .aftel-getal");return e?parseFloat(getComputedStyle(e).fontSize):0;})(),
         melding:document.getElementById("seizoen-melding").textContent.trim(),
         samenvatting:(document.querySelector(".seizoen-samenvatting")||{}).textContent||"",
+        /* E1: de uitkomst staat in #seizoen-uitkomst, boven de aftelling; de inleiding past bij de fase. */
+        uitkomstBoven:(()=>{const s=document.querySelector(".seizoen-samenvatting"),a=document.getElementById("seizoen-aftellen");if(!s)return null;return !!s.closest("#seizoen-uitkomst")&&(!a||a.hidden||s.getBoundingClientRect().bottom<=a.getBoundingClientRect().top);})(),
+        intro:(document.getElementById("seizoen-intro")||{}).textContent||"",
         tabellen:document.querySelectorAll(".seizoen-dag table").length,
         rijen:[...document.querySelectorAll(".seizoen-dag tbody tr")].length,
         cellen:[...document.querySelectorAll(".seizoen-dag td")].map(td=>td.textContent.trim()),
@@ -121,6 +124,8 @@ async function controleer(browserType,label,base){
       if(/^\d/.test(v.aftellen||""))assert.equal(r.getal,76,`${id}: aftelgetal staat niet groot (${r.getal}px)`);
       if(v.melding)assert.match(r.melding,v.melding,`${id}: melding`);
       if(v.samenvatting)assert.equal(r.samenvatting.trim(),v.samenvatting,`${id}: samenvatting`);
+      if(r.uitkomstBoven!==null)assert.equal(r.uitkomstBoven,true,`${id}: uitkomst staat boven de aftelling`);
+      assert.equal(r.intro.trim(),v.fetch?kerst.teksten.introVenster:kerst.intro,`${id}: inleiding past bij de fase`);
       assert.equal(r.tabellen,v.tabellen,`${id}: aantal dagtabellen`);
       if(v.tabellen)assert.equal(r.rijen,v.tabellen*kerst.plaatsen.length,`${id}: één rij per plaats per dag`);
       if(v.cel)assert(r.cellen.includes(v.cel),`${id}: cel ${v.cel} in ${JSON.stringify(r.cellen)}`);
@@ -141,7 +146,7 @@ async function controleer(browserType,label,base){
 /* Engels: alles vertaald, links en plaatsnamen blijven staan. */
 const ENGELS=[
   {naam:"ver",nu:"2026-10-05T10:00:00Z",kop:"White Christmas 2026",zinnen:["81 days to go until Christmas Day","Forecast from Saturday 19 December · Boxing Day follows on Sunday 20 December"]},
-  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site"]},
+  {naam:"venster",nu:"2026-12-21T09:00:00Z",data:metSneeuw("2026-12-21"),kop:"White Christmas 2026",zinnen:["4 days to go until Christmas Day","According to the current forecast, there will be snow on the ground in De Bilt on both Christmas Day and Boxing Day. If that holds, it will officially be a white Christmas.","Snow cover, 4 cm","No snow, 1.6 mm of rain","official measuring site","Below is the forecast snow cover from Groningen to Maastricht, for each Christmas day once it falls within the 7-day forecast."]},
   {naam:"half",nu:"2026-12-19T09:00:00Z",data:metSneeuw("2026-12-19"),kop:"White Christmas 2026",zinnen:["Boxing Day: the forecast will appear on Sunday 20 December."]}
 ];
 async function engels(browserType,label,base){
