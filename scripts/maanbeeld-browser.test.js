@@ -165,7 +165,7 @@ server.listen(0, async () => {
     /* M1: datum en plaats boven het antwoord; een ontbrekende opkomst of ondergang staat er expliciet. */
     const DAGEN_NL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"], MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
     const datumNL = d => { const p = d.split("-").map(Number); return DAGEN_NL[new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).getUTCDay()] + " " + p[2] + " " + MAANDEN_NL[p[1] - 1]; };
-    const tijdenNL = (op, onder) => { if (!op && !onder) return "De maan komt vandaag niet op en gaat niet onder."; const t = [["Maanopkomst", op], ["Maanondergang", onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]); if (!op) t.push("geen maanopkomst vandaag"); if (!onder) t.push("geen maanondergang vandaag"); return t.join(" · "); };
+    const tijdenNL = (op, onder) => { if (!op && !onder) return "De maan komt vandaag niet op en gaat niet onder."; const t = [["Maanopkomst", op], ["Maanondergang", onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]); if (!op) t.push("geen maanopkomst vandaag"); if (!onder) t.push("geen maanondergang vandaag"); return t.join("\u00a0· "); };
     for (const [label, plaats, data, naam, lat, lon, tz, zone, isoGeval = iso] of [
       ["Almere uit de app", { lat: 52.351, lon: 5.265, label: "Almere", land: "NL" }, null, "Almere", 52.351, 5.265, "Europe/Amsterdam", "Nederlandse tijd"],
       ["plaats met provincie", { lat: 50.851, lon: 5.691, label: "Maastricht, Limburg", land: "NL" }, null, "Maastricht", 50.851, 5.691, "Europe/Amsterdam", "Nederlandse tijd"],
@@ -187,7 +187,7 @@ server.listen(0, async () => {
       const ref = K.maanOverzicht(Date.parse(isoGeval), lat, lon, tz);
       assert.strictEqual(m.wanneer, `Vandaag, ${datumNL(ref.datum)}, in ${naam}`, `${label}: datum en plaats boven het antwoord`);
       assert.strictEqual(m.tijden, tijdenNL(ref.op, ref.onder), `${label}: maantijden`);
-      if (label === "De Bilt zonder maanopkomst") assert.strictEqual(m.tijden, "Maanondergang 13:18 · geen maanopkomst vandaag", `${label}: ontbrekende opkomst expliciet`);
+      if (label === "De Bilt zonder maanopkomst") assert.strictEqual(m.tijden, "Maanondergang 13:18\u00a0· geen maanopkomst vandaag", `${label}: ontbrekende opkomst expliciet`);
       assert.strictEqual(m.plaats, naam, `${label}: kleine letters noemen de plaats`);
       assert.strictEqual(m.stand, naam, `${label}: stand vanuit de plaats`);
       assert.strictEqual(m.zone, zone, `${label}: tijdzone in de kleine letters`);

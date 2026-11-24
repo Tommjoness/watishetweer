@@ -343,12 +343,13 @@ ${urenTabel(n.uren)}`;
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
     /* M1 (eigenaar 24 november): het antwoord eerst, met datum en plaats. Tijdvolgorde en
-       waarden blijven gelijk; een ontbrekende opkomst of ondergang wordt expliciet genoemd. */
+       waarden blijven gelijk; een ontbrekende opkomst of ondergang wordt expliciet genoemd.
+       Harde spatie vóór "·": op mobiel begint een regel nooit met de punt (zoals bij Witte kerst). */
     set("nz-maan-wanneer", "Vandaag, " + datumTekst(m.datum) + ", in " + r.naam);
     const tijden = [["Maanopkomst", m.op], ["Maanondergang", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]);
     if (!m.op && m.onder) tijden.push("geen maanopkomst vandaag");
     if (m.op && !m.onder) tijden.push("geen maanondergang vandaag");
-    set("nz-maan-tijden", tijden.length ? tijden.join(" · ") : "De maan komt vandaag niet op en gaat niet onder.");
+    set("nz-maan-tijden", tijden.length ? tijden.join("\u00a0· ") : "De maan komt vandaag niet op en gaat niet onder.");
     set("nz-maan-plaats", r.naam);
     set("nz-maan-standplaats", r.naam);
     set("nz-maan-tijdzone", r.nl ? "Nederlandse tijd" : "plaatselijke tijd van " + r.naam);

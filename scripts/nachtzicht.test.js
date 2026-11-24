@@ -159,8 +159,8 @@ assert.equal(vertalerPark.vertaal("De maanopkomst en maanondergang worden bij he
 assert.equal(vertalerPark.vertaal("; de tijden kunnen per plaats en datum verschillen"),"; times may differ by location and date");
 assert.equal(vertalerPark.vertaal("Berekend voor De Bilt"),"Calculated for De Bilt");
 assert.equal(vertalerPark.vertaal("Vandaag, dinsdag 24 november, in De Bilt"),"Today, Tuesday 24 November, in De Bilt");
-assert.equal(vertalerPark.vertaal("Maanondergang 08:21 · Maanopkomst 15:48"),"Moonset 08:21 · Moonrise 15:48");
-assert.equal(vertalerPark.vertaal("Maanondergang 13:18 · geen maanopkomst vandaag"),"Moonset 13:18 · no moonrise today");
+assert.equal(vertalerPark.vertaal("Maanondergang 08:21\u00a0· Maanopkomst 15:48"),"Moonset 08:21\u00a0· Moonrise 15:48");
+assert.equal(vertalerPark.vertaal("Maanondergang 13:18\u00a0· geen maanopkomst vandaag"),"Moonset 13:18\u00a0· no moonrise today");
 assert.equal(vertalerPark.vertaal("De maan komt vandaag niet op en gaat niet onder."),"The moon does not rise or set today.");
 assert.equal(vertalerPark.vertaal("Berekende tijden in Nederlandse tijd."),"Calculated times are in Dutch time.");
 assert.equal(vertalerPark.vertaal("Tijden in Nederlandse tijd."),"Times are in Dutch time.");
