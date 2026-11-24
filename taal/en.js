@@ -927,8 +927,9 @@
     /* Verdiepingspagina's /maan/, /nachtzicht/ en de parkpagina's (audit 15 oktober). */
     "De maan vandaag": "The moon today",
     "De maan vandaag: fase, opkomst en ondergang | watishetweer.nl": "The moon today: phase, moonrise and moonset | watishetweer.nl",
-    "Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.":
-      "What is the Moon like today? See the current moon phase, percentage illuminated, and moonrise and moonset times for De Bilt. Moonlight can make faint stars and the Milky Way harder to see; cloud cover and light pollution also matter for stargazing.",
+    "Hoe staat de maan vandaag? Hierboven staan de actuele maanfase, het verlichtingspercentage en de berekende op- en ondergang. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.":
+      "What is the Moon like today? Above are the current moon phase, percentage illuminated, and calculated moonrise and moonset times. Moonlight can make faint stars and the Milky Way harder to see; cloud cover and light pollution also matter for stargazing.",
+    "De maan komt vandaag niet op en gaat niet onder.": "The moon does not rise or set today.",
     "De op- en ondergangstijden worden geladen.": "Loading moonrise and moonset times.",
     "De maanopkomst en maanondergang worden bij het openen berekend.": "Moonrise and moonset times are calculated when the page opens.",
     "Het weer": "Weather",
@@ -1406,7 +1407,13 @@
     [/^Vandaag in ([^:]+): ((?:Maanopkomst|Maanondergang) \d{2}:\d{2}(?:, (?:Maanopkomst|Maanondergang) \d{2}:\d{2})?)\.$/, (m) => `Today in ${m[1]}: ${m[2].split(", ").map(x => x.replace(/^Maanopkomst /, "moonrise ").replace(/^Maanondergang /, "moonset ")).join(", ")}.`],
     [/^Vandaag in ([^:]+): ((?:op|onder) \d{2}:\d{2}(?:, (?:op|onder) \d{2}:\d{2})?)\.$/, (m) => `Today in ${m[1]}: ${m[2].split(", ").map(x => x.replace(/^op /, "moonrise ").replace(/^onder /, "moonset ")).join(", ")}.`],
     [/^Vandaag komt de maan in ([^.]+) niet op of niet onder\.$/, (m) => `Today the moon does not rise or set in ${m[1]}.`],
-    [/^Tijden in (Nederlandse tijd|plaatselijke tijd van [^.]+)\.$/, (m) => `Times are in ${m[1] === "Nederlandse tijd" ? "Dutch time" : "local time in " + m[1].slice("plaatselijke tijd van ".length)}.`],
+    /* M1: datum en plaats boven het antwoord, en de tijden met een expliciet ontbrekende opkomst of ondergang. */
+    [/^Berekend voor (.+)$/, (m) => `Calculated for ${m[1]}`],
+    [/^Vandaag, (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december), in (.+)$/,
+      (m) => `Today, ${dagVol(m[1])} ${m[2]} ${maand(m[3])}, in ${m[4]}`],
+    [/^(?:(?:Maanopkomst|Maanondergang) \d{2}:\d{2}|geen maanopkomst vandaag|geen maanondergang vandaag)(?: · (?:(?:Maanopkomst|Maanondergang) \d{2}:\d{2}|geen maanopkomst vandaag|geen maanondergang vandaag))*$/,
+      (m) => m[0].split(" · ").map(x => x.replace(/^Maanopkomst /, "Moonrise ").replace(/^Maanondergang /, "Moonset ").replace(/^geen maanopkomst vandaag$/, "no moonrise today").replace(/^geen maanondergang vandaag$/, "no moonset today")).join(" · ")],
+    [/^(Berekende t|T)ijden in (Nederlandse tijd|plaatselijke tijd van [^.]+)\.$/, (m) => `${m[1] === "T" ? "Times are" : "Calculated times are"} in ${m[2] === "Nederlandse tijd" ? "Dutch time" : "local time in " + m[2].slice("plaatselijke tijd van ".length)}.`],
     [/^plaatselijke tijd van (.+)$/, (m) => `local time in ${m[1]}`],
     [/^Op- en ondergang gelden voor ([^;.]+)(; de tijden kunnen per plaats en datum verschillen)?\.$/, (m) => `Moonrise and moonset are for ${m[1]}${m[2] ? "; times may differ by location and date" : ""}.`],
     [/^De maan staat getekend zoals je hem vanuit ([^:]+) ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat\.$/,

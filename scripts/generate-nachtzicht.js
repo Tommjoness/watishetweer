@@ -134,6 +134,9 @@ main.nz-maan-pagina{max-width:1140px;padding:36px clamp(20px,4vw,48px) 48px}
 .nz-maan-pagina .nz-maan-raster{margin-top:28px;padding-top:28px;gap:24px}
 .nz-maan-pagina .nz-maan .groot{font-size:clamp(24px,2.6vw,32px);line-height:1.25}
 .nz-maan-pagina #nz-maan-tijden{font-size:16px;line-height:1.55;color:var(--ink-70)}
+/* M1: het antwoord eerst, met datum en plaats; de inleiding staat eronder. */
+.nz-maan-pagina .nz-maan-wanneer{margin:0 0 6px;font-size:15px;line-height:1.4;color:var(--ink-70)}
+.nz-maan-pagina .nz-maan-raster+.nz-maan-inleiding{margin-top:28px}
 .nz-maan-pagina #nz-maan-fasen li{min-height:52px;border-bottom:1px solid var(--rule);padding:9px 0;font-size:16px;line-height:1.5}
 .nz-maan-pagina .nz-maan-tijdregel{font-size:15px;line-height:1.6;max-width:60rem;margin-top:24px}
 .nz-maan-pagina .nz-maan-uitleg{margin-top:18px;max-width:60rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:6px 0}
@@ -273,9 +276,9 @@ function maanPagina(kern, nuMs) {
   const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
   return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>
-<p class="nz-maan-inleiding">Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
 <div class="nz-maan-raster">
 <div class="nz-maan" aria-live="polite"><span id="nz-maan-schijf"></span><div>
+<p class="nz-maan-wanneer" id="nz-maan-wanneer">Berekend voor <span translate="no">${esc(MAAN_REFERENTIE.naam)}</span></p>
 <p class="groot" id="nz-maan-naam">${esc(naam)}</p>
 <p id="nz-maan-tijden">De maanopkomst en maanondergang worden bij het openen berekend.</p>
 <noscript><p class="klein">Zonder JavaScript is dit een momentopname van ${esc(berekendOp)}. Voor De Bilt op ${esc(m.datum)}: ${esc(tijdenMoment)}. De stand en tijden worden niet automatisch bijgewerkt.</p></noscript>
@@ -286,7 +289,8 @@ function maanPagina(kern, nuMs) {
 <noscript><p class="klein">De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):</p><ul>${fasenMoment}</ul></noscript>
 </div>
 </div>
-<p class="nz-maan-tijdregel">Tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats.</p>
+<p class="nz-maan-inleiding">Hoe staat de maan vandaag? Hierboven staan de actuele maanfase, het verlichtingspercentage en de berekende op- en ondergang. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.</p>
+<p class="nz-maan-tijdregel">Berekende tijden in <span id="nz-maan-tijdzone">Nederlandse tijd</span>. Op- en ondergang gelden voor <span id="nz-maan-plaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span><span id="nz-maan-elders">; de tijden kunnen per plaats en datum verschillen</span>. Kies je in de app een plaats, dan gelden ze voor die plaats.</p>
 <details class="nz-maan-uitleg"><summary>Over de berekening en de afbeelding</summary><p>De momenten van de fasen zijn berekend volgens Meeus (Astronomical Algorithms). Het percentage en de fasen gelden overal op aarde. De maan staat getekend zoals je hem vanuit <span id="nz-maan-standplaats" translate="no">${esc(MAAN_REFERENTIE.naam)}</span> ziet: nu, of anders op het eerstvolgende moment dat hij in het donker boven de horizon staat. Op het zuidelijk halfrond staat hij ondersteboven en rond de evenaar ligt een sikkel op zijn kant. Maanfoto: NASA's Scientific Visualization Studio.</p></details>
 <h2>Sterren kijken</h2>
 <p>Waar het donker is en hoe de komende nachten worden, staat op <a href="${BASIS}">Sterren kijken in Nederland</a>.</p>

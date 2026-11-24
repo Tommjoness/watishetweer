@@ -162,25 +162,32 @@ server.listen(0, async () => {
        ontbreekt die, dan blijft het De Bilt. */
     const iso = "2026-10-12T17:30:00+02:00";
     const sydneyData = { d: { timezone: "Australia/Sydney" }, lat: -33.87, lon: 151.21, label: "Sydney", land: "AU" };
-    for (const [label, plaats, data, naam, lat, lon, tz, zone] of [
+    /* M1: datum en plaats boven het antwoord; een ontbrekende opkomst of ondergang staat er expliciet. */
+    const DAGEN_NL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"], MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+    const datumNL = d => { const p = d.split("-").map(Number); return DAGEN_NL[new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).getUTCDay()] + " " + p[2] + " " + MAANDEN_NL[p[1] - 1]; };
+    const tijdenNL = (op, onder) => { if (!op && !onder) return "De maan komt vandaag niet op en gaat niet onder."; const t = [["Maanopkomst", op], ["Maanondergang", onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]); if (!op) t.push("geen maanopkomst vandaag"); if (!onder) t.push("geen maanondergang vandaag"); return t.join(" · "); };
+    for (const [label, plaats, data, naam, lat, lon, tz, zone, isoGeval = iso] of [
       ["Almere uit de app", { lat: 52.351, lon: 5.265, label: "Almere", land: "NL" }, null, "Almere", 52.351, 5.265, "Europe/Amsterdam", "Nederlandse tijd"],
       ["plaats met provincie", { lat: 50.851, lon: 5.691, label: "Maastricht, Limburg", land: "NL" }, null, "Maastricht", 50.851, 5.691, "Europe/Amsterdam", "Nederlandse tijd"],
       ["Sydney met tijdzone", { lat: -33.87, lon: 151.21, label: "Sydney", land: "AU" }, sydneyData, "Sydney", -33.87, 151.21, "Australia/Sydney", "plaatselijke tijd van Sydney"],
       ["buitenland zonder tijdzone", { lat: -33.87, lon: 151.21, label: "Sydney", land: "AU" }, null, "De Bilt", 52.1009, 5.1801, "Europe/Amsterdam", "Nederlandse tijd"],
       ["geen plaats", null, null, "De Bilt", 52.1009, 5.1801, "Europe/Amsterdam", "Nederlandse tijd"],
-      ["kapotte opslag", "{kapot", null, "De Bilt", 52.1009, 5.1801, "Europe/Amsterdam", "Nederlandse tijd"]
+      ["kapotte opslag", "{kapot", null, "De Bilt", 52.1009, 5.1801, "Europe/Amsterdam", "Nederlandse tijd"],
+      /* 1 december 2026: in De Bilt geen maanopkomst (USNO en JPL Horizons, zie het Moon 2.0-protocol). */
+      ["De Bilt zonder maanopkomst", null, null, "De Bilt", 52.1009, 5.1801, "Europe/Amsterdam", "Nederlandse tijd", "2026-12-01T12:00:00+01:00"]
     ]) {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       const fouten = []; page.on("pageerror", e => fouten.push(e.message));
       await page.addInitScript(([p, d]) => { try { localStorage.clear(); if (p !== null) localStorage.setItem("weerbriefing.plaats", typeof p === "string" ? p : JSON.stringify(p)); if (d) localStorage.setItem("weerbriefing.data", JSON.stringify(d)); } catch (e) { } }, [plaats, data]);
-      await page.clock.setFixedTime(new Date(iso));
+      await page.clock.setFixedTime(new Date(isoGeval));
       await page.goto(`http://127.0.0.1:${port}/maan/`, { waitUntil: "load" });
-      await page.waitForFunction(() => /Vandaag/.test((document.getElementById("nz-maan-tijden") || {}).textContent || "") && document.querySelector("#nz-maan-schijf canvas"), null, { timeout: 15000 });
-      const m = await page.evaluate(() => ({ tijden: document.getElementById("nz-maan-tijden").textContent, plaats: document.getElementById("nz-maan-plaats").textContent, stand: document.getElementById("nz-maan-standplaats").textContent, zone: document.getElementById("nz-maan-tijdzone").textContent, elders: document.getElementById("nz-maan-elders").hidden, draai: Number(document.querySelector("#nz-maan-schijf canvas").getAttribute("data-draai")) }));
-      const ref = K.maanOverzicht(Date.parse(iso), lat, lon, tz);
-      const verwacht = `Vandaag in ${naam}: ` + [["Maanopkomst", ref.op], ["Maanondergang", ref.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ") + ".";
-      assert.strictEqual(m.tijden, verwacht, `${label}: maantijden`);
+      await page.waitForFunction(() => /^Vandaag, /.test((document.getElementById("nz-maan-wanneer") || {}).textContent || "") && document.querySelector("#nz-maan-schijf canvas"), null, { timeout: 15000 });
+      const m = await page.evaluate(() => ({ wanneer: document.getElementById("nz-maan-wanneer").textContent, tijden: document.getElementById("nz-maan-tijden").textContent, plaats: document.getElementById("nz-maan-plaats").textContent, stand: document.getElementById("nz-maan-standplaats").textContent, zone: document.getElementById("nz-maan-tijdzone").textContent, elders: document.getElementById("nz-maan-elders").hidden, draai: Number(document.querySelector("#nz-maan-schijf canvas").getAttribute("data-draai")) }));
+      const ref = K.maanOverzicht(Date.parse(isoGeval), lat, lon, tz);
+      assert.strictEqual(m.wanneer, `Vandaag, ${datumNL(ref.datum)}, in ${naam}`, `${label}: datum en plaats boven het antwoord`);
+      assert.strictEqual(m.tijden, tijdenNL(ref.op, ref.onder), `${label}: maantijden`);
+      if (label === "De Bilt zonder maanopkomst") assert.strictEqual(m.tijden, "Maanondergang 13:18 · geen maanopkomst vandaag", `${label}: ontbrekende opkomst expliciet`);
       assert.strictEqual(m.plaats, naam, `${label}: kleine letters noemen de plaats`);
       assert.strictEqual(m.stand, naam, `${label}: stand vanuit de plaats`);
       assert.strictEqual(m.zone, zone, `${label}: tijdzone in de kleine letters`);

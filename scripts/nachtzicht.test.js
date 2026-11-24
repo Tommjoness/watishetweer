@@ -130,7 +130,12 @@ assert(overzicht.includes("De parken zijn gegroepeerd op geschatte lichtvervuili
 for (const p of parken) assert(overzicht.includes(`href="${BASIS}${p.slug}/"`), `overzicht linkt niet naar ${p.slug}`);
 const maan = maanPagina(kern, Date.UTC(2026, 9, 6, 12));
 assert(maan.includes(`<link rel="canonical" href="https://watishetweer.nl${MAAN}">`) && maan.includes('id="nz-maan-fasen"'), "maanpagina");
-assert(maan.includes("Hoe staat de maan vandaag? Bekijk de actuele maanfase"),"zoekintentie direct in de inleiding");
+assert(maan.includes("Hoe staat de maan vandaag? Hierboven staan de actuele maanfase"),"zoekintentie in de inleiding");
+/* M1 (eigenaar 24 november): het antwoord eerst, daarna de inleiding; één plaats, berekende tijden. */
+assert(maan.indexOf("<h1>De maan vandaag</h1>")<maan.indexOf('class="nz-maan-raster"')&&maan.indexOf('class="nz-maan-raster"')<maan.indexOf('class="nz-maan-inleiding"'),"maanpagina: antwoord (fase, tijden) staat direct onder de titel, de inleiding eronder");
+assert(maan.includes('<p class="nz-maan-wanneer" id="nz-maan-wanneer">Berekend voor <span translate="no">De Bilt</span></p>'),"maanpagina: plaatsregel boven het antwoord");
+assert(!/class="nz-maan-inleiding">[^<]*De Bilt/.test(maan),"maanpagina: de inleiding noemt geen vaste plaats meer");
+assert(maan.includes('<p class="nz-maan-tijdregel">Berekende tijden in <span id="nz-maan-tijdzone">'),"maanpagina: tijden heten berekend");
 assert(maan.includes('class="kaart breed nz-maan-pagina"'),"alleen de maanpagina krijgt de nieuwe brede opmaak");
 assert(/<header class="nz-maan-bovenbalk">[\s\S]*<\/header><main class="kaart breed nz-maan-pagina">/.test(maan),"maanheader is buiten het hoofdlandmark geplaatst");
 assert(/<\/main><footer class="nz-maan-footer">[\s\S]*<\/footer>/.test(maan),"maanfooter heeft een eigen landmark");
@@ -148,9 +153,16 @@ assert(maan.includes("De maanopkomst en maanondergang worden bij het openen bere
 assert(maan.includes("<noscript>")&&maan.includes("momentopname van 2026-10-06 12:00 UTC")&&maan.includes("Voor De Bilt op 2026-10-06:"),"zonder JS staat een gedateerde momentopname");
 assert(maan.includes("De volgende hoofdfasen volgens deze momentopname (Nederlandse tijd):")&&/<noscript>[\s\S]*?<ul><li>/.test(maan),"zonder JS bevat de pagina ook komende fasen");
 assert.equal((maan.match(/<noscript>/g)||[]).length,2,"geen dubbele no-JS-blokken");
-const maanVertaald=vertalerPark.vertaal("Hoe staat de maan vandaag? Bekijk de actuele maanfase, het verlichtingspercentage en de op- en ondergang in De Bilt. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.");
+const maanVertaald=vertalerPark.vertaal("Hoe staat de maan vandaag? Hierboven staan de actuele maanfase, het verlichtingspercentage en de berekende op- en ondergang. Maanlicht kan zwakke sterren en de Melkweg moeilijker zichtbaar maken; voor sterrenkijken zijn ook bewolking en lichtvervuiling belangrijk.");
 assert(maanVertaald&&maanVertaald.startsWith("What is the Moon like today?"),"nieuwe inleiding volledig Engels");
 assert.equal(vertalerPark.vertaal("De maanopkomst en maanondergang worden bij het openen berekend."),"Moonrise and moonset times are calculated when the page opens.");
 assert.equal(vertalerPark.vertaal("; de tijden kunnen per plaats en datum verschillen"),"; times may differ by location and date");
+assert.equal(vertalerPark.vertaal("Berekend voor De Bilt"),"Calculated for De Bilt");
+assert.equal(vertalerPark.vertaal("Vandaag, dinsdag 24 november, in De Bilt"),"Today, Tuesday 24 November, in De Bilt");
+assert.equal(vertalerPark.vertaal("Maanondergang 08:21 · Maanopkomst 15:48"),"Moonset 08:21 · Moonrise 15:48");
+assert.equal(vertalerPark.vertaal("Maanondergang 13:18 · geen maanopkomst vandaag"),"Moonset 13:18 · no moonrise today");
+assert.equal(vertalerPark.vertaal("De maan komt vandaag niet op en gaat niet onder."),"The moon does not rise or set today.");
+assert.equal(vertalerPark.vertaal("Berekende tijden in Nederlandse tijd."),"Calculated times are in Dutch time.");
+assert.equal(vertalerPark.vertaal("Tijden in Nederlandse tijd."),"Times are in Dutch time.");
 
 console.log(`Nachtzicht: ${PARKEN.length} parken in de lijst, ${parken.length} met volledige lichtkaart; ${BEKEND.length} maanfasen binnen 5 minuten; kern en aanvraag gelijk aan de app; pagina-opbouw klopt.`);
