@@ -165,6 +165,20 @@ assert(html.includes('<h2 id="wk-tijdlijn-kop">8 officiële witte kersten sinds 
 assert(html.includes('role="img" aria-label="Tijdlijn van de officiële witte kersten sinds 1901: 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010."'),"tijdlijn heeft een tekstalternatief");
 assert(html.includes('<span class="wk-eind" aria-hidden="true">2025</span>'),"as loopt tot de laatst verstreken kerst");
 assert(html.includes("Laatste officiële witte kerst: 2010. Bron: KNMI."),"laatste witte kerst en bron bij de tijdlijn");
+/* E1: inleiding per fase, en een eigen plek voor de uitkomst boven de aftelling. */
+assert(html.includes('<div id="seizoen-uitkomst"></div>')&&html.indexOf('id="seizoen-uitkomst"')<html.indexOf('id="seizoen-aftellen"'),"plek voor de uitkomst boven de aftelling");
+assert(html.includes('<p class="wk-lead" id="seizoen-intro" data-nl="'+kerst.intro+'">'+kerst.intro+'</p>'),"vóór het venster de gewone inleiding");
+{
+  const venster=pagina(kerst,"2026-12-19");
+  assert(venster.includes('<p class="wk-lead" id="seizoen-intro" data-nl="'+kerst.teksten.introVenster+'">'+kerst.teksten.introVenster+'</p>'),"binnen het venster een inleiding zonder 'zolang buiten de verwachting'");
+  assert(!/Zolang de kerstdagen buiten/.test(venster.split('id="seizoen-config"')[0].replace(/<meta[^>]*>/g,"")),"binnen het venster nergens meer 'zolang buiten de verwachting' in beeld");
+  assert(/"intro":"Krijgen we een witte kerst\? Zolang/.test(venster),"runtime krijgt de gewone inleiding mee voor na kerst");
+  assert.equal(R.introTekst({fase:"ver"},kerst),kerst.intro);
+  assert.equal(R.introTekst({fase:"verwachting"},kerst),kerst.teksten.introVenster);
+  assert.equal(R.introTekst({fase:"verwachting"},SEIZOENSPAGINAS.find(c=>c.slug==="oud-en-nieuw")),SEIZOENSPAGINAS.find(c=>c.slug==="oud-en-nieuw").intro,"andere pagina's houden hun inleiding");
+  assert(!/"intro":/.test(pagina(SEIZOENSPAGINAS.find(c=>c.slug==="oud-en-nieuw"),"2026-12-28")),"andere pagina's krijgen geen extra runtime-inleiding");
+  assert.equal(vertalerKerst0().vertaal(kerst.teksten.introVenster),"Will we have a white Christmas? Below is the forecast snow cover from Groningen to Maastricht, for each Christmas day once it falls within the 7-day forecast.");
+}
 assert(!html.includes("De Bilt en zes andere plaatsen")&&html.includes("tonen we het verwachte sneeuwdek van Groningen tot Maastricht."),"intro noemt de spreiding van Groningen tot Maastricht");
 {
   const wk=require("./witte-kerst-ontwerp-20261121.js");

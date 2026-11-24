@@ -462,12 +462,18 @@ function toonVakantie(doel,t,resultaten,cfg,bronZin){
     doel.append(el("p",{class:"klein seizoen-bron"},bronZin));
   }else doel.append(el("p",{class:"klein"},cfg.teksten.toelichting));
 }
+/* Pagina's met een eigen plek voor de uitkomst (Witte kerst, E1): de samenvatting staat daar,
+   boven de aftelling; de tabellen blijven in #seizoen-verwachting. Zonder die plek verandert niets. */
+function uitkomstPlek(){return typeof document!=="undefined"?document.getElementById("seizoen-uitkomst"):null;}
+function leegUitkomst(){const u=uitkomstPlek();if(u)u.replaceChildren();}
+function introTekst(t,cfg){return t.fase==="verwachting"&&cfg.teksten&&cfg.teksten.introVenster?cfg.teksten.introVenster:cfg.intro;}
 function toon(doel,t,resultaten,cfg,bronZin){
   if(cfg.soort==="vakantie")return toonVakantie(doel,t,resultaten,cfg,bronZin);
   doel.replaceChildren();
+  leegUitkomst();
   const nacht=cfg.soort==="middernacht";
   const zinnen=nacht?nachtSamenvatting(t,resultaten,cfg):[samenvatting(t,resultaten,cfg)].filter(Boolean);
-  for(const z of zinnen)doel.append(el("p",{class:"seizoen-samenvatting"},z));
+  for(const z of zinnen)(uitkomstPlek()||doel).append(el("p",{class:"seizoen-samenvatting"},z));
   for(const dag of t.dagen){
     if(dag.zichtbaar)doel.append(nacht?nachtTabel(dag,resultaten,cfg):dagTabel(dag,resultaten));
     else if(dag.over>0)doel.append(el("p",{class:"seizoen-later"},vul(cfg.teksten.dagLater,{dag:dag.label,datum:datumTekst(dag.vanaf,true)})));
@@ -644,14 +650,20 @@ async function start(opt){
   /* Optioneel kort label boven de melding (alleen pagina's met teksten.labelVer, zoals Witte kerst). */
   const label=document.getElementById("seizoen-label");
   if(label){label.textContent=labelTekst(t,cfg);label.hidden=!label.textContent;}
+  /* Inleiding past bij de fase (E1): binnen het venster niet meer "zolang buiten de verwachting".
+     data-nl onthoudt de laatst geschreven Nederlandse tekst, zodat een vertaalde zin niet nodeloos
+     wordt overschreven. */
+  const intro=document.getElementById("seizoen-intro");
+  if(intro&&cfg.intro&&cfg.teksten&&cfg.teksten.introVenster){const tekst=introTekst(t,cfg);if(intro.dataset.nl!==tekst){intro.textContent=tekst;intro.dataset.nl=tekst;}}
   const doel=document.getElementById("seizoen-verwachting");
   if(!doel)return;
-  if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();doel.removeAttribute("aria-busy");delete doel.dataset.focus;return;}
+  if(t.fase!=="verwachting"){lopend++;doel.replaceChildren();leegUitkomst();doel.removeAttribute("aria-busy");delete doel.dataset.focus;return;}
   /* Alleen het laatste ophalen telt: een oudere, trage aanvraag (of een
      tweede klik op "Opnieuw proberen") mag het scherm niet meer overschrijven. */
   const volgnummer=++lopend;
   doel.setAttribute("aria-busy","true");
   doel.replaceChildren(el("p",{class:"klein"},"Verwachting laden…"));
+  leegUitkomst();
   try{
     let antwoord,bronZin=null;
     try{
@@ -670,6 +682,7 @@ async function start(opt){
   }catch(e){
     if(volgnummer!==lopend)return;
     doel.replaceChildren(foutBlok(cfg));
+    leegUitkomst();
     /* Mislukt ook een nieuwe poging, dan krijgt de nieuwe knop de focus. */
     if(doel.dataset.focus){delete doel.dataset.focus;const nieuw=doel.querySelector(".seizoen-opnieuw");if(nieuw)nieuw.focus({preventScroll:true});}
   }finally{
@@ -677,7 +690,7 @@ async function start(opt){
   }
 }
 
-const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,vakantieregioVoorPlaats,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,labelTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord,reserveBronTekst};
+const api={TEMP_SCHAAL,temperatuurKleur,dagBereik,toestandVakantie,vakantieregioVoorPlaats,periodeTekst,regioKop,vakantieAftellen,vakantieWaarden,vakantieWeerTekst,overwegendDroog,vakantieSamenvatting,datumISO,dagenTussen,plusDagen,datumTekst,nuIn,vandaagIn,vul,eindUur,toestand,aftelTekst,aftelGetal,meldingTekst,labelTekst,introTekst,dagWaarden,heeftSneeuwdek,sneeuwTekst,samenvatting,richting,uurStempel,nachtWaarden,neerslagTekst,windTekst,lijstTekst,nachtSamenvatting,verwachtingUrl,verwerkAntwoord,reserveBronTekst};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 else if(typeof document!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

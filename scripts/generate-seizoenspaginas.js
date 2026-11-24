@@ -186,7 +186,9 @@ function pagina(cfg,buildDag){
     : cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
   const meldingHtml=`<p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>`;
   /* Witte kerst (G2-B): eerst het antwoord (kort label plus de melding), dan de tijdlijn. */
-  const labelHtml=witteKerst?`<div class="wk-status"><span class="wk-label" id="seizoen-label"${runtime.labelTekst(t,cfg)?"":" hidden"}>${esc(runtime.labelTekst(t,cfg))}</span>${meldingHtml}</div>\n`:"";
+  const labelHtml=witteKerst?`<div class="wk-status"><span class="wk-label" id="seizoen-label"${runtime.labelTekst(t,cfg)?"":" hidden"}>${esc(runtime.labelTekst(t,cfg))}</span>${meldingHtml}</div>\n<div id="seizoen-uitkomst"></div>\n`:"";
+  /* E1: de inleiding volgt de fase; de runtime krijgt beide teksten mee. */
+  const introNu=witteKerst?runtime.introTekst(t,cfg):cfg.intro;
   /* Tijdlijn tot en met de laatst verstreken kerst (of de laatste witte kerst, als die later is). */
   const tijdlijn=witteKerst?WK.tijdlijnHtml(cfg.uitleg.witteKersten,Math.max(t.jaar-1,...cfg.uitleg.witteKersten))+"\n":"";
   return `<!DOCTYPE html>
@@ -225,7 +227,7 @@ ${labelHtml}<p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
 ${witteKerst?"":meldingHtml}
 <div id="seizoen-verwachting"></div>
 </section>
-${tijdlijn}${witteKerst?`<p class="wk-lead">${esc(cfg.intro)}</p>\n<section class="wk-guide">`:""}
+${tijdlijn}${witteKerst?`<p class="wk-lead" id="seizoen-intro" data-nl="${esc(introNu)}">${esc(introNu)}</p>\n<section class="wk-guide">`:""}
 <h2>${esc(cfg.uitleg.kop)}</h2>
 ${witteKerst?'<div class="wk-vragen">':""}
 ${uitleg}
@@ -235,7 +237,7 @@ ${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" 
 ${witteKerst?"</section>":""}
 ${witteKerst?"</main>\n"+WK.FOOTER:""}
 ${witteKerst?"</div>":"</main>"}
-<script type="application/json" id="seizoen-config">${jsonInHtml(runtimeCfg)}</script>
+<script type="application/json" id="seizoen-config">${jsonInHtml(cfg.teksten&&cfg.teksten.introVenster?{...runtimeCfg,intro}:runtimeCfg)}</script>
 ${cfg.soort==="vakantie"?`<script defer src="/${REGIO_ASSET}"></script>`:""}
 <script>
 ${RUNTIME_BRON}

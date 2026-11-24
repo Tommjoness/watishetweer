@@ -815,6 +815,8 @@
     "Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek van Groningen tot Maastricht.":
       "Will we have a white Christmas? While Christmas is beyond the 7-day forecast, it is not possible to make a reliable prediction. Once each Christmas day falls within that range, we show the forecast snow cover from Groningen to Maastricht.",
     "Nog te vroeg": "Too early to tell",
+    "Krijgen we een witte kerst? Hieronder staat het verwachte sneeuwdek van Groningen tot Maastricht, per kerstdag zodra die binnen de 7-daagse verwachting valt.":
+      "Will we have a white Christmas? Below is the forecast snow cover from Groningen to Maastricht, for each Christmas day once it falls within the 7-day forecast.",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
