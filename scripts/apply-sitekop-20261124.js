@@ -113,6 +113,10 @@ html[data-thema="donker"] .wiw-sitekop{--wiw-sk-stip:#d2455d}
 .wiw-sitekop a:focus-visible,.wiw-sitekop summary:focus-visible,.wiw-sitekop button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .wiw-sk-terug{box-sizing:border-box;max-width:1184px;margin:16px auto 0;padding:0 20px;font:400 14px/1.4 var(--sans,"Instrument Sans",system-ui,sans-serif)}
 .wiw-sk-terug a{color:inherit;text-underline-offset:3px}
+/* De kop staat bovenaan: geen bovenmarge van de pagina erboven, en zonder kader geen binnenmarge van
+   32px meer boven de inhoud (houdt de titel en het eerste antwoord in het eerste scherm). */
+html body:not(#wiw-sk){padding-top:0!important}
+html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(.wk-page):not(#wiw-sk),html body main.wrap:not(#wiw-sk){padding-top:8px!important;margin-top:0!important}
 /* Inhoud zonder kader, zoals Witte kerst. */
 html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(#wiw-sk),html body main.wrap:not(#wiw-sk){border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 @media(max-width:600px){.wiw-sitekop{padding:10px 16px;gap:12px}.wiw-sk-merk{font-size:19px}.wiw-sitekop .wiw-menu-paneel{max-width:calc(100vw - 32px)}.wiw-sk-terug{padding:0 16px}}
