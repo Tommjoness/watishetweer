@@ -174,8 +174,8 @@ async function engels(browserType,label,base){
       }));
       assert.deepEqual(fouten,[],`${id}: geen browserfouten`);
       assert.deepEqual(r.ontbreekt,[],`${id}: alles vertaald`);
-      /* De vertaallaag mag geen lege vormelementen weghalen (tijdlijn en logo). */
-      const vorm=await page.evaluate(()=>({pt:document.querySelectorAll(".wk-pt").length,st:document.querySelectorAll(".wk-st").length,lijn:document.querySelectorAll(".wk-lijn").length,jl:document.querySelectorAll(".wk-jl").length,logo:document.querySelectorAll(".wk-brandmark").length,label:document.querySelector(".wk-baan").getAttribute("aria-label")}));
+      /* De vertaallaag mag geen lege vormelementen weghalen (tijdlijn en logo; sinds K1 het logo met stip in de sitekop). */
+      const vorm=await page.evaluate(()=>({pt:document.querySelectorAll(".wk-pt").length,st:document.querySelectorAll(".wk-st").length,lijn:document.querySelectorAll(".wk-lijn").length,jl:document.querySelectorAll(".wk-jl").length,logo:document.querySelectorAll("#wiw-sitekop .wiw-sk-logo circle").length,label:document.querySelector(".wk-baan").getAttribute("aria-label")}));
       assert.deepEqual([vorm.pt,vorm.st,vorm.lijn,vorm.jl,vorm.logo],[8,8,1,8,1],`${id}: tijdlijn en logo blijven compleet (${JSON.stringify(vorm)})`);
       assert(/^Timeline of official white Christmases since 1901: /.test(vorm.label),`${id}: tekstalternatief tijdlijn vertaald`);
       assert(r.titel.startsWith(sc.kop+": will we get snow at Christmas?"),`${id}: titel (${r.titel})`);

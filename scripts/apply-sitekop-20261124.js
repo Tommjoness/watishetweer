@@ -47,7 +47,7 @@ const SCRIPT_BRON=`(()=>{"use strict";
   };
   if(eigenThema){
     pas();
-    if(query){const volg=()=>{if(keuze==="auto")pas();};if(typeof query.addEventListener==="function")query.addEventListener("change",volg);else if(typeof query.addListener==="function")query.addListener(volg);}
+    if(query){/* Altijd opnieuw toepassen: een vroeg themascript dat de keuze bij het laden vastlegt, mag een handmatige keuze niet overschrijven. */const volg=()=>pas();if(typeof query.addEventListener==="function")query.addEventListener("change",volg);else if(typeof query.addListener==="function")query.addListener(volg);}
     doc.querySelectorAll("#thema [data-keuze]").forEach(k=>k.addEventListener("click",()=>{
       keuze=k.getAttribute("data-keuze");
       try{sessionStorage.setItem(SESSIE,JSON.stringify(keuze));localStorage.removeItem(PREF);}catch(e){}

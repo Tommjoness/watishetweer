@@ -102,6 +102,10 @@ function meet(){
         await page.click(".wiw-sk-weergave button:nth-child(3)");await page.waitForTimeout(150);
         assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",label+": Donker werkt niet");
         assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"donker",label+": keuze Donker niet bewaard");
+        /* Systeemthema wisselt na een handmatige keuze: geen enkel themascript op de pagina mag Donker overschrijven. */
+        await page.emulateMedia({colorScheme:"dark"});await page.waitForTimeout(100);
+        await page.emulateMedia({colorScheme:"light"});await page.waitForTimeout(100);
+        assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",label+": handmatig Donker overleeft geen systeemwissel");
         await page.click(".wiw-sk-weergave button:nth-child(1)");await page.waitForTimeout(150);
         /* Licht: "licht" (seizoens- en infopagina's) of geen kenmerk (Weer per plaats, bestaand theme-hub-gedrag); nooit donker. */
         assert(["licht",null].includes(await page.evaluate(()=>document.documentElement.getAttribute("data-thema"))),label+": Licht werkt niet");
