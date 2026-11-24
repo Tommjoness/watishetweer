@@ -313,6 +313,8 @@ function meet(){
     for(const [w,h] of [[390,844],[1366,768]]){
       const {context,page,fouten}=await open(browser,root,null,w,h,"/weer/");
       try{
+        /* Sinds K1 staat de weergavekeuze in het gedeelde menu bovenaan: eerst openen. */
+        await page.click("#wiw-menu > summary");await sleep(100);
         const r=await page.evaluate(()=>{
           const knoppen=[...document.querySelectorAll("#thema [data-keuze]")].map(k=>({k:k.getAttribute("data-keuze"),p:k.getAttribute("aria-pressed"),h:k.getBoundingClientRect().height,t:k.textContent.trim()}));
           const terug=document.querySelector(".terug-boven a"),h1=document.querySelector("h1");

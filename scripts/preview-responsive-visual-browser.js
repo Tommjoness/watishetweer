@@ -488,6 +488,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
          voorkeur opnieuw tot bron van waarheid te maken. */
       const hubResponse=await page.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
       assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
+      /* Sinds K1 staat de weergavekeuze van /weer/ in het gedeelde menu: eerst openen. */
+      await page.click("#wiw-menu > summary",{timeout:5000});
       await page.waitForSelector("#thema",{state:"visible",timeout:5000});
       /* /weer/ heeft dezelfde Licht | Auto | Donker-keuze als de weerpagina's. */
       const hubState=await page.evaluate(()=>{

@@ -216,7 +216,7 @@ ${STIJL}
 ${witteKerst?WK.STIJL:""}
 </head>
 <body>${witteKerst?'<div class="kaart breed wk-page">':'<main class="kaart breed">'}
-${witteKerst?WK.HEADER+"\n<main>":""}
+${witteKerst?"<main>":""}
 <p${witteKerst?' class="wk-return"':""}><a href="/">← Terug naar het weer</a></p>
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
 ${witteKerst?"":`<p>${esc(cfg.intro)}</p>\n`}<section class="seizoen-status${witteKerst?" wk-antwoord":""}" aria-labelledby="seizoen-kop" aria-live="polite">
@@ -240,7 +240,6 @@ ${cfg.soort==="vakantie"?`<script defer src="/${REGIO_ASSET}"></script>`:""}
 <script>
 ${RUNTIME_BRON}
 </script>
-${witteKerst?WK.THEMA_SCRIPT:""}
 </body>
 </html>
 `;

@@ -146,7 +146,8 @@ assert(html.includes('<link rel="canonical" href="https://watishetweer.nl/witte-
 assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 /* Ontwerp uitsluitend voor Witte kerst; broncontracten, taal en runtime blijven intact. */
 assert(html.includes('<div class="kaart breed wk-page">'),"Witte kerst gebruikt de geïsoleerde ontwerplaag");
-assert(html.includes('id="wk-licht"')&&html.includes('id="wk-auto"')&&html.includes('id="wk-donker"'),"zichtbare themabediening Licht/Auto/Donker");
+/* Sinds K1 komen menu, logo en weergavekeuze uit de gedeelde sitekop (postbuild); de generator levert geen eigen kop meer. */
+assert(!html.includes('class="wk-header"')&&!html.includes('name="wk-thema"')&&!html.includes('class="wk-menu"'),"geen eigen kop of weergavebalk meer in de generator");
 assert(html.includes('class="wk-vragen"')&&html.includes('class="wk-footer"'),"uitleg en footer bestaan");
 /* G2-B: eerst het antwoord, dan de tijdlijn; geen blauwe kaart, gloed of kaart in een kaart. */
 assert(!/wk-hero|wk-note|wk-cards|radial-gradient|linear-gradient\(115deg/.test(html),"geen hero-kaart, statuskaart, kaartenrij of gloed meer");

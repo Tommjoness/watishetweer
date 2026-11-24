@@ -7,24 +7,6 @@ const STIJL=String.raw`
 .kaart.breed.wk-page{max-width:1184px;padding:0 28px 48px;border:0;background:transparent}
 .wk-page{--wk-sky-a:#dfe8e8;--wk-sky-b:#e8edef;--wk-sky-c:#f6f6f3;--wk-line:#a9b9b0;--wk-overlay:rgba(255,255,255,.56)}
 html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sky-c:#1d2a2a;--wk-line:#607269;--wk-overlay:rgba(20,27,25,.86)}
-.wk-page .wk-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px;min-height:92px;border-bottom:1px solid var(--rule)}
-.wk-brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);font-size:16px;font-weight:700;letter-spacing:-.035em;text-decoration:none;white-space:nowrap}
-.wk-brandmark{position:relative;display:inline-block;width:28px;height:28px;flex:none;border:2px solid currentColor;border-radius:50%;overflow:hidden}
-.wk-brandmark:after{content:"";position:absolute;left:-5px;right:-5px;bottom:4px;height:14px;border-top:2px solid currentColor;border-radius:70% 70% 0 0;transform:rotate(-17deg)}
-.wk-menu{justify-self:end;position:relative;z-index:3}
-.wk-menu summary{display:flex;align-items:center;justify-content:center;min-width:46px;min-height:46px;padding:8px 14px;border:1px solid var(--rule);background:var(--sheet);cursor:pointer;list-style:none;font:600 13px/1.3 var(--sans)}
-.wk-menu summary::-webkit-details-marker{display:none}.wk-menu summary::marker{content:""}
-.wk-menu[open] summary{border-color:var(--wk-line)}
-/* G2-B: de weergavekeuze staat in het menu, niet meer als balk bovenaan. */
-.wk-menu .wk-paneel{position:absolute;top:calc(100% + 6px);right:0;display:grid;gap:10px;width:260px;max-width:calc(100vw - 32px);padding:8px 14px 14px;border:1px solid var(--rule);background:var(--sheet);box-shadow:0 10px 26px rgba(0,0,0,.07)}
-.wk-menu nav{display:grid}
-.wk-menu nav a{display:flex;align-items:center;min-height:44px;padding:7px 4px;color:var(--ink);font-size:14px;text-decoration:none;border-bottom:1px solid var(--rule)}
-.wk-menu nav a:last-child{border-bottom:0}.wk-menu nav a:hover{text-decoration:underline;text-underline-offset:3px}
-.wk-theme{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;padding:3px;border:1px solid var(--rule);background:var(--paper);border-radius:7px}
-.wk-theme input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.wk-theme label{display:inline-flex;align-items:center;justify-content:center;min-width:0;min-height:44px;padding:7px 9px;cursor:pointer;border-radius:5px;font:500 13px/1.2 var(--sans);color:var(--ink-70)}
-.wk-theme input:checked+label{background:var(--sheet);color:var(--ink);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.wk-theme input:focus-visible+label{outline:2px solid var(--ink);outline-offset:2px}
 .wk-return{margin:18px 0 20px!important;font-size:14px}
 .wk-return a{text-underline-offset:3px}
 /* G2-B (eigenaar 22 en 23 november): eerst het antwoord, dan de tijdlijn; geen blauwe kaart,
@@ -72,61 +54,19 @@ html[data-thema="donker"] .wk-page .wk-lead{color:var(--ink)}
 .wk-footer{margin-top:36px;padding:26px 0;border-top:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-70)}
 .wk-footer nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .wk-footer nav a{display:inline-flex;align-items:center;min-height:44px;color:var(--ink-70)}
-.wk-page a:focus-visible,.wk-page summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.wk-page a:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 @media(max-width:600px){
  .kaart.breed.wk-page{padding:0 16px 28px}
- .wk-page .wk-header{grid-template-columns:minmax(0,1fr) auto;row-gap:12px;column-gap:12px;padding:14px 0;min-height:0}
- .wk-brand{font-size:15px}.wk-brandmark{width:26px;height:26px}
- .wk-menu{grid-column:2;grid-row:1}
  .wk-page .wk-guide>h2,.wk-page .wk-related>h2{font-size:27px}
  .wk-vragen{grid-template-columns:1fr;gap:22px}
  .wk-page .wk-qa h2{font-size:21px}
  .wk-page .wk-related .seizoen-zieook a{flex:1 1 125px}
  .wk-footer{align-items:flex-start;flex-direction:column;gap:2px}
 }
-@media(max-width:345px){.wk-brand{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.wk-page *{scroll-behavior:auto}}
 </style>`;
-const HEADER=String.raw`
-<header class="wk-header">
-<a class="wk-brand" href="/" aria-label="watishetweer.nl" translate="no"><span class="wk-brandmark" aria-hidden="true"></span><span>watishetweer.nl</span></a>
-<details class="wk-menu"><summary>Menu</summary>
-<div class="wk-paneel">
-<nav aria-label="Menu"><a href="/">Actueel weer</a><a href="/maan/">De maan vandaag</a><a href="/nachtzicht/">Sterren kijken</a><a href="/kerstvakantie/">Kerstvakantie</a><a href="/oud-en-nieuw/">Oud en nieuw</a><a href="/over/">Over deze site</a></nav>
-<div class="wk-theme" role="group" aria-label="Weergave kiezen">
-<input type="radio" name="wk-thema" id="wk-licht" value="licht"><label for="wk-licht">Licht</label>
-<input type="radio" name="wk-thema" id="wk-auto" value="auto" checked><label for="wk-auto">Auto</label>
-<input type="radio" name="wk-thema" id="wk-donker" value="donker"><label for="wk-donker">Donker</label>
-</div>
-</div>
-</details>
-</header>`;
+/* De kop (menu, logo, weergavekeuze) komt sinds K1 uit de gedeelde sitekop (apply-sitekop-20261124.js). */
 const FOOTER=String.raw`<footer class="wk-footer"><span translate="no">© watishetweer.nl</span><nav aria-label="Informatie"><a href="/over/">Over deze site</a> <span aria-hidden="true">·</span> <a href="/privacy">Privacy &amp; gegevens</a></nav></footer>`;
-const THEMA_SCRIPT=String.raw`<script>
-/* De bestaande sessievoorkeur is leidend; alleen deze pagina toont de aanvullende bediening. */
-(()=>{try{
- const KEY="weerbriefing.thema.sessie",LEGACY="weerbriefing.thema";
- const lees=(s,k)=>{try{return JSON.parse(s.getItem(k));}catch(e){return null;}};
- const sessie=lees(sessionStorage,KEY),oud=lees(localStorage,LEGACY);
- let keuze=["auto","licht","donker"].includes(sessie)?sessie:["licht","donker"].includes(oud)?oud:"auto";
- const systeem=typeof matchMedia==="function"?matchMedia("(prefers-color-scheme: dark)"):null;
- const pas=()=>{
-  const donker=keuze==="donker"||(keuze==="auto"&&!!(systeem&&systeem.matches));
-  if(keuze!=="auto"||donker)document.documentElement.setAttribute("data-thema",donker?"donker":"licht");
-  else document.documentElement.removeAttribute("data-thema");
-  const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta)meta.setAttribute("content",donker?"#0B120F":"#F4F5F3");
- };
- const radio=document.getElementById("wk-"+keuze);if(radio)radio.checked=true;
- for(const el of document.querySelectorAll('input[name="wk-thema"]'))el.addEventListener("change",()=>{
-  if(!el.checked)return;keuze=el.value;
-  try{sessionStorage.setItem(KEY,JSON.stringify(keuze));localStorage.removeItem(LEGACY);}catch(e){}
-  pas();
- });
- if(systeem){const volg=()=>pas();if(systeem.addEventListener)systeem.addEventListener("change",volg);else if(systeem.addListener)systeem.addListener(volg);}
- pas();
-}catch(e){}})();
-</script>`;
 /* Tijdlijn van de officiële witte kersten (G2-B). Statisch bij de build; posities in procenten.
    Ieder jaartal hangt met een streepje aan zijn stip, in één van vier rijen (onder/boven, kort/lang).
    De rij wordt gekozen voor de smalste baan (ongeveer 200px bij 320px schermbreedte) met minstens
@@ -158,4 +98,4 @@ function tijdlijnHtml(jaren,eind,begin=1901){
 <p class="wk-tijdlijn-voet">Laatste officiële witte kerst: ${jaren[jaren.length-1]}. Bron: KNMI.</p>
 </section>`;
 }
-module.exports={STIJL,HEADER,FOOTER,THEMA_SCRIPT,tijdlijnHtml,tijdlijnRijen};
+module.exports={STIJL,FOOTER,tijdlijnHtml,tijdlijnRijen};
