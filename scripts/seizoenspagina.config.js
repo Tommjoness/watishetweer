@@ -45,6 +45,8 @@ const SEIZOENSPAGINAS=Object.freeze([
     teksten:{
       /* Kort antwoord boven de melding zolang de kerstdagen buiten de verwachting vallen (G2-B). */
       labelVer:"Nog te vroeg",
+      /* Inleiding zodra (een van) de kerstdagen binnen de verwachting valt (E1, eigenaar 24 november). */
+      introVenster:"Krijgen we een witte kerst? Hieronder staat het verwachte sneeuwdek van Groningen tot Maastricht, per kerstdag zodra die binnen de 7-daagse verwachting valt.",
       /* Kort antwoord (G2-B, eigenaar 23 november): de datum waarop de verwachting verschijnt.
          Harde spatie vóór de punt: een regel begint nooit met "·". */
       ver:"Verwachting vanaf {datum}\u00a0· tweede kerstdag volgt op {datum2}",

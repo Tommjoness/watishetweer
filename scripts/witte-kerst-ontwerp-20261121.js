@@ -38,6 +38,9 @@ html[data-thema="donker"] .wk-page{--wk-sky-a:#273a40;--wk-sky-b:#2d3b40;--wk-sk
 .wk-page .wk-status #seizoen-melding{flex:1 1 30ch;min-width:0;max-width:62ch;margin:0;font:500 clamp(17px,1.7vw,20px)/1.4 var(--sans);color:var(--ink)}
 .wk-page .wk-antwoord .seizoen-aftellen{margin:14px 0 0}
 .wk-page .wk-antwoord #seizoen-verwachting:not(:empty){margin-top:14px}
+/* E1: binnen het venster staat de uitkomst als antwoord boven de aftelling. */
+.wk-page #seizoen-uitkomst:empty{display:none}
+.wk-page #seizoen-uitkomst .seizoen-samenvatting{max-width:62ch;margin:0 0 4px;font:500 clamp(17px,1.7vw,20px)/1.4 var(--sans);color:var(--ink)}
 .wk-tijdlijn{margin:0 0 30px}
 .wk-page .wk-tijdlijn h2{font:600 17px/1.3 var(--sans);margin:0 0 6px;max-width:none}
 .wk-as{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
