@@ -73,8 +73,8 @@ const TERUG=`<p class="wiw-sk-terug"><a href="/">← Terug naar het weer</a></p>
 function kopHtml(vandaag,thema){
   const menu=menuHtml(vandaag).replace('<a href="#nachtzicht">','<a href="/#nachtzicht">');
   if(!menu.endsWith("</nav></details>"))throw new Error("Menu-opbouw onverwacht; kan de weergavekeuze niet toevoegen.");
-  /* Weergavekeuze onderaan in het menupaneel, onder de vier groepen. */
-  const metThema=menu.slice(0,-"</nav></details>".length)+`</nav><div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div></details>`;
+  /* Weergavekeuze onderaan in het (uitklap)paneel, onder de vier groepen. */
+  const metThema=menu.slice(0,-"</nav></details>".length)+`<div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div></nav></details>`;
   return `<header class="wiw-sitekop" id="${KOP_ID}">${metThema}<a class="wiw-sk-merk" href="/" translate="no" aria-label="watishetweer.nl">${LOGO}<span>watishetweer.nl</span></a></header>`;
 }
 
@@ -114,7 +114,7 @@ html[data-thema="donker"] .wiw-sitekop{--wiw-sk-stip:#d2455d}
 .wiw-sk-terug{box-sizing:border-box;max-width:1184px;margin:16px auto 0;padding:0 20px;font:400 14px/1.4 var(--sans,"Instrument Sans",system-ui,sans-serif)}
 .wiw-sk-terug a{color:inherit;text-underline-offset:3px}
 /* Inhoud zonder kader, zoals Witte kerst. */
-html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(#wiw-sk){border-color:transparent!important;background:transparent!important;box-shadow:none!important}
+html body main.kaart:not(#wiw-sk),html body .kaart.breed:not(#wiw-sk),html body main.wrap:not(#wiw-sk){border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 @media(max-width:600px){.wiw-sitekop{padding:10px 16px;gap:12px}.wiw-sk-merk{font-size:19px}.wiw-sitekop .wiw-menu-paneel{max-width:calc(100vw - 32px)}.wiw-sk-terug{padding:0 16px}}
 @media(max-width:345px){.wiw-sk-merk{font-size:17px}.wiw-sk-logo{width:28px}}
 @media print{.wiw-sitekop{display:none}}

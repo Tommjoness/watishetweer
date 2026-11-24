@@ -42,7 +42,7 @@ function meet(){
   const logo=kop&&kop.querySelector(".wiw-sk-logo"),merk=kop&&kop.querySelector(".wiw-sk-merk");
   const weergave=kop&&kop.querySelector(".wiw-sk-weergave"),knoppen=weergave?[...weergave.querySelectorAll("button")]:[];
   const terug=[...document.querySelectorAll("a")].find(a=>/Terug naar het weer|Back to the weather|Alle Nationale Parken|All National Parks/.test(a.textContent));
-  const kaart=document.querySelector("main.kaart,.kaart.breed");
+  const kaart=document.querySelector("main.kaart,.kaart.breed,main.wrap");
   return {
     koppen:document.querySelectorAll("#wiw-sitekop").length,kopTop:kop?kop.getBoundingClientRect().top:null,
     knop:r(knop),logo:r(logo),stip:!!(logo&&logo.querySelector("circle")),merk:merk?merk.textContent.trim():"",
@@ -51,6 +51,9 @@ function meet(){
     knoppen:knoppen.map(k=>({t:k.textContent.trim(),z:zie(k),...(r(k)||{})})),
     groepen:menu?[...menu.querySelectorAll(".wiw-menu-groep>summary")].map(s=>s.textContent.trim()):[],
     weergaveNaGroepen:!!(weergave&&menu&&menu.querySelector("nav")&&(menu.querySelector("nav").compareDocumentPosition(weergave)&Node.DOCUMENT_POSITION_FOLLOWING)),
+    /* De weergavekeuze ligt binnen het uitklappaneel en onder de laatste groep; de kop zelf schuift niet op. */
+    binnenPaneel:(()=>{const p=r(menu&&menu.querySelector(".wiw-menu-paneel")),w=r(weergave),g=[...(menu?menu.querySelectorAll(".wiw-menu-groep"):[])].pop();if(!p||!w||!g)return false;const gb=g.getBoundingClientRect();return w.t>=p.t-1&&w.b<=p.b+1&&w.l>=p.l-1&&w.r<=p.r+1&&w.t>=gb.bottom-1;})(),
+    kopHoogte:kop?kop.getBoundingClientRect().height:0,
     terug:terug?{t:terug.textContent.trim(),z:zie(terug)}:null,
     kaartRand:kaart?getComputedStyle(kaart).borderTopColor:null,kaartAchter:kaart?getComputedStyle(kaart).backgroundColor:null,
     breed:document.documentElement.scrollWidth-innerWidth,thema:document.documentElement.getAttribute("data-thema"),
@@ -64,7 +67,8 @@ function meet(){
   const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   let n=0;
   try{
-    for(const pad of PAGINAS)for(const taal of ["nl","en"])for(const breedte of [390,1366]){
+    /* De 404 heeft geen taallaag (de hele pagina is Nederlands): alleen NL. */
+    for(const pad of PAGINAS)for(const taal of (pad==="/bestaat-niet/"?["nl"]:["nl","en"]))for(const breedte of [390,1366]){
       const context=await browser.newContext({viewport:{width:breedte,height:900},colorScheme:"light",locale:taal==="en"?"en-GB":"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage();const fouten=[];
       page.on("pageerror",e=>fouten.push(e.message));
@@ -90,6 +94,8 @@ function meet(){
         assert.equal(m.groepen.length,4,label+": verwacht vier menugroepen");
         if(taal==="en")assert.deepEqual(m.groepen,["Weather and places","Stars and night","Seasons and holidays","About and information"],label+": menugroepen niet vertaald "+JSON.stringify(m.groepen));
         assert(m.weergaveNaGroepen,label+": weergavekeuze staat niet onder de groepen");
+        assert(m.binnenPaneel,label+": weergavekeuze ligt niet binnen het uitklappaneel onder de groepen");
+        assert(m.kopHoogte<=80,label+": de kop groeit als het menu opengaat ("+m.kopHoogte+"px)");
         assert.equal(m.knoppen.length,3,label+": verwacht drie weergaveknoppen");
         assert(m.knoppen.every(k=>k.z&&k.h>=44&&k.l>=0&&k.r<=breedte),label+": weergaveknoppen niet zichtbaar, te klein of buiten beeld "+JSON.stringify(m.knoppen));
         /* Donker kiezen werkt en blijft bewaard; daarna weer Auto. */
@@ -97,7 +103,9 @@ function meet(){
         assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"donker",label+": Donker werkt niet");
         assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"donker",label+": keuze Donker niet bewaard");
         await page.click(".wiw-sk-weergave button:nth-child(1)");await page.waitForTimeout(150);
-        assert.equal(await page.evaluate(()=>document.documentElement.getAttribute("data-thema")),"licht",label+": Licht werkt niet");
+        /* Licht: "licht" (seizoens- en infopagina's) of geen kenmerk (Weer per plaats, bestaand theme-hub-gedrag); nooit donker. */
+        assert(["licht",null].includes(await page.evaluate(()=>document.documentElement.getAttribute("data-thema"))),label+": Licht werkt niet");
+        assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem("weerbriefing.thema.sessie"))),"licht",label+": keuze Licht niet bewaard");
         await page.click(".wiw-sk-weergave button:nth-child(2)");await page.waitForTimeout(150);
         /* Escape sluit het menu en zet de focus terug op de knop. */
         await page.keyboard.press("Escape");await page.waitForTimeout(100);

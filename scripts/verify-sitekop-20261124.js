@@ -30,7 +30,7 @@ for(const p of htmlBestanden(OUT)){
   assert.equal(tel(kop,'<details class="wiw-menu-groep" name="wiw-menu-groep">'),4,rel+": verwacht vier menugroepen");
   assert(kop.includes('class="wiw-sk-logo"')&&kop.includes('<circle')&&kop.includes('class="wiw-sk-merk" href="/" translate="no"'),rel+": logo (zonneboog met stip) of merklink ontbreekt");
   const w0=kop.indexOf('class="wiw-sk-weergave"');
-  assert(w0>kop.indexOf("</nav>"),rel+": weergavekeuze staat niet onder de menugroepen");
+  assert(w0>kop.lastIndexOf("</ul></details>")&&w0<kop.indexOf("</nav>"),rel+": weergavekeuze staat niet in het menupaneel onder de groepen");
   const weergave=kop.slice(w0);
   const knoppen=tel(weergave,"data-keuze=");
   assert.equal(knoppen,3,rel+": weergavekeuze heeft geen drie knoppen in het menu");
