@@ -185,6 +185,10 @@ function pagina(cfg,buildDag){
     ? (cfg.uitleg.vragen||[]).map(v=>`<article class="wk-qa"><h2>${esc(v.kop)}</h2><p>${esc(v.antwoord)}</p></article>`).join("\n")
     : cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
   const meldingHtml=`<p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>`;
+  /* Witte kerst (G2-B): eerst het antwoord (kort label plus de melding), dan de tijdlijn. */
+  const labelHtml=witteKerst?`<div class="wk-status"><span class="wk-label" id="seizoen-label"${runtime.labelTekst(t,cfg)?"":" hidden"}>${esc(runtime.labelTekst(t,cfg))}</span>${meldingHtml}</div>\n`:"";
+  /* Tijdlijn tot en met de laatst verstreken kerst (of de laatste witte kerst, als die later is). */
+  const tijdlijn=witteKerst?WK.tijdlijnHtml(cfg.uitleg.witteKersten,Math.max(t.jaar-1,...cfg.uitleg.witteKersten))+"\n":"";
   return `<!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -214,19 +218,16 @@ ${witteKerst?WK.STIJL:""}
 <body>${witteKerst?'<div class="kaart breed wk-page">':'<main class="kaart breed">'}
 ${witteKerst?WK.HEADER+"\n<main>":""}
 <p${witteKerst?' class="wk-return"':""}><a href="/">← Terug naar het weer</a></p>
-${witteKerst?'<section class="wk-hero"><div class="wk-hero-copy">':""}
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
-<p${witteKerst?' class="wk-lead"':""}>${esc(cfg.intro)}</p>
-${witteKerst?'</div><aside class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"><h2 id="wk-status-kop">Verwachtingsstatus</h2>'+meldingHtml+'</aside></section>':""}
-<section class="seizoen-status" aria-labelledby="seizoen-kop" aria-live="polite">
+${witteKerst?"":`<p>${esc(cfg.intro)}</p>\n`}<section class="seizoen-status${witteKerst?" wk-antwoord":""}" aria-labelledby="seizoen-kop" aria-live="polite">
 ${cfg.soort==="vakantie"?`<p class="klein" id="seizoen-regio">Landelijk overzicht van alle schoolvakantieregio's.</p>`:""}
-<p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
+${labelHtml}<p class="seizoen-aftellen" id="seizoen-aftellen" hidden></p>
 ${witteKerst?"":meldingHtml}
 <div id="seizoen-verwachting"></div>
 </section>
-${witteKerst?'<section class="wk-guide">':""}
+${tijdlijn}${witteKerst?`<p class="wk-lead">${esc(cfg.intro)}</p>\n<section class="wk-guide">`:""}
 <h2>${esc(cfg.uitleg.kop)}</h2>
-${witteKerst?'<div class="wk-cards">':""}
+${witteKerst?'<div class="wk-vragen">':""}
 ${uitleg}
 ${witteKerst?"</div>":""}
 ${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${witteKerst?'</section><section class="wk-related"><h2>Verder ontdekken</h2>':""}${zieOokHtml(cfg)}${witteKerst?'</section><section class="wk-weather">':""}<h2>Het weer voor jouw plaats</h2>

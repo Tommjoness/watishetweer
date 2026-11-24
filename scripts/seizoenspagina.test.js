@@ -42,7 +42,7 @@ assert.equal(t.jaar,2026);
 assert.equal(t.fase,"ver");
 assert.equal(t.vanaf,"2026-12-19");
 /* Audit 6 oktober (F03): eerste kerstdag verschijnt op 19, tweede op 20 december. */
-assert.equal(R.meldingTekst(t,kerst),"Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december.");
+assert.equal(R.meldingTekst(t,kerst),"Verwachting vanaf zaterdag 19 december\u00a0· tweede kerstdag volgt op zondag 20 december");
 assert.deepEqual(R.toestand("2026-12-19",kerst).dagen.map(d=>d.zichtbaar),[true,false],"19 december: alleen eerste kerstdag");
 assert.deepEqual(R.toestand("2026-12-20",kerst).dagen.map(d=>d.zichtbaar),[true,true],"20 december: beide kerstdagen");
 assert.equal(R.meldingTekst(R.toestand("2026-12-21",kerst),kerst),"","binnen het venster geen aparte melding boven de tabel");
@@ -138,6 +138,7 @@ const url=R.verwachtingUrl(kerst);
 assert(url.startsWith("https://api.open-meteo.com/v1/forecast?latitude=52.0989,"),url);
 assert(url.includes("&hourly=snow_depth")&&url.includes("&forecast_days=7")&&url.includes("&timezone=Europe%2FAmsterdam"),url);
 
+const vertalerKerst0=()=>require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
 /* Statische pagina op een builddag ver voor kerst. */
 const html=pagina(kerst,"2026-10-05");
 assert(html.includes("<title>Witte kerst 2026: krijgen we sneeuw met kerst? | watishetweer.nl</title>"));
@@ -146,14 +147,40 @@ assert(html.includes('<h1 id="seizoen-kop">Witte kerst 2026</h1>'));
 /* Ontwerp uitsluitend voor Witte kerst; broncontracten, taal en runtime blijven intact. */
 assert(html.includes('<div class="kaart breed wk-page">'),"Witte kerst gebruikt de geïsoleerde ontwerplaag");
 assert(html.includes('id="wk-licht"')&&html.includes('id="wk-auto"')&&html.includes('id="wk-donker"'),"zichtbare themabediening Licht/Auto/Donker");
-assert(html.includes('class="wk-hero"')&&html.includes('class="wk-cards"')&&html.includes('class="wk-footer"'),"hero, uitleg en footer bestaan");
+assert(html.includes('class="wk-vragen"')&&html.includes('class="wk-footer"'),"uitleg en footer bestaan");
+/* G2-B: eerst het antwoord, dan de tijdlijn; geen blauwe kaart, gloed of kaart in een kaart. */
+assert(!/wk-hero|wk-note|wk-cards|radial-gradient|linear-gradient\(115deg/.test(html),"geen hero-kaart, statuskaart, kaartenrij of gloed meer");
 assert.equal((html.match(/id="seizoen-melding"/g)||[]).length,1,"exact één bericht voor de bestaande runtime");
-assert(html.includes('class="wk-note" aria-labelledby="wk-status-kop" aria-live="polite"'),"dynamische status blijft een live regio voor schermlezers");
+assert(html.includes('<section class="seizoen-status wk-antwoord" aria-labelledby="seizoen-kop" aria-live="polite">'),"dynamische status blijft een live regio voor schermlezers");
+const antwoord=html.slice(html.indexOf('class="seizoen-status wk-antwoord"'),html.indexOf("</section>",html.indexOf('class="seizoen-status wk-antwoord"')));
+assert(antwoord.includes('<span class="wk-label" id="seizoen-label">Nog te vroeg</span><p id="seizoen-melding">'),"kort label en melding staan samen in de live regio");
+assert(html.indexOf('class="seizoen-status wk-antwoord"')<html.indexOf('class="wk-tijdlijn"')&&html.indexOf('class="wk-tijdlijn"')<html.indexOf('class="wk-lead"'),"volgorde: antwoord, tijdlijn, inleiding");
+assert(html.indexOf('<h1 id="seizoen-kop">')<html.indexOf('class="seizoen-status wk-antwoord"')&&!html.slice(html.indexOf('<h1 id="seizoen-kop">'),html.indexOf('class="seizoen-status wk-antwoord"')).includes("<p"),"het antwoord staat direct onder de paginakop");
+assert.deepEqual(kerst.uitleg.witteKersten,[1906,1938,1940,1950,1964,1981,2009,2010],"tijdlijn volgt de KNMI-lijst");
+for(const j of kerst.uitleg.witteKersten)assert(kerst.uitleg.vragen[1].antwoord.includes(String(j)),"tijdlijnjaar "+j+" staat ook in de KNMI-uitleg");
+assert(/sinds 1901 acht officiële witte kersten/.test(kerst.uitleg.vragen[1].antwoord)&&kerst.uitleg.witteKersten.length===8,"aantal in de tijdlijn en de uitleg is gelijk");
+assert.equal((html.match(/class="wk-pt"/g)||[]).length,8,"acht stippen");
+assert.equal((html.match(/class="wk-jl r\d"/g)||[]).length,8,"acht jaartallen met eigen streepje");
+assert(html.includes('<h2 id="wk-tijdlijn-kop">8 officiële witte kersten sinds 1901</h2>'),"tijdlijnkop");
+assert(html.includes('role="img" aria-label="Tijdlijn van de officiële witte kersten sinds 1901: 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010."'),"tijdlijn heeft een tekstalternatief");
+assert(html.includes('<span class="wk-eind" aria-hidden="true">2025</span>'),"as loopt tot de laatst verstreken kerst");
+assert(html.includes("Laatste officiële witte kerst: 2010. Bron: KNMI."),"laatste witte kerst en bron bij de tijdlijn");
+assert(!html.includes("De Bilt en zes andere plaatsen")&&html.includes("tonen we het verwachte sneeuwdek van Groningen tot Maastricht."),"intro noemt de spreiding van Groningen tot Maastricht");
+{
+  const wk=require("./witte-kerst-ontwerp-20261121.js");
+  assert.deepEqual(wk.tijdlijnRijen(kerst.uitleg.witteKersten,1901,2025),[0,0,1,2,0,1,0,1],"dicht bij elkaar liggende jaren krijgen een eigen rij");
+  assert.throws(()=>wk.tijdlijnHtml([1950,1940],2025),/oplopend/,"onlogische jaren breken de build");
+  const naKerst=pagina(kerst,"2026-12-28");
+  assert(naKerst.includes('<span class="wk-eind" aria-hidden="true">2026</span>'),"na kerst loopt de as tot en met die kerst");
+  const inVenster=pagina(kerst,"2026-12-20");
+  assert(inVenster.includes('<span class="wk-label" id="seizoen-label" hidden></span>'),"geen label zodra de verwachting zichtbaar is");
+}
 assert.equal((html.match(/id="seizoen-verwachting"/g)||[]).length,1,"één data- en foutcontainer");
 assert(!html.includes('Het weer, helder verteld')&&!html.includes('Zelfstandige ontwerpstudie'),"geen slogan of ontwerpnotities");
 assert(!html.includes('class="note-dot"')&&!html.includes('class="wk-dot"'),"geen als nul leesbaar statuspictogram");
 
-assert(html.includes("Vanaf zaterdag 19 december verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op zondag 20 december."));
+assert(html.includes("Verwachting vanaf zaterdag 19 december\u00a0· tweede kerstdag volgt op zondag 20 december</p>"),"kort antwoord met beide datums");
+assert.equal(vertalerKerst0().vertaal("Verwachting vanaf zaterdag 19 december\u00a0· tweede kerstdag volgt op zondag 20 december"),"Forecast from Saturday 19 December\u00a0· Boxing Day follows on Sunday 20 December","kort antwoord ook in het Engels");
 assert(html.includes("Krijgen we een witte kerst in 2026? Vanaf 19 december het verwachte sneeuwdek van Groningen tot Maastricht"),"description beantwoordt de zoekvraag en noemt de startdatum");
 assert(html.includes("gesloten sneeuwdek")&&html.includes("https://www.knmi.nl/"),"definitie met KNMI-bron");
 assert(html.includes("Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen"),"intro geeft een direct antwoord op de zoekvraag");
@@ -164,7 +191,11 @@ assert(html.includes("1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010")&&html.i
 assert(html.includes("https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"),"historische bron is zichtbaar");
 const vertalerKerst=require("../taal/vertaalkern.js").maakVertaler(require("../taal/en.js"));
 assert.match(vertalerKerst.vertaal(kerst.intro),/^Will we have a white Christmas\?/,"nieuwe intro wordt vertaald");
-assert.equal(vertalerKerst.vertaal("Verwachtingsstatus"),"Forecast status");
+assert.match(vertalerKerst.vertaal(kerst.intro),/forecast snow cover from Groningen to Maastricht\.$/,"spreiding ook in het Engels");
+assert.equal(vertalerKerst.vertaal("Nog te vroeg"),"Too early to tell");
+assert.equal(vertalerKerst.vertaal("8 officiële witte kersten sinds 1901"),"8 official white Christmases since 1901");
+assert.equal(vertalerKerst.vertaal("Tijdlijn van de officiële witte kersten sinds 1901: 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010."),"Timeline of official white Christmases since 1901: 1906, 1938, 1940, 1950, 1964, 1981, 2009 and 2010.");
+assert.equal(vertalerKerst.vertaal("Laatste officiële witte kerst: 2010. Bron: KNMI."),"Last official white Christmas: 2010. Source: KNMI.");
 assert.equal(vertalerKerst.vertaal("Verder ontdekken"),"Keep exploring");
 assert.equal(vertalerKerst.vertaal("Sneeuwdek onbekend"),"Snow cover unknown");
 assert.equal(vertalerKerst.vertaal("Of het een officiële witte kerst wordt, is nog niet te beoordelen: de sneeuwdekgegevens voor De Bilt zijn niet voor beide kerstdagen beschikbaar."),"An official white Christmas cannot yet be assessed: snow-cover data for De Bilt is not available for both Christmas days.");

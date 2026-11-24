@@ -806,15 +806,15 @@
 
     /* Seizoenspagina witte kerst (vaste teksten) */
     "Witte kerst": "White Christmas",
-    "Verwachtingsstatus": "Forecast status",
     "Verder ontdekken": "Keep exploring",
     "Informatie": "Information",
     "Sterren kijken in de Nationale Parken ›": "Stargazing in the Dutch national parks ›",
     "De maan vandaag ›": "The moon today ›",
     "De maan vandaag": "The moon today",
     "Sterren kijken": "Stargazing",
-    "Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.":
-      "Will we have a white Christmas? While Christmas is beyond the 7-day forecast, it is not possible to make a reliable prediction. Once each Christmas day falls within that range, we show the forecast snow cover for De Bilt and six other places.",
+    "Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek van Groningen tot Maastricht.":
+      "Will we have a white Christmas? While Christmas is beyond the 7-day forecast, it is not possible to make a reliable prediction. Once each Christmas day falls within that range, we show the forecast snow cover from Groningen to Maastricht.",
+    "Nog te vroeg": "Too early to tell",
     "Wanneer is het een witte kerst?": "When is it a white Christmas?",
     "Er is officieel sprake van een witte kerst wanneer er in De Bilt op beide kerstdagen een gesloten sneeuwdek wordt gemeten. Sinds 1901 gebeurde dat acht keer; de laatste keer was in 2010.":
       "Officially, it is a white Christmas when a continuous snow cover is measured in De Bilt on both Christmas Day and Boxing Day. Since 1901 this has happened eight times; the last time was in 2010.",
@@ -1135,6 +1135,10 @@
     [/^Vanaf (\d{1,2}) december het verwachte sneeuwdek van Groningen tot Maastricht, plus alle witte kersten sinds 1901\.$/,
       (m) => `From ${m[1]} December: the expected snow cover from Groningen to Maastricht, plus every white Christmas since 1901.`],
     [/^Witte kerst (\d{4}): krijgen we sneeuw met kerst\?$/, (m) => `White Christmas ${m[1]}: will we get snow at Christmas?`],
+    /* Tijdlijn witte kersten (G2-B): aantal en jaren komen uit de config. */
+    [/^(\d+) officiële witte kersten sinds (\d{4})$/, (m) => `${m[1]} official white Christmases since ${m[2]}`],
+    [/^Tijdlijn van de officiële witte kersten sinds (\d{4}): ((?:\d{4}, )*\d{4}) en (\d{4})\.$/, (m) => `Timeline of official white Christmases since ${m[1]}: ${m[2]} and ${m[3]}.`],
+    [/^Laatste officiële witte kerst: (\d{4})\. Bron: KNMI\.$/, (m) => `Last official white Christmas: ${m[1]}. Source: KNMI.`],
     [/^Vergelijk de lichtvervuiling en de verwachte omstandigheden voor vannacht in (\d+) geselecteerde nationale parken\.$/, (m) => `Compare light pollution and tonight's forecast conditions in ${m[1]} selected national parks.`],
     /* Uurselectie. Bij de najaarswissel komt één klokuur twee keer voor: "02:00 (zomertijd)" en "02:00 (wintertijd)". Het
        achtervoegsel staat direct achter de tijd in iedere zinsvorm (tooltipkop, schuifwaarde, knoplabel, melding); de zin
@@ -1259,6 +1263,8 @@
       (m) => `The forecast for ${KERSTDAG[m[4]]} will appear here from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}.`],
     [/^De verwachting voor (eerste kerstdag|tweede kerstdag) volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\.$/,
       (m) => `The ${KERSTDAG[m[1]]} forecast follows on ${dagVol(m[2])} ${m[3]} ${maand(m[4])}.`],
+    [/^Verwachting vanaf (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)[\s\u00a0]· tweede kerstdag volgt op (maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) (\d{1,2}) (januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)$/,
+      (m) => `Forecast from ${dagVol(m[1])} ${m[2]} ${maand(m[3])}\u00a0· Boxing Day follows on ${dagVol(m[4])} ${m[5]} ${maand(m[6])}`],
     [/^Nog (\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)\.$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}.`],
     /* Groot aftelgetal: het getal staat los, de rest ernaast (ontwerpronde 7 oktober). */
     [/^(\d+) dagen tot (eerste kerstdag|tweede kerstdag|oudejaarsdag)$/, (m) => `${m[1]} days to go until ${KERSTDAG[m[2]]}`],

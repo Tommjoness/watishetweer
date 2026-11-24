@@ -27,7 +27,7 @@ const SEIZOENSPAGINAS=Object.freeze([
     dagen:[{maand:12,dag:25,label:"Eerste kerstdag"},{maand:12,dag:26,label:"Tweede kerstdag"}],
     titel:"Witte kerst {jaar}: krijgen we sneeuw met kerst?",
     beschrijving:"Krijgen we een witte kerst in {jaar}? Vanaf {datum} het verwachte sneeuwdek van Groningen tot Maastricht, plus alle witte kersten sinds 1901.",
-    intro:"Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek in De Bilt en zes andere plaatsen.",
+    intro:"Krijgen we een witte kerst? Zolang de kerstdagen buiten de 7-daagse verwachting vallen, is dat niet betrouwbaar te zeggen. Zodra elke kerstdag binnen die termijn valt, tonen we het verwachte sneeuwdek van Groningen tot Maastricht.",
     uitleg:{
       kop:"Wanneer is het een witte kerst?",
       alineas:[
@@ -37,10 +37,17 @@ const SEIZOENSPAGINAS=Object.freeze([
         {kop:"Waarom is sneeuw met kerst niet altijd een officiële witte kerst?",antwoord:"Een paar sneeuwvlokken tijdens kerst zijn niet genoeg. Voor een officiële witte kerst moet in De Bilt op zowel 25 als 26 december om 09:00 uur een gesloten sneeuwdek liggen. Elders in Nederland kan het wit zijn terwijl aan die landelijke definitie niet wordt voldaan."},
         {kop:"Wanneer hadden we voor het laatst een witte kerst?",antwoord:"Volgens het KNMI waren er sinds 1901 acht officiële witte kersten: in 1906, 1938, 1940, 1950, 1964, 1981, 2009 en 2010. De laatste twee volgden dus direct op elkaar. In De Bilt lag er in 2009 op eerste kerstdag 9 centimeter sneeuw en op tweede kerstdag 4 centimeter; in 2010 op beide dagen 5 centimeter."}
       ],
-      bron:{naam:"KNMI",url:"https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"}
+      bron:{naam:"KNMI",url:"https://www.knmi.nl/nederland-nu/klimatologie/lijsten/wittekerst"},
+      /* De officiële witte kersten volgens de KNMI-lijst hierboven; voedt de tijdlijn (G2-B).
+         seizoenspagina.test.js bewaakt dat de vraagtekst dezelfde jaren en hetzelfde aantal noemt. */
+      witteKersten:[1906,1938,1940,1950,1964,1981,2009,2010]
     },
     teksten:{
-      ver:"Vanaf {datum} verschijnt hier de verwachting voor eerste kerstdag. De verwachting voor tweede kerstdag volgt op {datum2}.",
+      /* Kort antwoord boven de melding zolang de kerstdagen buiten de verwachting vallen (G2-B). */
+      labelVer:"Nog te vroeg",
+      /* Kort antwoord (G2-B, eigenaar 23 november): de datum waarop de verwachting verschijnt.
+         Harde spatie vóór de punt: een regel begint nooit met "·". */
+      ver:"Verwachting vanaf {datum}\u00a0· tweede kerstdag volgt op {datum2}",
       aftellenMeer:"Nog {n} dagen tot {dag}.",
       aftellenGetal:"dagen tot {dag}",
       aftellenMorgen:"Morgen is het {dag}.",
