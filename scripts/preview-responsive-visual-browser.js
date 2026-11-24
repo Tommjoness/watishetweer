@@ -331,6 +331,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
         }
       }
 
+      /* Sinds K2 (eigenaar 24 november) staat Licht/Auto/Donker in het menu (vanaf 1904px in de open zijbalk): eerst openen. */
+      if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.click("#wiw-menu > summary",{timeout:5000});
       await page.locator("#thema").scrollIntoViewIfNeeded();
       const themaVoor=await page.evaluate(()=>{
         const groep=document.getElementById("thema"),auto=document.getElementById("thema-auto"),schakelaar=document.getElementById("thema-switch"),zon=schakelaar?.querySelector(".wiw-theme-sun"),maan=schakelaar?.querySelector(".wiw-theme-moon"),r=groep?.getBoundingClientRect(),track=schakelaar?.querySelector(".wiw-theme-track")?.getBoundingClientRect(),thumb=schakelaar?.querySelector(".wiw-theme-thumb")?.getBoundingClientRect();
@@ -489,7 +491,8 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       const hubResponse=await page.goto(ROOT+"/weer/",{waitUntil:"domcontentloaded",timeout:30000});
       assert(hubResponse&&hubResponse.ok(),`${vp.naam}: /weer/ HTTP ${hubResponse&&hubResponse.status()}`);
       /* Sinds K1 staat de weergavekeuze van /weer/ in het gedeelde menu: eerst openen. */
-      await page.click("#wiw-menu > summary",{timeout:5000});
+      /* Vanaf 1440px staat het menu op subpagina's al open als zijbalk "Snel naar" (K2); anders eerst openen. */
+      if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.click("#wiw-menu > summary",{timeout:5000});
       await page.waitForSelector("#thema",{state:"visible",timeout:5000});
       /* /weer/ heeft dezelfde Licht | Auto | Donker-keuze als de weerpagina's. */
       const hubState=await page.evaluate(()=>{
@@ -521,6 +524,7 @@ const antwoord=(route,data)=>route.fulfill({status:200,contentType:"application/
       await page.waitForFunction(()=>document.querySelectorAll("#days .row.day:not(.kop)").length===7,null,{timeout:10000});
       assert.equal(await page.evaluate(()=>document.getElementById("thema")?.dataset.actieveThemaKeuze||""),"donker",`${vp.naam}: weatherpagina verliest sessiegebonden Donker-keuze na terugnavigatie`);
 
+      if(!await page.locator("#wiw-menu").evaluate(d=>d.open))await page.click("#wiw-menu > summary",{timeout:5000});
       await page.locator("#thema-auto").click();
       const autoNa=await page.evaluate(()=>{
         const lees=(store,key)=>{try{const raw=store.getItem(key);return raw==null?null:JSON.parse(raw);}catch(e){return null;}};

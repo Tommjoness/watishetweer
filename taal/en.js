@@ -273,6 +273,7 @@
     "Voeg deze plaats toe aan je lijst": "Add this place to your list",
     "Bezig": "Loading",
     "Weergave": "Appearance",
+    "Snel naar": "Quick links",
     "Weergave kiezen": "Choose appearance",
     "Licht": "Light",
     "Donker": "Dark",
