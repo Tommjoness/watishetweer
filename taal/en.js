@@ -1013,6 +1013,11 @@
     "Geschat op basis van de RIVM-kaart, voor een heldere, maanloze nacht.": "Estimated from the RIVM map, for a clear, moonless night.",
     "Bron": "Source",
     "Privacy en transparantie": "Privacy and transparency",
+    "Gebruik van deze site": "Using this site",
+    "watishetweer.nl is gratis en zonder account te gebruiken. We doen ons best om de informatie juist, actueel en begrijpelijk te tonen, maar we kunnen niet garanderen dat verwachtingen en andere gegevens altijd kloppen, volledig zijn of beschikbaar blijven. Gebruik de site als hulpmiddel, niet als enige basis voor beslissingen waarbij veiligheid, gezondheid of geld op het spel staat.":
+      "watishetweer.nl is free to use and needs no account. We do our best to show accurate, up-to-date and clear information, but we cannot guarantee that forecasts and other data are always correct, complete or available. Use the site as an aid, not as the only basis for decisions that involve safety, health or money.",
+    "De weergegevens komen van externe bronnen en vallen onder hun eigen licenties en voorwaarden; de bronnen staan bij de weergave en hierboven. Wil je de gegevens hergebruiken, haal ze dan rechtstreeks bij de bron. Zie je een fout of heb je een vraag, mail dan naar support@watishetweer.nl.":
+      "The weather data come from external sources and are subject to their own licences and terms; the sources are listed with the weather view and above. If you want to reuse the data, get them directly from the source. If you spot an error or have a question, email support@watishetweer.nl.",
     "watishetweer.nl brengt actuele weersinformatie en modelverwachtingen voor plaatsen wereldwijd overzichtelijk samen: in één oogopslag wat het weer nu doet en wat er de komende uren en dagen komt.":
       "watishetweer.nl brings together current weather information and model forecasts for places worldwide in one clear view, so you can see at a glance what the weather is doing now and what to expect over the coming hours and days.",
     "De site toont onder meer het actuele weer, neerslag in de komende uren, een 7-daagse verwachting, wind en windstoten, luchtkwaliteit, zonuren en een indicatie voor nachtzicht. De weergave gebruikt lokale tijd voor de gekozen plaats.":
