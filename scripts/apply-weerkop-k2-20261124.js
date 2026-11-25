@@ -49,7 +49,7 @@ html[data-thema="donker"] .wiw-bovenbalk{--wiw-sk-stip:#d2455d}
 @media(max-width:600px){.wiw-weer-merk{font-size:19px}}
 @media(max-width:345px){.wiw-weer-merk{font-size:17px}.wiw-weer-merk .wiw-sk-logo{width:28px}}
 /* Weergavekeuze in het menupaneel, onder de groepen (zelfde opmaak als de gedeelde kop van de subpagina's). */
-html body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-boven{display:block;flex:none;margin:0;min-width:0;border-top:1px solid var(--rule);padding:12px 0 14px}
+html body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-boven{display:block;flex:none;margin:0 0 6px;min-width:0;border-bottom:1px solid var(--rule);padding:12px 0 14px}
 html body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-label{display:block;margin:0 0 8px;font:600 13px/1 var(--sans);letter-spacing:0;text-transform:none;color:var(--ink-70)}
 /* Breedte zo dat de binnenmaat (zonder de rand van 2 × 1px) deelbaar is door drie: drie gelijke vakjes
    zonder afrondingsrest, zodat de licht/donker-schakelaar precies de hele driewegbediening overspant
@@ -66,9 +66,9 @@ html:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{content:"";positi
 html[data-thema="donker"]:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{background:rgba(0,0,0,.5)}
 @media(prefers-color-scheme:dark){html:not([data-thema="licht"]):not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{background:rgba(0,0,0,.5)}}
 .wiw-bovenbalk .wiw-menu>summary{position:relative;z-index:61}
-/* Zijbalk vanaf 1904px: "Snel naar", 276px breed, alle groepen open (menuruntime). */
+/* Zijbalk vanaf 1920px (eigenaar 25 november, gelijk aan de subpagina's): "Snel naar", 276px breed, alle groepen open (menuruntime). */
 .wiw-rail-kop{display:none}
-@media(min-width:1904px){
+@media(min-width:1920px){
   html.wiw-menu-rail .wiw-rail-kop{display:block;margin:4px 0 6px;font:500 22px/1.2 var(--display,"Newsreader",Georgia,serif);color:var(--ink)}
   html.wiw-menu-rail .wiw-menu-paneel{width:276px}
   html.wiw-menu-rail .wiw-menu-kop{cursor:default}
@@ -76,7 +76,26 @@ html[data-thema="donker"]:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::af
   html.wiw-menu-rail .wiw-menu-paneel ul{padding-left:0}
   html.wiw-menu-rail body>.sheet:not(#wiw-desktop-premium),
   html.wiw-menu-rail body>.seo-plaatsnav:not(#wiw-desktop-premium),
-  html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){margin-left:max(292px,calc(50vw - 800px))!important}
+  html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){margin-left:max(300px,calc(50vw - 800px))!important}
+}
+/* Weergavekeuze op de homepage in dezelfde vorm als op de subpagina's (eigenaar 25 november): afgeronde groep op
+   papierkleur, de actieve keuze als wit vlakje met een smalle papierrand (inset, zodat de vakjesbreedte van minstens
+   86px, de schakelaarmaten en de gedeelde lettergrootte en het lettergewicht van Auto/Licht/Donker gelijk blijven; de actieve keuze
+   verandert de typografische zwaarte niet), even hoog als op de
+   subpagina's (52px). */
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-control.wiw-theme-segmented-20260915{min-height:52px!important;height:52px!important;border-radius:7px!important;background:var(--paper)!important;overflow:hidden}
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-switch,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{min-height:50px!important;height:50px!important}
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{border-radius:7px!important;background:transparent!important;color:var(--ink-70)!important;box-shadow:none!important}
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="auto"] #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="licht"] .wiw-theme-sun,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="donker"] .wiw-theme-moon{background:var(--sheet)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px var(--paper),inset 0 -1px 4px -2px rgba(0,0,0,.12)!important}
+/* Lage vensters (≤960px hoog) vanaf 1920px: dezelfde compacte zijbalk als op de subpagina's (eigenaar 25 november),
+   zodat menu, weergavekeuze en "Snel naar" op beide op dezelfde hoogte staan. Aanraakschermen houden 44px-doelen. */
+@media(min-width:1920px) and (max-height:960px) and (pointer:fine){
+  html.wiw-menu-rail body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-boven{padding-top:8px}
+  html.wiw-menu-rail body .wiw-rail-kop{margin:0 0 2px;font-size:20px}
+  html.wiw-menu-rail body .wiw-menu-kop{min-height:34px}
+  html.wiw-menu-rail body .wiw-menu-groep+.wiw-menu-groep{margin-top:4px}
+  html.wiw-menu-rail body .wiw-menu-paneel ul{padding-bottom:4px}
+  html.wiw-menu-rail body .wiw-menu-paneel a{min-height:32px}
 }
 `;
 
@@ -113,9 +132,10 @@ function pasToe(html,rel){
   if(!(balk<menuEind&&menuEind<weergave))throw new Error(rel+": verwacht menu vóór de weergavekeuze in de bovenbalk.");
   let {blok,rest:uit}=knipWeergave(html,rel);
   uit=uit.replace(SNEL,"");
-  uit=uit.replace(NAV_OPEN,NAV_OPEN+RAIL_KOP);
+  /* Weergavekeuze bovenaan in het menupaneel, boven "Snel naar" (eigenaar 25 november). */
+  uit=uit.replace(NAV_OPEN,NAV_OPEN+blok+RAIL_KOP);
   const eind=uit.indexOf(MENU_EIND,uit.indexOf(BALK_OPEN));
-  uit=uit.slice(0,eind)+blok+MENU_EIND+MERK+uit.slice(eind+MENU_EIND.length);
+  uit=uit.slice(0,eind)+MENU_EIND+MERK+uit.slice(eind+MENU_EIND.length);
   if(uit.includes(H1_HOME))uit=uit.replace(H1_HOME,H1_HOME_VERBORGEN);
   /* Na de menulaag, vóór de voetlaag (die blijft de laatste stijllaag). */
   uit=uit.replace(`<style id="${VOET_STYLE_ID}">`,`<style id="${STYLE_ID}">\n${CSS}\n</style>\n<style id="${VOET_STYLE_ID}">`);

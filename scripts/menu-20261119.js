@@ -4,12 +4,13 @@
    voegt alleen toe wat <details> zelf niet doet:
    - Escape sluit het menu en zet de focus terug op de menuknop;
    - een klik buiten het menu of op een link in het menu sluit het;
-   - vanaf 1904px (genoeg papier naast het vel van 1600px) staat hetzelfde menu
-     permanent open als zijbalk links naast het vel; de knop is dan verborgen
+   - vanaf 1920px (zelfde grens als de subpagina's, eigenaar 25 november; daaronder zou de grafiek te smal worden) staat hetzelfde menu
+     permanent open als zijbalk links tegen de rand (zelfde plek als op de
+     subpagina's, eigenaar 25 november); de knop is dan verborgen
      (CSS). De zijbalk staat vast bij het scrollen en schuift mee omhoog zodra
      het einde van het vel in beeld komt, zodat hij nooit over de plaatscontext
      of de populaire plaatsen eronder valt;
-   - bij het verkleinen van het venster onder 1904px gaat het menu weer dicht;
+   - bij het verkleinen van het venster onder 1920px gaat het menu weer dicht;
    - de vier groepen zijn zelf ook <details> (titel klikbaar, links na een
      klik); er staat er één tegelijk open (name-attribuut, met dezelfde regel
      hier voor browsers zonder dat attribuut). In de zijbalk ("Snel naar",
@@ -18,7 +19,7 @@
    Er is één menu in de pagina; de zijbalk is hetzelfde element. */
 (function(root){
 "use strict";
-var RAIL_MIN=1904,RAIL_BREEDTE=276,RAIL_LUCHT=8,RAIL_BOVEN=48,RAIL_ONDER=16;
+var RAIL_MIN=1920,RAIL_BREEDTE=276,RAIL_LINKS=16,RAIL_BOVEN=16,RAIL_ONDER=16;
 function init(){
   var doc=root.document,menu=doc.getElementById("wiw-menu");
   if(!menu||menu.getAttribute("data-wiw-menu")==="klaar")return;
@@ -33,8 +34,11 @@ function init(){
     if(!rail()){paneel.style.left="";paneel.style.transform="";return;}
     var sheet=doc.querySelector(".sheet");if(!sheet)return;
     var s=sheet.getBoundingClientRect();
-    paneel.style.left=Math.max(RAIL_LUCHT,Math.round(s.left-RAIL_LUCHT-RAIL_BREEDTE))+"px";
-    var over=RAIL_BOVEN+paneel.offsetHeight+RAIL_ONDER-s.bottom;
+    /* Vast tegen de linkerrand, op dezelfde plek als de zijbalk op de subpagina's (eigenaar 25 november);
+       de bovenmaat komt uit de stylesheet (16px, bij een lage pagina 10px). */
+    paneel.style.left=RAIL_LINKS+"px";
+    var boven=parseFloat(root.getComputedStyle(paneel).top);if(!(boven>=0))boven=RAIL_BOVEN;
+    var over=boven+paneel.offsetHeight+RAIL_ONDER-s.bottom;
     paneel.style.transform=over>0?"translateY("+(-Math.ceil(over))+"px)":"";
   }
   function plan(){if(!gepland){gepland=true;(root.requestAnimationFrame||setTimeout)(plaats);}}

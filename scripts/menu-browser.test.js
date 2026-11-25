@@ -17,7 +17,7 @@
      een dichte groep heeft geen voorleesbare links;
    - alle bestemmingen bestaan als route of anker; Nachtzicht vanavond brengt de
      kop in beeld;
-   - vanaf 1904px: hetzelfde menu als zijbalk "Snel naar" (K2) in de
+   - vanaf 1920px (sinds 25 november, gelijk aan de subpagina's): hetzelfde menu als zijbalk "Snel naar" (K2) in de
      linkermarge, alle groepen uitgeklapt met de weergavekeuze eronder,
      leesbaar (titels ≥12px, links ≥14px, niets afgeknipt, vakjes ≥86px),
      zonder overlap met het vel, binnen het venster, vast bij scrollen en boven
@@ -119,9 +119,9 @@ const meet=()=>{
     return {kop:k?k.textContent.trim():"",label:id&&document.getElementById(id)===k,open:g.open,n:u?u.querySelectorAll("a").length:0,kopZicht:zie(k),kopFs:k?parseFloat(getComputedStyle(k).fontSize):0,kopKnip:k?k.scrollWidth>k.clientWidth+1:true,
       pijl:k?getComputedStyle(k,"::before").transform:"",linksZicht:u?[...u.querySelectorAll("a")].filter(zie).length:0,...(zie(k)?vak(k):{})};}):[];
   const voet=document.querySelector("footer"),sheet=document.querySelector(".sheet");
-  const merk=balk&&balk.querySelector(":scope > .wiw-weer-merk"),railKop=paneel&&paneel.querySelector(".wiw-rail-kop"),laatsteGroep=paneel?[...paneel.querySelectorAll(".wiw-menu-groep")].pop():null;
+  const merk=balk&&balk.querySelector(":scope > .wiw-weer-merk"),railKop=paneel&&paneel.querySelector(".wiw-rail-kop"),eersteGroep=paneel?paneel.querySelector(".wiw-menu-groep"):null;
   return {aantalMenus:document.querySelectorAll("#wiw-menu,.wiw-menu").length,merk:zie(merk)?r(merk):null,merkTekst:merk?merk.textContent.trim():"",snelNacht:document.querySelectorAll(".wiw-snel-nachtzicht").length,
-    railKop:zie(railKop)?railKop.textContent.trim():"",themaOnderGroepen:!!(thema&&laatsteGroep&&zie(thema)&&thema.getBoundingClientRect().top>=laatsteGroep.getBoundingClientRect().bottom-1),inBalk:!!(balk&&menu&&balk.firstElementChild===menu),themaInMenu:!!(menu&&thema&&menu.contains(thema)),themaInBalk:!!(balk&&thema&&balk.contains(thema)),
+    railKop:zie(railKop)?railKop.textContent.trim():"",themaBovenGroepen:!!(thema&&eersteGroep&&zie(thema)&&thema.getBoundingClientRect().bottom<=eersteGroep.getBoundingClientRect().top+1&&(!zie(railKop)||thema.getBoundingClientRect().bottom<=railKop.getBoundingClientRect().top+1)),inBalk:!!(balk&&menu&&balk.firstElementChild===menu),themaInMenu:!!(menu&&thema&&menu.contains(thema)),themaInBalk:!!(balk&&thema&&balk.contains(thema)),
     open:!!(menu&&menu.open),rail:document.documentElement.classList.contains("wiw-menu-rail"),knop:zie(knop)?r(knop):null,paneel:r(paneel),paneelZicht:zie(paneel),
     themaGeknipt:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].some(s=>{const e=document.querySelector(s);return !!e&&zie(e)&&e.scrollWidth>e.clientWidth+1;}),
     thema:zie(thema)?r(thema):null,segs:["#thema .wiw-theme-sun","#thema-auto","#thema .wiw-theme-moon"].map(s=>{const e=document.querySelector(s);return e?e.getBoundingClientRect().width:0;}),balk:r(balk),hero:r(".hero"),sheet:r(sheet),ctx:r(".seo-route-context"),plaatsnav:r(".seo-plaatsnav"),
@@ -176,7 +176,7 @@ async function loopGroepen(page,label,eis){
   const DESKTOP_HERO={1024:221,1366:208,1440:211};
   try{
     const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[450,900,"light","nl"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
-      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1904,1080,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
+      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1536,864,"light","nl"],[1600,900,"light","nl"],[1904,1080,"light","nl"],[1920,900,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
       /* aanraakscherm op desktopbreedte en een laag breed venster */
       [1024,768,"light","nl",true],[1920,1080,"light","nl",true],[1920,640,"light","nl"]];
     for(const [w,h,schema,taal,aanraak] of gevallen){
@@ -192,7 +192,7 @@ async function loopGroepen(page,label,eis){
         if(m.knop)assert(m.merk.left>=m.knop.right&&Math.abs((m.merk.top+m.merk.bottom)/2-(m.knop.top+m.knop.bottom)/2)<=3,`${label}: logo staat niet rechts naast de menuknop`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
         assert.equal(m.groepen.length,4,`${label}: verwacht vier groepen`);
-        assert(m.groepen.every(g=>g.kop&&g.label&&g.n>=2&&g.open===(w>=1904)),`${label}: groep zonder klikbare titel als label, met te weinig links, of open/dicht verkeerd (zijbalk: alles open): ${JSON.stringify(m.groepen.map(g=>[g.kop,g.label,g.n,g.open]))}`);
+        assert(m.groepen.every(g=>g.kop&&g.label&&g.n>=2&&g.open===(w>=1920)),`${label}: groep zonder klikbare titel als label, met te weinig links, of open/dicht verkeerd (zijbalk: alles open): ${JSON.stringify(m.groepen.map(g=>[g.kop,g.label,g.n,g.open]))}`);
         for(const l of m.links)assert(bestaat(l.href),`${label}: bestemming bestaat niet: ${l.href}`);
         assert.equal(new Set(m.links.map(l=>l.href)).size,m.links.length,`${label}: dubbele bestemming in het menu`);
         assert.equal(m.links.length,15,`${label}: verwacht 15 bestemmingen`);
@@ -205,23 +205,23 @@ async function loopGroepen(page,label,eis){
           assert(m.voetTekst.includes(v),`${label}: footer mist '${v}'`);
         assert(!m.voetHrefs.some(h=>/^\/(witte-kerst|oud-en-nieuw|kerstvakantie|voorjaarsvakantie|meivakantie|zomervakantie|herfstvakantie|nachtzicht|maan)\//.test(h)),`${label}: footer bevat nog seizoens- of nachtlinks: ${m.voetHrefs.join(", ")}`);
         assert(m.ctx&&m.plaatsnav,`${label}: plaatscontext of populaire plaatsen ontbreekt`);
-        const minDoel=w<=900||touch?44:w>=1904?30:36;
+        const minDoel=w<=900||touch?44:w>=1920?30:36;
         /* Titels: zichtbaar zodra het menu open is (zijbalk: altijd), met pijltje naar rechts. */
         const titels=(x,lbl)=>{
           assert(x.groepen.every(g=>g.kopZicht&&g.kopFs>=12&&!g.kopKnip&&g.h>=minDoel-0.5&&g.pijl&&g.pijl!=="none"),`${lbl}: groepstitels niet zichtbaar, te klein, afgeknipt of zonder pijltje: ${JSON.stringify(x.groepen.map(g=>[g.kop,g.kopZicht,g.kopFs,Math.round(g.h||0),g.pijl]))}`);
           assert.equal(x.links.filter(l=>l.zicht).length,0,`${lbl}: links zichtbaar terwijl alle groepen dicht zijn`);
         };
-        if(w>=1904){
+        if(w>=1920){
           /* Zijbalk "Snel naar" (K2): alle groepen open, links zichtbaar, weergavekeuze eronder. */
           assert(m.rail&&m.open&&m.paneelZicht&&!m.knop,`${label}: zijbalk niet zichtbaar of menuknop nog zichtbaar`);
           assert.equal(m.railKop,taal==="en"?"Quick links":"Snel naar",`${label}: kop van de zijbalk ontbreekt of is niet vertaald`);
-          assert(m.paneel.left>=7.5&&m.paneel.right<=m.sheet.left-7.5,`${label}: zijbalk valt niet in de linkermarge (${Math.round(m.paneel.left)}–${Math.round(m.paneel.right)}, vel vanaf ${Math.round(m.sheet.left)})`);
+          assert(Math.abs(m.paneel.left-16)<=1&&Math.abs(m.paneel.top-(h<=960?10:16))<=1&&m.paneel.right<=m.sheet.left-7.5,`${label}: zijbalk valt niet in de linkermarge (${Math.round(m.paneel.left)}–${Math.round(m.paneel.right)}, vel vanaf ${Math.round(m.sheet.left)})`);
           assert.equal(m.navLabel,"Menu",`${label}: navigatie heeft geen naam`);
           assert(m.groepen.every(g=>g.kopZicht&&g.kopFs>=12&&!g.kopKnip&&g.h>=minDoel-0.5&&g.linksZicht===g.n),`${label}: groepstitels of links in de zijbalk niet zichtbaar, te klein of afgeknipt: ${JSON.stringify(m.groepen.map(g=>[g.kop,g.kopZicht,g.kopFs,Math.round(g.h||0),g.linksZicht,g.n]))}`);
           assert.equal(m.links.filter(l=>l.zicht).length,15,`${label}: niet alle 15 bestemmingen zichtbaar in de zijbalk`);
           for(const l of m.links)assert(l.fs>=14&&!l.knip&&l.r<=m.sheet.left-7.5&&l.h>=minDoel-0.5,`${label}: zijbalklink '${l.t}' onleesbaar, afgeknipt, over het vel of te klein (${l.fs}px, ${Math.round(l.h)}px hoog)`);
           assert(m.paneel.bottom<=h+1,`${label}: zijbalk loopt onder het venster door (${Math.round(m.paneel.bottom)} > ${h})`);
-          assert(m.themaInMenu&&m.themaOnderGroepen&&!m.themaGeknipt&&m.segs.every(x=>x>=86),`${label}: weergavekeuze niet onder de groepen in de zijbalk, afgeknipt of vakjes te smal (${m.segs.map(Math.round).join("/")})`);
+          assert(m.themaInMenu&&m.themaBovenGroepen&&!m.themaGeknipt&&m.segs.every(x=>x>=86),`${label}: weergavekeuze niet bovenaan (boven "Snel naar" en de groepen) in de zijbalk, afgeknipt of vakjes te smal (${m.segs.map(Math.round).join("/")})`);
           const ax0=await axMenu(page);
           assert(ax0.nav&&ax0.groepen.length===4&&ax0.groepen.every(g=>g.uitgeklapt===true)&&ax0.links===15,`${label}: schermlezerstructuur zijbalk klopt niet: ${JSON.stringify(ax0)}`);
           /* Weergavekeuze in de zijbalk bereikbaar (ook als de zijbalk moet scrollen) en werkend. */
@@ -257,7 +257,8 @@ async function loopGroepen(page,label,eis){
           /* Sinds K2 staan alle groepen open: in een laag venster (1920×640) is de zijbalk hoger dan de ruimte boven het
              einde van het vel. Dan schuift hij (bestaand gedrag) met het vel mee omhoog en sluit hij precies aan op het einde
              van het vel; past hij wel, dan blijft hij helemaal in beeld. */
-          const past=48+o2.paneel.height+16<=o2.sheet.bottom+1;
+          /* Bovenmaat van de zijbalk: 16px, bij een lage pagina (≤960px) 10px, zoals op de subpagina's (eigenaar 25 november). */
+          const past=(h<=960?10:16)+o2.paneel.height+16<=o2.sheet.bottom+1;
           assert(o2.paneel.bottom<=o2.sheet.bottom-15&&(past?o2.paneel.top>=-1:Math.abs(o2.paneel.bottom-(o2.sheet.bottom-16))<=2),`${label}: zijbalk na dichtklikken onderaan verkeerd geplaatst (${Math.round(o2.paneel.top)}–${Math.round(o2.paneel.bottom)}, vel tot ${Math.round(o2.sheet.bottom)}, ${past?"past":"past niet, hoort aan te sluiten"})`);
           /* Wisselen van venstergrootte: zijbalk -> uitklapmenu (alles dicht, één groep tegelijk) -> zijbalk (alles open) */
           await page.setViewportSize({width:1366,height:768});await sleep(300);
@@ -288,8 +289,8 @@ async function loopGroepen(page,label,eis){
           titels(o,label);
           assert(o.paneel.top>=o.knop.bottom-1&&o.paneel.left>=-1&&o.paneel.right<=w+1&&o.paneel.bottom<=h+1,`${label}: menupaneel valt buiten beeld of over de knop`);
           assert(Math.abs(o.hero.ptop-m.hero.ptop)<=1,`${label}: openen verschuift de temperatuur`);
-          /* Weergavekeuze in het open menu onder de groepen, met dezelfde maten als voorheen in de bovenbalk. */
-          assert(o.thema&&o.themaOnderGroepen&&o.thema.left>=o.paneel.left&&o.thema.right<=o.paneel.right+1,`${label}: Licht/Auto/Donker staat niet onder de groepen in het menupaneel`);
+          /* Weergavekeuze in het open menu bovenaan, boven de groepen (eigenaar 25 november), met dezelfde maten als voorheen in de bovenbalk. */
+          assert(o.thema&&o.themaBovenGroepen&&o.thema.left>=o.paneel.left&&o.thema.right<=o.paneel.right+1,`${label}: Licht/Auto/Donker staat niet bovenaan, boven de groepen in het menupaneel`);
           assert(o.thema.width>=242,`${label}: Licht/Auto/Donker te smal (${Math.round(o.thema.width)}px)`);
           const keuzeBreedte=o.thema.width;
           assert(!o.themaGeknipt,`${label}: woord in Licht/Auto/Donker afgeknipt`);
@@ -304,11 +305,15 @@ async function loopGroepen(page,label,eis){
           await page.keyboard.press("Escape");await sleep(100);
           o=await page.evaluate(meet);
           assert(!o.open&&/SUMMARY/.test(o.focus),`${label}: Escape sluit niet of zet de focus niet terug (${o.open}, ${o.focus})`);
-          /* Toetsenbord: Enter op de knop, Tab naar de eerste titel, Enter opent die groep, Spatie op de knop sluit */
+          /* Toetsenbord: Enter op de knop; Tab gaat eerst langs de weergavekeuze (bovenaan sinds 25 november, eigenaar)
+             en daarna naar de eerste titel; Enter opent die groep, Spatie op de knop sluit */
           await page.focus("#wiw-menu > summary");await page.keyboard.press("Enter");await sleep(100);
           assert((await page.evaluate(meet)).open,`${label}: Enter opent het menu niet`);
           await page.keyboard.press("Tab");
-          assert(await page.evaluate(s=>document.activeElement===document.querySelector(s),KOP(0)),`${label}: Tab gaat niet naar de eerste groepstitel`);
+          assert(await page.evaluate(()=>!!document.activeElement&&!!document.activeElement.closest("#thema")),`${label}: Tab gaat niet eerst naar de weergavekeuze bovenaan het menu`);
+          let stappen=0;
+          while(stappen<4&&await page.evaluate(()=>!!document.activeElement&&!!document.activeElement.closest("#thema"))){await page.keyboard.press("Tab");stappen++;}
+          assert(await page.evaluate(s=>document.activeElement===document.querySelector(s),KOP(0)),`${label}: Tab gaat na de weergavekeuze niet naar de eerste groepstitel`);
           await page.keyboard.press("Enter");await sleep(100);
           assert((await page.evaluate(meet)).groepen[0].open,`${label}: Enter opent de groep niet`);
           await page.keyboard.press("Tab");
@@ -356,5 +361,5 @@ async function loopGroepen(page,label,eis){
     }
   }finally{await browser.close();server.close();}
   regels.forEach(r=>console.log("MENU "+r));
-  console.log("Menu OK: één menu met logo in de bovenbalk op 320–1440px (open/dicht met muis, toetsenbord, Escape, buiten klikken en links; Licht/Auto/Donker onder de groepen), vier uitklapbare titels met één groep tegelijk open, zijbalk \"Snel naar\" vanaf 1904px (alles open, weergavekeuze eronder, vast, leesbaar, binnen het venster, geen overlap, wisselt met de venstergrootte), NL/EN, licht/donker, aanraakscherm, footer en eerste scherm.");
+  console.log("Menu OK: één menu met logo in de bovenbalk op 320–1440px (open/dicht met muis, toetsenbord, Escape, buiten klikken en links; Licht/Auto/Donker bovenaan, boven de groepen), vier uitklapbare titels met één groep tegelijk open, zijbalk \"Snel naar\" vanaf 1904px (alles open, weergavekeuze eronder, vast, leesbaar, binnen het venster, geen overlap, wisselt met de venstergrootte), NL/EN, licht/donker, aanraakscherm, footer en eerste scherm.");
 })().catch(e=>{console.error(e);process.exit(1);});

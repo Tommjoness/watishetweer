@@ -8,7 +8,7 @@
    - Donker/Licht werkt en wordt bewaard; Escape sluit het menu en zet de focus terug;
    - er is een weg terug (naar het weer, of op parkpagina's naar de parken);
    - de inhoud staat niet in een kader; geen horizontale overflow en geen runtimefouten;
-   - vanaf 1440px (K2): zijbalk "Snel naar" links, alle groepen open, weergavekeuze eronder,
+   - vanaf 1920px (K2; grens sinds 25 november gelijk aan de homepage): zijbalk "Snel naar" links, alle groepen open, weergavekeuze erboven,
      niets van kop of inhoud eronder; daaronder het uitklapmenu met gedimde achtergrond.
    Plus de 404-pagina zoals cloudflare-output.js hem publiceert. Draait op het finale artifact. */
 
@@ -52,9 +52,9 @@ function meet(){
     weergaveZichtbaar:zie(weergave),open:!!(menu&&menu.open),
     knoppen:knoppen.map(k=>({t:k.textContent.trim(),z:zie(k),...(r(k)||{})})),
     groepen:menu?[...menu.querySelectorAll(".wiw-menu-groep>summary")].map(s=>s.textContent.trim()):[],
-    weergaveNaGroepen:!!(weergave&&menu&&menu.querySelector("nav")&&(menu.querySelector("nav").compareDocumentPosition(weergave)&Node.DOCUMENT_POSITION_FOLLOWING)),
+    weergaveBovenGroepen:!!(weergave&&menu&&menu.querySelector(".wiw-menu-groep")&&(menu.querySelector(".wiw-menu-groep").compareDocumentPosition(weergave)&Node.DOCUMENT_POSITION_PRECEDING)&&menu.querySelector("nav").contains(weergave)),
     /* De weergavekeuze ligt binnen het uitklappaneel en onder de laatste groep; de kop zelf schuift niet op. */
-    binnenPaneel:(()=>{const p=r(menu&&menu.querySelector(".wiw-menu-paneel")),w=r(weergave),g=[...(menu?menu.querySelectorAll(".wiw-menu-groep"):[])].pop();if(!p||!w||!g)return false;const gb=g.getBoundingClientRect();return w.t>=p.t-1&&w.b<=p.b+1&&w.l>=p.l-1&&w.r<=p.r+1&&w.t>=gb.bottom-1;})(),
+    binnenPaneel:(()=>{const p=r(menu&&menu.querySelector(".wiw-menu-paneel")),w=r(weergave),g=[...(menu?menu.querySelectorAll(".wiw-menu-groep"):[])].pop();if(!p||!w||!g)return false;const gb=g.getBoundingClientRect();const g0=menu.querySelector(".wiw-menu-groep").getBoundingClientRect();return w.t>=p.t-1&&w.b<=p.b+1&&w.l>=p.l-1&&w.r<=p.r+1&&w.b<=g0.top+1;})(),
     kopHoogte:kop?kop.getBoundingClientRect().height:0,
     terug:terug?{t:terug.textContent.trim(),z:zie(terug)}:null,
     kaartRand:kaart?getComputedStyle(kaart).borderTopColor:null,kaartAchter:kaart?getComputedStyle(kaart).backgroundColor:null,
@@ -95,8 +95,8 @@ function meet(){
         assert(m.open&&m.weergaveZichtbaar,label+": weergavekeuze niet zichtbaar in het open menu");
         assert.equal(m.groepen.length,4,label+": verwacht vier menugroepen");
         if(taal==="en")assert.deepEqual(m.groepen,["Weather and places","Stars and night","Seasons and holidays","About and information"],label+": menugroepen niet vertaald "+JSON.stringify(m.groepen));
-        assert(m.weergaveNaGroepen,label+": weergavekeuze staat niet onder de groepen");
-        assert(m.binnenPaneel,label+": weergavekeuze ligt niet binnen het uitklappaneel onder de groepen");
+        assert(m.weergaveBovenGroepen,label+": weergavekeuze staat niet bovenaan in het menu, boven de groepen");
+        assert(m.binnenPaneel,label+": weergavekeuze ligt niet binnen het uitklappaneel boven de groepen");
         assert(m.kopHoogte<=80,label+": de kop groeit als het menu opengaat ("+m.kopHoogte+"px)");
         assert.equal(m.knoppen.length,3,label+": verwacht drie weergaveknoppen");
         assert(m.knoppen.every(k=>k.z&&k.h>=44&&k.l>=0&&k.r<=breedte),label+": weergaveknoppen niet zichtbaar, te klein of buiten beeld "+JSON.stringify(m.knoppen));
@@ -121,10 +121,10 @@ function meet(){
         n++;
       }finally{await context.close();}
     }
-    /* Zijbalk "Snel naar" vanaf 1440px (K2, eigenaar 24 november): vast links, alle groepen open, weergavekeuze
+    /* Zijbalk "Snel naar" vanaf 1920px (K2, eigenaar 24 november; grens sinds 25 november): vast links, alle groepen open, weergavekeuze
        eronder; niets van de kop of de inhoud eronder; uitklapmenu met gedimde achtergrond daaronder; wisselen met de
        venstergrootte. */
-    for(const pad of ["/maan/","/witte-kerst/","/weer/","/over/","/nachtzicht/hoge-veluwe/","/bestaat-niet/"])for(const [breedte,taal] of [[1440,"nl"],[1920,"nl"],[1536,"en"]]){
+    for(const pad of ["/maan/","/witte-kerst/","/weer/","/over/","/nachtzicht/hoge-veluwe/","/bestaat-niet/"])for(const [breedte,taal] of [[1920,"nl"],[2400,"nl"],[1920,"en"]]){
       if(pad==="/bestaat-niet/"&&taal==="en")continue;
       const context=await browser.newContext({viewport:{width:breedte,height:900},colorScheme:"light",locale:taal==="en"?"en-GB":"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage();const fouten=[];
@@ -205,5 +205,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1440px zonder overlap, uitklapmenu met gedimde achtergrond.");
+  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1920px zonder overlap, uitklapmenu met gedimde achtergrond.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

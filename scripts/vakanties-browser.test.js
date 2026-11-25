@@ -67,7 +67,11 @@ server.listen(0, async () => {
         tabellen: document.querySelectorAll("#seizoen-verwachting .seizoen-dag").length,
         koppen: [...document.querySelectorAll("#seizoen-verwachting .seizoen-dag h3")].map(h => h.textContent.replace(/\s+/g, " ").trim()),
         overloop: document.documentElement.scrollWidth - innerWidth,
-        ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null
+        ontbreekt: window.__WIW_TAAL_ONTBREEKT__ ? [...window.__WIW_TAAL_ONTBREEKT__] : null,
+        uitleg: (() => {
+          const r = s => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width }; };
+          return { kaart: r("main.kaart"), tekst: r(".seizoen-uitleg-tekst"), data: r(".seizoen-uitleg-data"), tabel: r(".seizoen-uitleg-data .seizoen-perioden:not([hidden])"), bron: r("#seizoen-regio-bron") };
+        })()
       }));
       const label = `${g.slug} ${g.nu.slice(0, 10)} ${taal} ${breedte}px`;
       assert.deepEqual(fouten, [], `${label}: scriptfouten`);
@@ -81,6 +85,16 @@ server.listen(0, async () => {
         assert.deepEqual(m.ontbreekt, [], `${label}: onvertaalde teksten`);
         if (g.en.kop) assert.equal(m.kop, g.en.kop, `${label}: kop`);
         assert.equal(m.aftellen, g.en.aftellen, `${label}: aftellen`);
+      }
+      /* Brede opmaak zoals Witte kerst (eigenaar 25 november): op 1366px uitleg links en vakantiedata met bronnen
+         rechts, samen over de volle kaartbreedte; op de telefoon onder elkaar in dezelfde volgorde. */
+      const u = m.uitleg;
+      assert(u.kaart && u.tekst && u.data && u.tabel && u.bron, `${label}: uitlegblok, vakantietabel of bronvermelding ontbreekt ${JSON.stringify(u)}`);
+      if (breedte >= 1366) {
+        assert(u.data.l >= u.tekst.r + 24 && Math.abs(u.data.t - u.tekst.t) <= 2, `${label}: vakantiedata staan niet rechts naast de uitleg ${JSON.stringify(u)}`);
+        assert(u.data.r >= u.kaart.r - 80 && u.tekst.l <= u.kaart.l + 80, `${label}: uitleg en data vullen de kaartbreedte niet ${JSON.stringify(u)}`);
+      } else {
+        assert(u.data.t >= u.tekst.b - 1 && Math.abs(u.data.l - u.tekst.l) <= 2, `${label}: op de telefoon staan uitleg en data niet onder elkaar ${JSON.stringify(u)}`);
       }
       gemeten++;
       await context.close();
