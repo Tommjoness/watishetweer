@@ -126,7 +126,9 @@ function meet(){
         }
         /* Typografie-ronde 29 oktober 2026: grotere labels, toelichtingen en waarschuwingstekst duwen de grafiek op 1366x768 van y=652 naar y=680 (gemeten in dit scenario).
            De grens gaat van 660 naar 690; dit is een zichtbare afweging van de ronde (de grafiek staat 28px lager op een laptopscherm) en staat in de PR vermeld. */
-        if(naam==="avond"&&w===1366)assert(m.chart.y<=690,label+": de grafiek begint pas op y="+Math.round(m.chart.y));
+        /* G2-D (25 nov. 2026, eigenaar): tekst vanaf 1100px 6,25% groter (bovenste regel en uurtabel ongewijzigd). Samenvatting en
+           tegeluitleg worden hoger; de grafiek komt in dit scenario op y=704 (gemeten). Grens 690 -> 710; zichtbare afweging, in de PR vermeld. */
+        if(naam==="avond"&&w===1366)assert(m.chart.y<=710,label+": de grafiek begint pas op y="+Math.round(m.chart.y));
         if(SCENARIO[naam].waarschuwing){
           /* Fase 1 (25 oktober 2026): "code geel voor …" in plaats van "Code geel: …", zodat de zin één dubbele punt heeft. */
           assert(/Officiële weerwaarschuwing: code geel voor /.test(m.brief)&&!/\(geel\)/.test(m.brief)&&!/Officiële weerwaarschuwing: Code /.test(m.brief),label+": de samenvatting herhaalt het niveau: "+m.brief.slice(0,80));

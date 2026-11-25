@@ -135,6 +135,8 @@ function meet(page){
 const MIN_UURRIJEN={1100:{nl:7,en:7},1280:{nl:8,en:8},1363:{nl:8,en:8},1366:{nl:8,en:8},1440:{nl:10,en:10},1920:{nl:14,en:14}};
 /* Strook-lettermaten per desktopbreedte (zie live-polish.css): twee kolommen (stripcontainer < 758px, viewport tot ca. 1350px) 16/18, vier smalle kolommen
    (758 t/m 859px, viewport ca. 1351 t/m 1599px) 15/16, vier ruime kolommen (vanaf 860px, viewport 1600px en breder) 16/17. */
+const {desktopMaat}=require("./apply-tekstgrootte-desktop-g2d-20261125.js");
+const G2D_ONGEWIJZIGD=new Set(["kopknop","plaatsmeta","uurkop","uurtijd","uurprim","uursec","uurdatum"]);
 const stripMaat=w=>w<=1350?{stripdt:16,stripdd:18}:w<1600?{stripdt:15,stripdd:16}:{stripdt:16,stripdd:17};
 const DESKTOP={kopknop:14,plaatsmeta:14,kans:14,stripoms:14,tabelknop:14,dagmm:14,vanafnu:14,voetlabel:13,themaknop:14,stripdt:14,stripdd:15,kop:20,label:14,uitleg:15,uitlegTop:16,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:14,uurtijd:16,uurprim:16,uursec:14,uurdatum:14,dagkop:14,altth:14,alttd:15,terug:14};
 const TABLET={stripdt:13,stripdd:13.5,kop:18,label:13,uitleg:14,uitlegTop:14,eenheid:14,wtitel:18,wtekst:16,mlabel:14,mnote:14,uurkop:13,uurtijd:15,terug:14,altth:13,alttd:15};
@@ -191,11 +193,14 @@ const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,uitlegTop:14,eenheid:13
           await page.waitForSelector("#wiw-hour-table tbody tr",{timeout:20000});await page.waitForTimeout(1200);
           /* Telefoon: tegellabels 13px vanaf 380px, daaronder 12px ("LUCHTVOCHTIGHEID" valt anders niet in zijn tegel). */
           /* Van 1100 tot 1200px staan de labels (tegels, uurtabel, kolomkoppen, alternatieve tabel) op 13px: op 14px stak "LUCHTVOCHTIGHEID" er 5px buiten zijn tegel. */
-          const verwacht=g.klasse==="desktop"?(g.w<1200?{...DESKTOP,...stripMaat(g.w),label:13,uurkop:13,dagkop:13,altth:13}:{...DESKTOP,...stripMaat(g.w)}):g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
+          const basis=g.klasse==="desktop"?(g.w<1200?{...DESKTOP,...stripMaat(g.w),label:13,uurkop:13,dagkop:13,altth:13}:{...DESKTOP,...stripMaat(g.w)}):g.klasse==="tablet"?TABLET:{...TELEFOON,label:g.w>=380?13:12};
+          /* G2-D (25 nov. 2026): vanaf 1100px alle vaste px-maten x1,0625 (afgerond op 0,5px), behalve de bovenste regel
+             (kopknop, plaatsmeta) en de uurtabel naast de grafiek; die blijven ongewijzigd. */
+          const verwacht=Object.fromEntries(Object.entries(basis).map(([rol,px])=>[rol,G2D_ONGEWIJZIGD.has(rol)?px:desktopMaat(px,g.w)]));
           const L=`${g.w}px ${g.taal} ${thema} ${variant}`;
           /* uitgangssituatie, daarna tooltip in het midden en aan beide randen, geopende alternatieve tabel, gekozen dag */
           let m=await meet(page);
-          controleer(L+" [start]",g.klasse,m,variant==="modelcontext"?{mlabel:14,mnote:14}:verwacht);
+          controleer(L+" [start]",g.klasse,m,variant==="modelcontext"?{mlabel:desktopMaat(14,g.w),mnote:desktopMaat(14,g.w)}:verwacht);
           if(variant==="standaard"){
             assert.ok(m.maten.wtitel&&m.maten.wtekst,`${L}: de lokale waarschuwing ontbreekt in de meting`);
             if(g.klasse!=="telefoon"){
@@ -223,9 +228,9 @@ const TELEFOON={stripdt:12,stripdd:12.5,kop:18,uitleg:14,uitlegTop:14,eenheid:13
             }
             if(g.klasse==="desktop"){
               await page.evaluate(()=>{const s=document.querySelector("#chartdata summary");if(s&&!s.parentElement.open)s.click();});await page.waitForTimeout(400);
-              m=await meet(page);controleer(`${L} [tabel]`,g.klasse,m,{altth:g.w<1200?13:14,alttd:15});
+              m=await meet(page);controleer(`${L} [tabel]`,g.klasse,m,{altth:desktopMaat(g.w<1200?13:14,g.w),alttd:desktopMaat(15,g.w)});
               await page.evaluate(()=>{const r=document.querySelector("#days .row.day:not(.kop)");if(r)(r.querySelector("button,[role=button]")||r).click();});await page.waitForTimeout(800);
-              m=await meet(page);assert.ok(m.maten.terug,`${L}: terugknop ontbreekt na dagselectie`);controleer(`${L} [dag]`,g.klasse,m,{terug:14,kop:20});
+              m=await meet(page);assert.ok(m.maten.terug,`${L}: terugknop ontbreekt na dagselectie`);controleer(`${L} [dag]`,g.klasse,m,{terug:desktopMaat(14,g.w),kop:desktopMaat(20,g.w)});
             }
           }
           assert.deepEqual(fouten,[],`${L}: scriptfouten`);

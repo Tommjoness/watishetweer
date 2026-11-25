@@ -167,7 +167,9 @@ const meetIndeling=page=>page.evaluate(()=>{
     uitgelijndMetGrafiek:R(Math.abs(sb.left-svg.left)+Math.abs(sb.right-svg.right)),
     kop:(st.querySelector(".tip-kop")||{}).textContent||"",rol:st.getAttribute("role"),ariaHidden:st.getAttribute("aria-hidden")};
 });
-const verwachtIndeling=m=>({kolommen:m.W>=780?4:2,px:m.vw>=1024?(m.inhoud<758?[16,18]:(m.inhoud>=860?[16,17]:[15,16])):(m.inhoud>=440?[13,13.5]:[12,12.5]),minH:m.vw>=1024?164:140});
+/* G2-D (25 nov. 2026): vanaf 1100px x1,0625, afgerond op 0,5px (desktopMaat). */
+const {desktopMaat}=require("./apply-tekstgrootte-desktop-g2d-20261125.js");
+const verwachtIndeling=m=>({kolommen:m.W>=780?4:2,px:(m.vw>=1024?(m.inhoud<758?[16,18]:(m.inhoud>=860?[16,17]:[15,16])):(m.inhoud>=440?[13,13.5]:[12,12.5])).map(x=>desktopMaat(x,m.vw)),minH:m.vw>=1024?164:140});
 
 function controleerIndeling(m,L,metRoos=true){
   const v=verwachtIndeling(m);

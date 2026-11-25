@@ -46,9 +46,13 @@ const MEDIA=`@media (min-width:${DESKTOP_VANAF}px)`;
 /* Bovenste regel van de weerpagina blijft gelijk. :where() heeft specificiteit 0,
    dus :not(:where(...)) laat de specificiteit van de kopie gelijk aan die van het
    origineel; de cascadevolgorde blijft daarmee ongewijzigd. */
-const UITGESLOTEN=".mast";
-const NIET_BOVEN=`:not(:where(${UITGESLOTEN},${UITGESLOTEN} *))`;
-const UURTABEL_CSS=`@media (min-width:${DESKTOP_VANAF}px){html body #wiw-hour-table td:first-child,html body #wiw-hour-table th:first-child{width:17%!important}html body #wiw-hour-table td:nth-child(3),html body #wiw-hour-table th:nth-child(3){width:26%!important}}`;
+/* Ook de uurtabel naast de grafiek (#wiw-hour-scroll) blijft gelijk: haar rijhoogte
+   wordt in de runtime op de grafiekhoogte afgestemd (29-51px per rij) en bij storm
+   ("ZZW 10 Bft") is de kolomruimte op 1100px al krap. Grotere tekst gaf rijen tot
+   52,4px en 5px horizontale overloop (gemeten 25 nov.). */
+const UITGESLOTEN_LIJST=[".mast","#wiw-hour-scroll"];
+const UITGESLOTEN=UITGESLOTEN_LIJST.join(",");
+const NIET_BOVEN=`:not(:where(${UITGESLOTEN_LIJST.map(x=>`${x},${x} *`).join(",")}))`;
 
 function schaal(px){
   if(!(px>=KLEIN_TOT&&px<GROOT_VANAF))return null;
@@ -56,6 +60,12 @@ function schaal(px){
   return n===px?null:n;
 }
 const getal=n=>String(Math.round(n*100)/100);
+/* Voor testcontracten: de verwachte maat van een vaste px-lettergrootte op een
+   viewportbreedte (onder DESKTOP_VANAF ongewijzigd). */
+function desktopMaat(px,breedte){
+  if(breedte<DESKTOP_VANAF)return px;
+  const s=schaal(px);return s===null?px:s;
+}
 
 /* Splits CSS in topniveau-items, met kennis van commentaar en strings. */
 function items(css){
@@ -221,12 +231,8 @@ function pasToe(html){
     const r=vergroot(css);totaal+=r.aantal;return open+r.css+sluit;
   });
   if(!totaal)return {html,aantal:0};
-  /* Merkteken voor idempotentie en verificatie, met de enige lay-outaanpassing die
-     de grotere tekst nodig heeft: in de uurtabel (vaste kolomverdeling in %) past
-     de datum onder middernacht ("do 23 jul") niet meer in de tijdkolom (14%) bij
-     1280-1536px. De tijdkolom krijgt 3 procentpunt van de ruime temperatuurkolom
-     (29%); de som blijft gelijk. Gemeten met de reviewscripts van G2-D. */
-  const metMarker=nieuw.replace("</head>",`<style id="${STYLE_MARKER}">/* G2-D: vaste px-lettergroottes vanaf ${DESKTOP_VANAF}px x${FACTOR}, direct na iedere regel */${UURTABEL_CSS}</style></head>`);
+  /* Merkteken voor idempotentie en verificatie. */
+  const metMarker=nieuw.replace("</head>",`<style id="${STYLE_MARKER}">/* G2-D: vaste px-lettergroottes vanaf ${DESKTOP_VANAF}px x${FACTOR}, direct na iedere regel; ${UITGESLOTEN} ongewijzigd */</style></head>`);
   return {html:metMarker,aantal:totaal};
 }
 
@@ -247,5 +253,5 @@ function main(){
   return {paginas,regels,cache};
 }
 
-module.exports={main,STYLE_MARKER,UURTABEL_CSS,UITGESLOTEN,NIET_BOVEN,zonderBoven,selectoren,DESKTOP_VANAF,FACTOR,KLEIN_TOT,GROOT_VANAF,schaal,vergroot,vergroteDeclaraties,mediaKanOpDesktop,pasToe,items};
+module.exports={main,desktopMaat,STYLE_MARKER,UITGESLOTEN,NIET_BOVEN,zonderBoven,selectoren,DESKTOP_VANAF,FACTOR,KLEIN_TOT,GROOT_VANAF,schaal,vergroot,vergroteDeclaraties,mediaKanOpDesktop,pasToe,items};
 if(require.main===module)main();

@@ -19,6 +19,7 @@
 
    Draait na: npm run build:cloudflare */
 
+const {desktopMaat}=require("./apply-tekstgrootte-desktop-g2d-20261125.js");
 const fs=require("fs"),path=require("path"),http=require("http"),assert=require("assert");
 const {chromium}=require("playwright");
 const {bouw}=require("../data.js");
@@ -174,7 +175,7 @@ function meet(){
         /* SEO-blok en plaatsen op de lijn van de pagina. */
         for(const [n,x] of Object.entries({kruimelpad:m.seo.kruimel,kop:m.seo.kop,tekst:m.seo.tekst,buurt:m.seo.buurt,plaatsenkop:m.plaatsen.kop}))
           assert(x!==null&&Math.abs(x-m.appLinks)<=1.5,label+": SEO-"+n+" begint op "+x+"px in plaats van op de lijn van de pagina ("+m.appLinks+"px)");
-        assert(m.seo.kopGrootte<=12,label+": SEO-kop herhaalt de h1 als grote kop ("+m.seo.kopGrootte+"px)");
+        assert(m.seo.kopGrootte<=desktopMaat(12,w),label+": SEO-kop herhaalt de h1 als grote kop ("+m.seo.kopGrootte+"px)"); /* G2-D: vanaf 1100px 13px, nog steeds een kleine kop */
         assert(m.plaatsen.hoogte>=minDoel,label+": plaatslink lager dan "+Math.ceil(minDoel)+"px");
         if(touch){
           assert(Math.abs(m.plaatsen.eerste-m.appLinks)<=1.5,label+": eerste populaire plaats begint niet op de lijn van de pagina");
