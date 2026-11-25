@@ -337,14 +337,19 @@ ${urenTabel(n.uren)}`;
     const eigen = eigenPlaats(), r = eigen || { ...cfg.referentie, tz: TZ, nl: true };
     const m = K.maanOverzicht(Date.now(), r.lat, r.lon, r.tz);
     /* Ongewijzigde uitkomst (de pagina wordt iedere minuut opnieuw berekend) raakt de DOM en de maanfoto niet. */
-    const handtekening = JSON.stringify([r.naam, r.tz, r.nl, m.naam, Math.round(m.ill * 100), m.op, m.onder, Math.round(m.rand), m.draai, m.fasen.map(f => f.datum + f.tijd)]);
+    const handtekening = JSON.stringify([r.naam, r.tz, r.nl, m.datum, m.naam, Math.round(m.ill * 100), m.op, m.onder, Math.round(m.rand), m.draai, m.fasen.map(f => f.datum + f.tijd)]);
     if (handtekening === st.html.maan) return;
     st.html.maan = handtekening;
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
     set("nz-maan-naam", hoofdletter(m.naam) + ", " + procent(m.ill * 100) + " verlicht");
-    /* Tijdvolgorde en waarden blijven gelijk; de zichtbare termen zijn expliciet. */
-    const tijden = [["Maanopkomst", m.op], ["Maanondergang", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]).join(", ");
-    set("nz-maan-tijden", tijden ? "Vandaag in " + r.naam + ": " + tijden + "." : "Vandaag komt de maan in " + r.naam + " niet op of niet onder.");
+    /* M1 (eigenaar 24 november): het antwoord eerst, met datum en plaats. Tijdvolgorde en
+       waarden blijven gelijk; een ontbrekende opkomst of ondergang wordt expliciet genoemd.
+       Harde spatie vóór "·": op mobiel begint een regel nooit met de punt (zoals bij Witte kerst). */
+    set("nz-maan-wanneer", "Vandaag, " + datumTekst(m.datum) + ", in " + r.naam);
+    const tijden = [["Maanopkomst", m.op], ["Maanondergang", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]);
+    if (!m.op && m.onder) tijden.push("geen maanopkomst vandaag");
+    if (m.op && !m.onder) tijden.push("geen maanondergang vandaag");
+    set("nz-maan-tijden", tijden.length ? tijden.join("\u00a0· ") : "De maan komt vandaag niet op en gaat niet onder.");
     set("nz-maan-plaats", r.naam);
     set("nz-maan-standplaats", r.naam);
     set("nz-maan-tijdzone", r.nl ? "Nederlandse tijd" : "plaatselijke tijd van " + r.naam);

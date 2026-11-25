@@ -195,7 +195,7 @@ async function verberg(page,ja){
     {
       const {context,page,fouten}=await open(browser,"/maan/","2026-07-22T21:50:00Z");/* 23:50 lokaal */
       try{
-        await page.waitForFunction(()=>/Vandaag/.test((document.getElementById("nz-maan-tijden")||{}).textContent||""),null,{timeout:20000});
+        await page.waitForFunction(()=>/^Vandaag, /.test((document.getElementById("nz-maan-wanneer")||{}).textContent||"")&&!/bij het openen/.test((document.getElementById("nz-maan-tijden")||{}).textContent||""),null,{timeout:20000});
         const avond=await page.locator("#nz-maan-tijden").innerText();
         assert.equal(await page.evaluate(()=>window.__intervallen),1,"maan: precies één timer");
         await page.evaluate(()=>{document.getElementById("nz-maan-naam").dataset.merk="blijft";});
@@ -207,7 +207,7 @@ async function verberg(page,ja){
         const verwacht=await page.evaluate(()=>{
           const K=window.WeatherNowNachtzichtKern,c=JSON.parse(document.getElementById("nz-config").textContent),r=c.referentie;
           const m=K.maanOverzicht(Date.now(),r.lat,r.lon,"Europe/Amsterdam");
-          return [["Maanopkomst",m.op],["Maanondergang",m.onder]].filter(x=>x[1]).sort((a,b)=>a[1]<b[1]?-1:1).map(x=>x[0]+" "+x[1]).join(", ");
+          return [["Maanopkomst",m.op],["Maanondergang",m.onder]].filter(x=>x[1]).sort((a,b)=>a[1]<b[1]?-1:1).map(x=>x[0]+" "+x[1]).join("\u00a0· ");
         });
         assert(ochtend.includes(verwacht),"maan: na middernacht kloppen de tijden met de nieuwe dag ("+ochtend+" vs "+verwacht+")");
         assert.notEqual(ochtend,avond,"maan: de tijden van vandaag zijn na middernacht veranderd");
