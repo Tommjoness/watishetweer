@@ -3,7 +3,7 @@
 const assert=require("assert");
 const fs=require("fs");
 const path=require("path");
-const {waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm}=require("./staff-audit-20260826.js");
+const {waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm,ankerGeldig}=require("./staff-audit-20260826.js");
 
 const owner=fs.readFileSync(path.join(__dirname,"apply-staff-audit-20260826.js"),"utf8");
 const css=fs.readFileSync(path.join(__dirname,"staff-audit-20260826.css"),"utf8");
@@ -34,6 +34,11 @@ assert(historyStateGeldig(s));
 assert(!historyStateGeldig({weatherNowLocation:1,lat:999,lon:4,plaats:"Fout"}));
 assert.equal(historyState(91,4,"Fout","NL",false),null);
 assert.equal(historyState(52,181,"Fout","NL",false),null);
+
+/* Paginaanker uit een menulink (/#nachtzicht) blijft bij de URL-synchronisatie behouden; alleen eenvoudige ids. */
+assert.equal(ankerGeldig("#nachtzicht"),true);
+assert.equal(ankerGeldig("#app"),true);
+for(const fout of ["","#","nachtzicht","#1abc","#a b","#a\"onload","#"+"a".repeat(65),null,undefined])assert.equal(ankerGeldig(fout),false,String(fout));
 
 assert.equal(formatMm(null),"–");
 assert.equal(formatMm(-1),"–");

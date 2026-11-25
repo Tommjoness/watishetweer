@@ -51,7 +51,13 @@ function formatMm(v){
   return n.toLocaleString("nl-NL",{minimumFractionDigits:1,maximumFractionDigits:1})+" mm";
 }
 
-const api={WAARSCHUWING_TITELS,waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm,markeerNavigatie:()=>{}};
+/* Een paginaanker (bijvoorbeeld /#nachtzicht vanuit het menu op een subpagina) hoort bij de
+   navigatie van de bezoeker. Alleen een eenvoudige id komt in aanmerking; al het andere vervalt. */
+function ankerGeldig(hash){
+  return typeof hash==="string"&&/^#[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(hash);
+}
+
+const api={WAARSCHUWING_TITELS,waarschuwingTitelNl,waarschuwingTitelVoorBriefing,locatieSleutel,historyState,historyStateGeldig,formatMm,ankerGeldig,markeerNavigatie:()=>{}};
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
 root.WeatherNowStaffAudit=api;
 
@@ -115,6 +121,32 @@ function herstelRouteSeo(){
   const context=document.querySelector(".seo-route-context");if(context)context.hidden=false;
 }
 
+let ankerGedaan=false;
+function paginaAnker(){
+  try{const h=location.hash;return ankerGeldig(h)&&document.getElementById(h.slice(1))?h:"";}catch(_){return "";}
+}
+function naarAnker(anker){
+  if(ankerGedaan||!anker)return;
+  ankerGedaan=true;
+  const doelEl=document.getElementById(anker.slice(1));
+  if(!doelEl||typeof doelEl.scrollIntoView!=="function")return;
+  /* Zodra de bezoeker zelf scrolt, klikt of een toets gebruikt, blijft de pagina staan. */
+  let zelf=false;const stop=()=>{zelf=true;};
+  ["wheel","touchstart","keydown","pointerdown"].forEach(t=>root.addEventListener(t,stop,{once:true,passive:true}));
+  const ga=()=>{if(!zelf)doelEl.scrollIntoView({block:"start"});};
+  if(typeof root.requestAnimationFrame==="function")root.requestAnimationFrame(ga);else ga();
+  if(document.readyState!=="complete")root.addEventListener("load",()=>root.setTimeout(ga,0),{once:true});
+  /* Onderdelen die daarna nog boven het anker verschijnen (luchtkwaliteit, waarschuwingen; op de telefoon
+     meer dan op desktop) duwen het weer omlaag. Volg zulke verschuivingen kort (8 s), zolang de bezoeker
+     zelf niets doet. */
+  if(typeof root.ResizeObserver==="function"&&document.body){
+    const tot=Date.now()+8000;
+    const ro=new root.ResizeObserver(()=>{if(zelf||Date.now()>tot){ro.disconnect();return;}ga();});
+    ro.observe(document.body);
+    root.setTimeout(()=>ro.disconnect(),8100);
+  }
+}
+
 urlBij=function(){
   /* URL/history is afgeleide navigatiepresentatie. Een browserbeperking op
      History API (bijvoorbeeld file:// tijdens lokale QA) mag nooit weerdata of
@@ -148,7 +180,12 @@ urlBij=function(){
          identiteit verlaten. Dit contract bestond al vóór history-support en
          blijft bewust onafhankelijk van de wijze waarop load() is aangeroepen. */
       if(verlaatStatischeRoute)basisUrlBijStaff();
-      history.replaceState(state,"",doel);
+      /* Een anker uit de oorspronkelijke link (/#nachtzicht) blijft staan; na de eerste weergave
+         gaat de pagina er alsnog heen, omdat de weerinhoud erboven het onderdeel intussen heeft
+         verschoven. Een keuze voor een andere plaats (push) laat het anker bewust vallen. */
+      const anker=paginaAnker();
+      history.replaceState(state,"",anker?doel.replace(/#.*$/,"")+anker:doel);
+      naarAnker(anker);
     }
   }catch(_){/* weerdata blijft leidend; history-sync faalt gesloten als UI-bijzaak */}
 };
