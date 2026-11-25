@@ -5,11 +5,15 @@ const path=require("path");
 const {vernieuwServiceworkerCache}=require("./postbuild-cache.js");
 const {OUT,htmlBestanden}=require("./apply-kleur-20261012.js");
 
-/* G2-D: tekst groter op desktop (eigenaar 25 november, optie B; fase G2 van #641).
+/* G2-D: tekst groter op desktop (eigenaar 25 november; fase G2 van #641).
    Aanleiding: de eigenaar vond de tekst op desktop "erg klein" (24 november).
+   Eerst gebouwd als +12,5% (optie B); dat brak op de weerpagina het eerste scherm,
+   de fontwissel-CLS, de kopregel en de uurtabel. Daarna gekozen (eigenaar 25 nov.):
+   +6,25% en de bovenste regel van de weerpagina (.mast: plaatsnaam, zoekveld,
+   knoppen, chips, ophaaltijd) ongewijzigd.
    Vanaf DESKTOP_VANAF (1100px, het bestaande desktopbreekpunt van de site) wordt
-   iedere vaste lettergrootte in px met FACTOR (12,5%) vergroot: gewone tekst
-   16 -> 18px, labels 14 -> 16px, de samenvatting 20 -> 22,5px.
+   iedere vaste lettergrootte in px met FACTOR vergroot, afgerond op 0,5px:
+   gewone tekst 16 -> 17px, labels 14 -> 15px, de samenvatting 20 -> 21px.
    Mobiel en tablet (< 1100px) blijven exact gelijk.
 
    Werkwijze, generiek en zonder losse uitzonderingen per onderdeel: in iedere
@@ -35,10 +39,15 @@ const {OUT,htmlBestanden}=require("./apply-kleur-20261012.js");
    dezelfde manier mee. */
 const STYLE_MARKER="wiw-g2d-tekstgrootte-20261125";
 const DESKTOP_VANAF=1100;
-const FACTOR=1.125;
+const FACTOR=1.0625;
 const KLEIN_TOT=11;
 const GROOT_VANAF=36;
 const MEDIA=`@media (min-width:${DESKTOP_VANAF}px)`;
+/* Bovenste regel van de weerpagina blijft gelijk. :where() heeft specificiteit 0,
+   dus :not(:where(...)) laat de specificiteit van de kopie gelijk aan die van het
+   origineel; de cascadevolgorde blijft daarmee ongewijzigd. */
+const UITGESLOTEN=".mast";
+const NIET_BOVEN=`:not(:where(${UITGESLOTEN},${UITGESLOTEN} *))`;
 const UURTABEL_CSS=`@media (min-width:${DESKTOP_VANAF}px){html body #wiw-hour-table td:first-child,html body #wiw-hour-table th:first-child{width:17%!important}html body #wiw-hour-table td:nth-child(3),html body #wiw-hour-table th:nth-child(3){width:26%!important}}`;
 
 function schaal(px){
@@ -100,12 +109,32 @@ function declaraties(body){
   return uit.map(d=>d.trim()).filter(Boolean);
 }
 
+/* Splitst een selectorlijst op komma's op het hoogste niveau. */
+function selectoren(lijst){
+  const uit=[];let d=0,start=0;
+  for(let i=0;i<lijst.length;i++){
+    const c=lijst[i];
+    if(c==='"'||c==="'"){i=eindString(lijst,i)-1;continue;}
+    if(c==="("||c==="[")d++;else if(c===")"||c==="]")d--;
+    else if(c===","&&d===0){uit.push(lijst.slice(start,i).trim());start=i+1;}
+  }
+  uit.push(lijst.slice(start).trim());
+  return uit.filter(Boolean);
+}
+/* Voegt de uitsluiting toe aan iedere selector, vóór een eventueel pseudo-element. */
+const PSEUDO=/(::[a-z-]+(\([^)]*\))?|:(before|after|first-letter|first-line))$/i;
+function zonderBoven(lijst){
+  return selectoren(lijst).map(sel=>{
+    const m=PSEUDO.exec(sel);
+    return m?sel.slice(0,m.index)+NIET_BOVEN+m[0]:sel+NIET_BOVEN;
+  }).join(",");
+}
 const PX=/^(-?\d*\.?\d+)px$/i;
 const TOKEN=/^--wiw-t-[a-z-]+$/;
 /* Geeft de vergrote declaraties van een regel terug, of [] als er niets te doen is. */
 function vergroteDeclaraties(body){
   const decls=declaraties(body);
-  const uit=[];let groter=null;
+  const uit=[];const herstel=[];let groter=null;let basis=null;
   for(const d of decls){
     const m=/^([a-z-]+)\s*:\s*([\s\S]*?)\s*(!important)?$/i.exec(d);
     if(!m)continue;
@@ -114,12 +143,12 @@ function vergroteDeclaraties(body){
       /* Tekstmaattokens (--wiw-t-*, tokens-PR #653) gebruikt via font-size:var(). */
       const p=PX.exec(waarde);if(!p)continue;
       const s=schaal(parseFloat(p[1]));if(s===null)continue;
-      uit.push(`${eig}:${getal(s)}px${imp}`);continue;
+      uit.push(`${eig}:${getal(s)}px${imp}`);herstel.push(`${eig}:${waarde}${imp}`);continue;
     }
     if(eig==="font-size"){
       const p=PX.exec(waarde);if(!p)continue;
       const s=schaal(parseFloat(p[1]));if(s===null)continue;
-      uit.push(`font-size:${getal(s)}px${imp}`);groter=true;
+      uit.push(`font-size:${getal(s)}px${imp}`);groter=true;basis=`font-size:${waarde}${imp}`;
     }else if(eig==="font"){
       /* font: [stijl] [gewicht] <maat>[/<regelhoogte>] <familie> */
       const f=/^(.*?)(\d*\.?\d+)px(\s*\/\s*(\d*\.?\d+)(px)?)?(\s+[\s\S]+)$/i.exec(waarde);
@@ -130,13 +159,13 @@ function vergroteDeclaraties(body){
       uit.push(`font:${f[1]}${getal(s)}px${lh}${f[6]}${imp}`);groter=true;
     }
   }
-  if(!groter)return uit;
+  if(!groter)return {decl:uit,herstel,basis};
   /* Een vaste regelhoogte in px schaalt mee met de lettergrootte van deze regel. */
   for(const d of decls){
     const m=/^line-height\s*:\s*(-?\d*\.?\d+)px\s*(!important)?$/i.exec(d);
     if(m)uit.push(`line-height:${getal(Math.round(parseFloat(m[1])*FACTOR*2)/2)}px${m[2]?"!important":""}`);
   }
-  return uit;
+  return {decl:uit,herstel,basis};
 }
 
 /* Kan een @media-voorwaarde op desktop (>= 1100px, scherm) ooit gelden? */
@@ -172,8 +201,15 @@ function vergroot(css){
       uit+=it.tekst;continue; /* @keyframes, @font-face, @page, ... */
     }
     uit+=it.tekst;
-    const d=vergroteDeclaraties(it.body);
-    if(d.length){uit+=`${MEDIA}{${kop}{${d.join(";")}}}`;aantal++;}
+    const {decl,herstel:tokens,basis}=vergroteDeclaraties(it.body);
+    /* Een basismaat op html/body/:root erft door naar de bovenste regel: zet ook die terug. */
+    const erft=basis&&selectoren(kop).some(x=>/^(html|body|:root)$/i.test(x.trim()));
+    const herstel=erft?[...tokens,basis]:tokens;
+    if(decl.length){
+      /* Tokens op :root erven door naar de bovenste regel; zet daar direct na de
+         kopie de oorspronkelijke tokenwaarde terug (zelfde mediacontext en volgorde). */
+      uit+=`${MEDIA}{${zonderBoven(kop)}{${decl.join(";")}}${herstel.length?`${UITGESLOTEN}{${herstel.join(";")}}`:""}}`;aantal++;
+    }
   }
   return {css:uit,aantal};
 }
@@ -211,5 +247,5 @@ function main(){
   return {paginas,regels,cache};
 }
 
-module.exports={main,STYLE_MARKER,UURTABEL_CSS,DESKTOP_VANAF,FACTOR,KLEIN_TOT,GROOT_VANAF,schaal,vergroot,vergroteDeclaraties,mediaKanOpDesktop,pasToe,items};
+module.exports={main,STYLE_MARKER,UURTABEL_CSS,UITGESLOTEN,NIET_BOVEN,zonderBoven,selectoren,DESKTOP_VANAF,FACTOR,KLEIN_TOT,GROOT_VANAF,schaal,vergroot,vergroteDeclaraties,mediaKanOpDesktop,pasToe,items};
 if(require.main===module)main();
