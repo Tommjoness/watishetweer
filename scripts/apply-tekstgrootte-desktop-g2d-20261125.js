@@ -50,7 +50,10 @@ const MEDIA=`@media (min-width:${DESKTOP_VANAF}px)`;
    wordt in de runtime op de grafiekhoogte afgestemd (29-51px per rij) en bij storm
    ("ZZW 10 Bft") is de kolomruimte op 1100px al krap. Grotere tekst gaf rijen tot
    52,4px en 5px horizontale overloop (gemeten 25 nov.). */
-const UITGESLOTEN_LIJST=[".mast","#wiw-hour-scroll"];
+/* De informatiestrook onder de grafiek (.tip-strook, detail van het gekozen uur)
+   heeft vanaf 1024px een vaste gereserveerde hoogte van 164px (geen verspringing bij
+   het kiezen van een uur); met grotere tekst werd de inhoud 171,3px. Ook ongewijzigd. */
+const UITGESLOTEN_LIJST=[".mast","#wiw-hour-scroll",".tip-strook"];
 const UITGESLOTEN=UITGESLOTEN_LIJST.join(",");
 const NIET_BOVEN=`:not(:where(${UITGESLOTEN_LIJST.map(x=>`${x},${x} *`).join(",")}))`;
 
