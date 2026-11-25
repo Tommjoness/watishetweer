@@ -58,8 +58,8 @@ const SCRIPT_BRON=`(()=>{"use strict";
   const menu=doc.getElementById("wiw-menu");if(!menu)return;
   const knop=menu.querySelector(":scope > summary");
   const groepen=[...menu.querySelectorAll(".wiw-menu-groep")];
-  /* Zijbalk "Snel naar" vanaf 1600px (sinds 25 november gelijk aan de homepage; was 1440px): menu en alle groepen open, vast links naast de inhoud. */
-  const railMq=typeof matchMedia==="function"?matchMedia("(min-width: 1600px)"):null;
+  /* Zijbalk "Snel naar" vanaf 1920px (sinds 25 november gelijk aan de homepage; was 1440px): menu en alle groepen open, vast links naast de inhoud. */
+  const railMq=typeof matchMedia==="function"?matchMedia("(min-width: 1920px)"):null;
   const rail=()=>!!(railMq&&railMq.matches);
   const zetRail=()=>{
     if(rail()){html.classList.add("wiw-sk-rail");menu.open=true;groepen.forEach(g=>{g.removeAttribute("name");g.open=true;});}
@@ -137,7 +137,7 @@ html:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{content:"";position:f
 html[data-thema="donker"]:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}
 @media(prefers-color-scheme:dark){html:not([data-thema="licht"]):not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}}
 .wiw-sitekop .wiw-menu>summary{position:relative;z-index:61}
-/* Zijbalk "Snel naar" vanaf 1600px (K2, eigenaar 24 november; grens sinds 25 november gelijk aan de homepage): vast links, alle groepen open, weergavekeuze
+/* Zijbalk "Snel naar" vanaf 1920px (K2, eigenaar 24 november; grens sinds 25 november gelijk aan de homepage): vast links, alle groepen open, weergavekeuze
    eronder. De inhoud schuift alleen zoveel naar rechts als nodig (de breedste inhoud is 1184px) en wordt
    tot 1476px hooguit 36px smaller; vanaf 1768px staat hij weer precies in het midden. Zonder JavaScript
    blijft het gewone menu (de zijbalk hangt aan de klasse wiw-sk-rail van het kopscript). */

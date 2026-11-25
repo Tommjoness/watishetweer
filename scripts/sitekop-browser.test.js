@@ -8,7 +8,7 @@
    - Donker/Licht werkt en wordt bewaard; Escape sluit het menu en zet de focus terug;
    - er is een weg terug (naar het weer, of op parkpagina's naar de parken);
    - de inhoud staat niet in een kader; geen horizontale overflow en geen runtimefouten;
-   - vanaf 1600px (K2; grens sinds 25 november gelijk aan de homepage): zijbalk "Snel naar" links, alle groepen open, weergavekeuze erboven,
+   - vanaf 1920px (K2; grens sinds 25 november gelijk aan de homepage): zijbalk "Snel naar" links, alle groepen open, weergavekeuze erboven,
      niets van kop of inhoud eronder; daaronder het uitklapmenu met gedimde achtergrond.
    Plus de 404-pagina zoals cloudflare-output.js hem publiceert. Draait op het finale artifact. */
 
@@ -121,10 +121,10 @@ function meet(){
         n++;
       }finally{await context.close();}
     }
-    /* Zijbalk "Snel naar" vanaf 1600px (K2, eigenaar 24 november; grens sinds 25 november): vast links, alle groepen open, weergavekeuze
+    /* Zijbalk "Snel naar" vanaf 1920px (K2, eigenaar 24 november; grens sinds 25 november): vast links, alle groepen open, weergavekeuze
        eronder; niets van de kop of de inhoud eronder; uitklapmenu met gedimde achtergrond daaronder; wisselen met de
        venstergrootte. */
-    for(const pad of ["/maan/","/witte-kerst/","/weer/","/over/","/nachtzicht/hoge-veluwe/","/bestaat-niet/"])for(const [breedte,taal] of [[1600,"nl"],[1920,"nl"],[1680,"en"]]){
+    for(const pad of ["/maan/","/witte-kerst/","/weer/","/over/","/nachtzicht/hoge-veluwe/","/bestaat-niet/"])for(const [breedte,taal] of [[1920,"nl"],[2400,"nl"],[1920,"en"]]){
       if(pad==="/bestaat-niet/"&&taal==="en")continue;
       const context=await browser.newContext({viewport:{width:breedte,height:900},colorScheme:"light",locale:taal==="en"?"en-GB":"nl-NL",serviceWorkers:"block"});
       const page=await context.newPage();const fouten=[];
@@ -180,5 +180,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1600px zonder overlap, uitklapmenu met gedimde achtergrond.");
+  console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1920px zonder overlap, uitklapmenu met gedimde achtergrond.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

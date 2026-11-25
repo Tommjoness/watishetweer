@@ -17,7 +17,7 @@
      een dichte groep heeft geen voorleesbare links;
    - alle bestemmingen bestaan als route of anker; Nachtzicht vanavond brengt de
      kop in beeld;
-   - vanaf 1600px (sinds 25 november, gelijk aan de subpagina's): hetzelfde menu als zijbalk "Snel naar" (K2) in de
+   - vanaf 1920px (sinds 25 november, gelijk aan de subpagina's): hetzelfde menu als zijbalk "Snel naar" (K2) in de
      linkermarge, alle groepen uitgeklapt met de weergavekeuze eronder,
      leesbaar (titels ≥12px, links ≥14px, niets afgeknipt, vakjes ≥86px),
      zonder overlap met het vel, binnen het venster, vast bij scrollen en boven
@@ -176,7 +176,7 @@ async function loopGroepen(page,label,eis){
   const DESKTOP_HERO={1024:221,1366:208,1440:211};
   try{
     const gevallen=[[320,640,"light","nl"],[360,740,"light","nl"],[390,844,"light","nl"],[390,844,"dark","nl"],[430,932,"light","en"],[450,900,"light","nl"],[481,900,"light","nl"],[481,900,"light","en"],[559,900,"light","en"],[560,900,"light","nl"],
-      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1536,864,"light","nl"],[1600,900,"light","nl"],[1904,1080,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
+      [768,1024,"light","nl"],[1024,768,"light","nl"],[1366,768,"dark","nl"],[1440,900,"light","nl"],[1536,864,"light","nl"],[1600,900,"light","nl"],[1904,1080,"light","nl"],[1920,900,"light","nl"],[1920,1080,"light","nl"],[1920,1080,"dark","en"],
       /* aanraakscherm op desktopbreedte en een laag breed venster */
       [1024,768,"light","nl",true],[1920,1080,"light","nl",true],[1920,640,"light","nl"]];
     for(const [w,h,schema,taal,aanraak] of gevallen){
@@ -192,7 +192,7 @@ async function loopGroepen(page,label,eis){
         if(m.knop)assert(m.merk.left>=m.knop.right&&Math.abs((m.merk.top+m.merk.bottom)/2-(m.knop.top+m.knop.bottom)/2)<=3,`${label}: logo staat niet rechts naast de menuknop`);
         assert(m.overflow<=1,`${label}: horizontale overflow ${m.overflow}px`);
         assert.equal(m.groepen.length,4,`${label}: verwacht vier groepen`);
-        assert(m.groepen.every(g=>g.kop&&g.label&&g.n>=2&&g.open===(w>=1600)),`${label}: groep zonder klikbare titel als label, met te weinig links, of open/dicht verkeerd (zijbalk: alles open): ${JSON.stringify(m.groepen.map(g=>[g.kop,g.label,g.n,g.open]))}`);
+        assert(m.groepen.every(g=>g.kop&&g.label&&g.n>=2&&g.open===(w>=1920)),`${label}: groep zonder klikbare titel als label, met te weinig links, of open/dicht verkeerd (zijbalk: alles open): ${JSON.stringify(m.groepen.map(g=>[g.kop,g.label,g.n,g.open]))}`);
         for(const l of m.links)assert(bestaat(l.href),`${label}: bestemming bestaat niet: ${l.href}`);
         assert.equal(new Set(m.links.map(l=>l.href)).size,m.links.length,`${label}: dubbele bestemming in het menu`);
         assert.equal(m.links.length,15,`${label}: verwacht 15 bestemmingen`);
@@ -205,13 +205,13 @@ async function loopGroepen(page,label,eis){
           assert(m.voetTekst.includes(v),`${label}: footer mist '${v}'`);
         assert(!m.voetHrefs.some(h=>/^\/(witte-kerst|oud-en-nieuw|kerstvakantie|voorjaarsvakantie|meivakantie|zomervakantie|herfstvakantie|nachtzicht|maan)\//.test(h)),`${label}: footer bevat nog seizoens- of nachtlinks: ${m.voetHrefs.join(", ")}`);
         assert(m.ctx&&m.plaatsnav,`${label}: plaatscontext of populaire plaatsen ontbreekt`);
-        const minDoel=w<=900||touch?44:w>=1600?30:36;
+        const minDoel=w<=900||touch?44:w>=1920?30:36;
         /* Titels: zichtbaar zodra het menu open is (zijbalk: altijd), met pijltje naar rechts. */
         const titels=(x,lbl)=>{
           assert(x.groepen.every(g=>g.kopZicht&&g.kopFs>=12&&!g.kopKnip&&g.h>=minDoel-0.5&&g.pijl&&g.pijl!=="none"),`${lbl}: groepstitels niet zichtbaar, te klein, afgeknipt of zonder pijltje: ${JSON.stringify(x.groepen.map(g=>[g.kop,g.kopZicht,g.kopFs,Math.round(g.h||0),g.pijl]))}`);
           assert.equal(x.links.filter(l=>l.zicht).length,0,`${lbl}: links zichtbaar terwijl alle groepen dicht zijn`);
         };
-        if(w>=1600){
+        if(w>=1920){
           /* Zijbalk "Snel naar" (K2): alle groepen open, links zichtbaar, weergavekeuze eronder. */
           assert(m.rail&&m.open&&m.paneelZicht&&!m.knop,`${label}: zijbalk niet zichtbaar of menuknop nog zichtbaar`);
           assert.equal(m.railKop,taal==="en"?"Quick links":"Snel naar",`${label}: kop van de zijbalk ontbreekt of is niet vertaald`);

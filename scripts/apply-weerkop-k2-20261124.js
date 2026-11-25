@@ -66,9 +66,9 @@ html:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{content:"";positi
 html[data-thema="donker"]:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{background:rgba(0,0,0,.5)}
 @media(prefers-color-scheme:dark){html:not([data-thema="licht"]):not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::after{background:rgba(0,0,0,.5)}}
 .wiw-bovenbalk .wiw-menu>summary{position:relative;z-index:61}
-/* Zijbalk vanaf 1600px (eigenaar 25 november, gelijk aan de subpagina's): "Snel naar", 276px breed, alle groepen open (menuruntime). */
+/* Zijbalk vanaf 1920px (eigenaar 25 november, gelijk aan de subpagina's): "Snel naar", 276px breed, alle groepen open (menuruntime). */
 .wiw-rail-kop{display:none}
-@media(min-width:1600px){
+@media(min-width:1920px){
   html.wiw-menu-rail .wiw-rail-kop{display:block;margin:4px 0 6px;font:500 22px/1.2 var(--display,"Newsreader",Georgia,serif);color:var(--ink)}
   html.wiw-menu-rail .wiw-menu-paneel{width:276px}
   html.wiw-menu-rail .wiw-menu-kop{cursor:default}
@@ -86,9 +86,9 @@ html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-control.wiw-theme-seg
 html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-switch,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{min-height:50px!important;height:50px!important}
 html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{border-radius:7px!important;background:transparent!important;color:var(--ink-70)!important;font-weight:500!important;box-shadow:none!important}
 html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="auto"] #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="licht"] .wiw-theme-sun,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="donker"] .wiw-theme-moon{background:var(--sheet)!important;color:var(--ink)!important;font-weight:700!important;box-shadow:inset 0 0 0 3px var(--paper),inset 0 -1px 4px -2px rgba(0,0,0,.12)!important}
-/* Lage vensters (≤960px hoog) vanaf 1600px: dezelfde compacte zijbalk als op de subpagina's (eigenaar 25 november),
+/* Lage vensters (≤960px hoog) vanaf 1920px: dezelfde compacte zijbalk als op de subpagina's (eigenaar 25 november),
    zodat menu, weergavekeuze en "Snel naar" op beide op dezelfde hoogte staan. Aanraakschermen houden 44px-doelen. */
-@media(min-width:1600px) and (max-height:960px) and (pointer:fine){
+@media(min-width:1920px) and (max-height:960px) and (pointer:fine){
   html.wiw-menu-rail body .wiw-bovenbalk .wiw-menu-paneel .wiw-weergave-boven{padding-top:8px}
   html.wiw-menu-rail body .wiw-rail-kop{margin:0 0 2px;font-size:20px}
   html.wiw-menu-rail body .wiw-menu-kop{min-height:34px}
