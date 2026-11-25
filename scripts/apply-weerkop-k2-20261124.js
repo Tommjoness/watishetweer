@@ -80,12 +80,13 @@ html[data-thema="donker"]:not(.wiw-menu-rail) .wiw-bovenbalk .wiw-menu[open]::af
 }
 /* Weergavekeuze op de homepage in dezelfde vorm als op de subpagina's (eigenaar 25 november): afgeronde groep op
    papierkleur, de actieve keuze als wit vlakje met een smalle papierrand (inset, zodat de vakjesbreedte van minstens
-   86px, de schakelaarmaten en de gedeelde lettergrootte van Auto/Licht/Donker gelijk blijven), even hoog als op de
+   86px, de schakelaarmaten en de gedeelde lettergrootte en het lettergewicht van Auto/Licht/Donker gelijk blijven; de actieve keuze
+   verandert de typografische zwaarte niet), even hoog als op de
    subpagina's (52px). */
 html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-control.wiw-theme-segmented-20260915{min-height:52px!important;height:52px!important;border-radius:7px!important;background:var(--paper)!important;overflow:hidden}
 html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-switch,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{min-height:50px!important;height:50px!important}
-html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{border-radius:7px!important;background:transparent!important;color:var(--ink-70)!important;font-weight:500!important;box-shadow:none!important}
-html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="auto"] #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="licht"] .wiw-theme-sun,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="donker"] .wiw-theme-moon{background:var(--sheet)!important;color:var(--ink)!important;font-weight:700!important;box-shadow:inset 0 0 0 3px var(--paper),inset 0 -1px 4px -2px rgba(0,0,0,.12)!important}
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915 .wiw-theme-icon{border-radius:7px!important;background:transparent!important;color:var(--ink-70)!important;box-shadow:none!important}
+html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="auto"] #thema-auto,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="licht"] .wiw-theme-sun,html body .wiw-bovenbalk .wiw-menu-paneel #thema.wiw-theme-segmented-20260915[data-actieve-thema-keuze="donker"] .wiw-theme-moon{background:var(--sheet)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px var(--paper),inset 0 -1px 4px -2px rgba(0,0,0,.12)!important}
 /* Lage vensters (≤960px hoog) vanaf 1920px: dezelfde compacte zijbalk als op de subpagina's (eigenaar 25 november),
    zodat menu, weergavekeuze en "Snel naar" op beide op dezelfde hoogte staan. Aanraakschermen houden 44px-doelen. */
 @media(min-width:1920px) and (max-height:960px) and (pointer:fine){
