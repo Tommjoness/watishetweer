@@ -179,6 +179,31 @@ function meet(){
         n++;
       }finally{await context.close();}
     }
+    /* Nachtzicht vanuit het menu op een subpagina (eigenaar 25 november): de homepage opent op het onderdeel
+       Nachtzicht, ook nadat het weer erboven is geladen, en #nachtzicht blijft in de adresbalk staan. */
+    for(const [breedte,hoogte] of [[1920,1000],[1366,800],[390,844]]){
+      const context=await browser.newContext({viewport:{width:breedte,height:hoogte},colorScheme:"light",locale:"nl-NL",serviceWorkers:"block"});
+      const page=await context.newPage();const fouten=[];
+      page.on("pageerror",e=>fouten.push(e.message));
+      await page.route("**/*",r=>r.request().url().startsWith(root)?r.continue():r.abort());
+      const label=`Nachtzicht vanaf /kerstvakantie/ ${breedte}px`;
+      try{
+        await page.goto(root+"/kerstvakantie/",{waitUntil:"load"});await page.waitForTimeout(300);
+        if(!await page.evaluate(()=>document.getElementById("wiw-menu").open)){await page.click("#wiw-menu > summary");await page.waitForTimeout(150);}
+        /* In het uitklapmenu zit de link in de (dichte) groep "Sterren en nacht": eerst die groep openen, zoals een bezoeker doet. */
+        const groep=page.locator("#wiw-menu details.wiw-menu-groep",{has:page.locator('a[href="/#nachtzicht"]')});
+        if(!await groep.evaluate(g=>g.open)){await groep.locator(":scope > summary").click();await page.waitForTimeout(150);}
+        await Promise.all([page.waitForNavigation({waitUntil:"load"}),page.click('#wiw-menu a[href="/#nachtzicht"]')]);
+        await page.waitForFunction(()=>{const a=document.getElementById("app");return !!a&&getComputedStyle(a).display!=="none";},null,{timeout:15000});
+        await page.waitForTimeout(1200);
+        const d=await page.evaluate(()=>{const b=document.getElementById("nachtzicht").getBoundingClientRect();return {top:Math.round(b.top),hash:location.hash,y:Math.round(scrollY),pad:location.pathname};});
+        assert.equal(d.pad,"/",label+": niet op de homepage "+JSON.stringify(d));
+        assert.equal(d.hash,"#nachtzicht",label+": anker verdwijnt uit de adresbalk "+JSON.stringify(d));
+        assert(d.y>0&&d.top>=-2&&d.top<=160,label+": Nachtzicht staat na het laden niet bovenaan in beeld "+JSON.stringify(d));
+        assert.deepEqual(fouten,[],label+": runtimefouten "+fouten.join(" | "));
+        n++;
+      }finally{await context.close();}
+    }
   }finally{await browser.close();server.close();}
   console.log("Sitekop OK op "+n+" weergaven ("+PAGINAS.length+" soorten subpagina's incl. 404, NL/EN, 390/1366px): menu links met logo, weergavekeuze alleen in het menu (Licht/Auto/Donker werkt), Escape, weg terug, geen kader; zijbalk Snel naar vanaf 1440px zonder overlap, uitklapmenu met gedimde achtergrond.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
