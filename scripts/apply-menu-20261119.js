@@ -136,34 +136,36 @@ const CSS=`
   .wiw-menu>summary{min-height:44px;height:44px}
   .wiw-menu-kop,.wiw-menu-paneel a{min-height:44px}
 }
-@media(min-width:1904px){
+@media(min-width:1600px){
   /* Zijbalk: hetzelfde menu, permanent open (wiw-menu-rail via de menulaag). */
   .wiw-menu>summary{display:none}
-  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:48px;left:12px;right:auto;width:192px;display:block;padding:8px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow:auto}
+  html.wiw-menu-rail .wiw-menu-paneel{position:fixed;top:16px;left:16px;right:auto;width:192px;display:block;padding:8px;border:0;box-sizing:border-box;background:transparent;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto}
+  /* Zelfde plek als de zijbalk op de subpagina's (eigenaar 25 november): 16px van de rand, bij een lage pagina 10px. */
+  @media(max-height:960px){html.wiw-menu-rail .wiw-menu-paneel{top:10px;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px)}}
   html.wiw-menu-rail .wiw-menu-groep+.wiw-menu-groep{border-top:0;margin-top:10px}
   html.wiw-menu-rail .wiw-menu-kop{min-height:42px;gap:9px;font-size:13px;letter-spacing:.035em;line-height:1.45}
   html.wiw-menu-rail .wiw-menu-paneel ul{padding:0 0 10px 22px}
   html.wiw-menu-rail .wiw-menu-paneel a{min-height:40px;padding:5px 0;font-size:15px;line-height:1.35;color:var(--ink-70);overflow-wrap:normal}
   html.wiw-menu-rail .wiw-menu-paneel a:hover{color:var(--ink)}
 }
-@media(min-width:1904px) and (pointer:coarse){
+@media(min-width:1600px) and (pointer:coarse){
   html.wiw-menu-rail .wiw-menu-kop,html.wiw-menu-rail .wiw-menu-paneel a{min-height:44px}
 }
-/* Op brede schermen blijven de 1600px-premiumkolom en de
-   496px-uurtabel intact. Tussen 1904 en 2016px schuift het
+/* Zijbalk vanaf 1600px (eigenaar 25 november: overal dezelfde grens). Op brede schermen blijven de
+   1600px-premiumkolom en de 496px-uurtabel intact. Vroeger: tussen 1904 en 2016px schuift het
    hoofdvlak iets naar rechts om links 192px zijbalk + 8px
    tussenruimte te reserveren; vanaf 2016px staat het weer
    vanzelf gecentreerd. Desktop body heeft 30px zijpadding. */
-@media(min-width:1904px){
+@media(min-width:1600px){
   html.wiw-menu-rail body>.sheet:not(#wiw-desktop-premium),
   html.wiw-menu-rail body>.seo-plaatsnav:not(#wiw-desktop-premium),
   html.wiw-menu-rail body>.seo-route-context:not(#wiw-desktop-premium){
-    max-width:1600px!important;
+    max-width:min(1600px,calc(100vw - 316px))!important;
     margin-left:max(208px,calc(50vw - 800px))!important;
     margin-right:auto!important
   }
   html.wiw-menu-rail body .seo-plaatsnav-inner:not(#wiw-desktop-premium){
-    max-width:1600px!important
+    max-width:min(1600px,calc(100vw - 316px))!important
   }
 }
 `;
@@ -211,7 +213,7 @@ function main(fase){
   if(!geraakt)throw new Error("Geen weerpagina geraakt door de menulaag ("+fase+").");
   if(fase==="runtime"){console.log(`Menuruntime toegevoegd aan ${geraakt} weerpagina's.`);return {geraakt};}
   const cache=vernieuwServiceworkerCache(OUT,"menu-20261119");
-  console.log(`Menu toegepast op ${geraakt} weerpagina's: vier groepen in de bovenbalk, zijbalk vanaf 1904px, seizoens- en nachtlinks uit de footer; cache ${cache}.`);
+  console.log(`Menu toegepast op ${geraakt} weerpagina's: vier groepen in de bovenbalk, zijbalk vanaf 1600px, seizoens- en nachtlinks uit de footer; cache ${cache}.`);
   return {geraakt,cache};
 }
 

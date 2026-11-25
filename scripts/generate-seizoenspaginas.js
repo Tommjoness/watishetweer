@@ -111,6 +111,16 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
    tabellen en overzichten krijgen de volle kaartbreedte. Pagina's zonder zo'n overzicht blijven smal. */
 .kaart.breed{max-width:1080px;padding:36px clamp(22px,4.5vw,48px)}
 .breed p,.breed h2,.breed .seizoen-perioden{max-width:43rem}
+/* Oud en nieuw (eigenaar 25 november): zolang er nog geen verwachting staat alleen tekst, dus een smalle kaart in
+   het midden (zoals Over deze site); met de verwachting erin weer de brede kaart voor de tabellen. */
+.kaart.breed.seizoen-smal-zonder-verwachting:not(:has(#seizoen-verwachting .seizoen-dag)){max-width:760px}
+/* Vakantiepagina's vanaf een brede kaart (eigenaar 25 november, "zoals Witte kerst"): uitleg links,
+   vakantiedata en bronnen rechts, tussen twee lijnen over de volle breedte. Smaller: onder elkaar. */
+@media(min-width:1000px){
+.breed .seizoen-uitleg{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0 48px;align-items:start;margin:32px 0 8px;padding:8px 0 20px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.breed .seizoen-uitleg p,.breed .seizoen-uitleg h2,.breed .seizoen-uitleg .seizoen-perioden{max-width:none}
+.breed .seizoen-uitleg-data>.seizoen-perioden:first-child h3{margin-top:24px}
+}
 .breed .seizoen-dag .officieel{font-size:13px}
 .breed .seizoen-later{font-size:14px;line-height:1.55}
 .breed .klein{font-size:15px;line-height:1.55}
@@ -183,7 +193,10 @@ function pagina(cfg,buildDag){
   /* De bestaande twee KNMI-vragen blijven volledig aanwezig, zonder dubbele inleidingsalinea. */
   const uitleg=witteKerst
     ? (cfg.uitleg.vragen||[]).map(v=>`<article class="wk-qa"><h2>${esc(v.kop)}</h2><p>${esc(v.antwoord)}</p></article>`).join("\n")
-    : cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+periodenHtml(cfg,t.jaar);
+    : cfg.uitleg.alineas.map(a=>`<p>${esc(a)}</p>`).join("\n")+(verdieping?"\n"+verdieping:"")+(cfg.soort==="vakantie"?"":periodenHtml(cfg,t.jaar));
+  /* Vakantiepagina's (eigenaar 25 november, "zoals Witte kerst"): op een brede kaart staan de uitleg
+     links en de vakantiedata met bronnen rechts; smaller blijft alles onder elkaar in dezelfde volgorde. */
+  const vakantie=cfg.soort==="vakantie";
   const meldingHtml=`<p id="seizoen-melding"${runtime.meldingTekst(t,cfg)?"":" hidden"}>${esc(runtime.meldingTekst(t,cfg))}</p>`;
   /* Witte kerst (G2-B): eerst het antwoord (kort label plus de melding), dan de tijdlijn. */
   const labelHtml=witteKerst?`<div class="wk-status"><span class="wk-label" id="seizoen-label"${runtime.labelTekst(t,cfg)?"":" hidden"}>${esc(runtime.labelTekst(t,cfg))}</span>${meldingHtml}</div>\n<div id="seizoen-uitkomst"></div>\n`:"";
@@ -217,7 +230,7 @@ ${THEMA_SCRIPT}
 ${STIJL}
 ${witteKerst?WK.STIJL:""}
 </head>
-<body>${witteKerst?'<div class="kaart breed wk-page">':'<main class="kaart breed">'}
+<body>${witteKerst?'<div class="kaart breed wk-page">':`<main class="kaart breed${cfg.soort==="middernacht"?" seizoen-smal-zonder-verwachting":""}">`}
 ${witteKerst?"<main>":""}
 <p${witteKerst?' class="wk-return"':""}><a href="/">← Terug naar het weer</a></p>
 <h1 id="seizoen-kop">${esc(cfg.naam)} ${t.jaar}</h1>
@@ -228,11 +241,11 @@ ${witteKerst?"":meldingHtml}
 <div id="seizoen-verwachting"></div>
 </section>
 ${tijdlijn}${witteKerst?`<p class="wk-lead" id="seizoen-intro" data-nl="${esc(introNu)}">${esc(introNu)}</p>\n<section class="wk-guide">`:""}
-<h2>${esc(cfg.uitleg.kop)}</h2>
+${vakantie?'<div class="seizoen-uitleg">\n<div class="seizoen-uitleg-tekst">\n':""}<h2>${esc(cfg.uitleg.kop)}</h2>
 ${witteKerst?'<div class="wk-vragen">':""}
 ${uitleg}
 ${witteKerst?"</div>":""}
-${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${cfg.soort==="vakantie"?REGIO_BRONVERMELDING:""}${witteKerst?'</section><section class="wk-related"><h2>Verder ontdekken</h2>':""}${zieOokHtml(cfg)}${witteKerst?'</section><section class="wk-weather">':""}<h2>Het weer voor jouw plaats</h2>
+${vakantie?'</div>\n<div class="seizoen-uitleg-data">'+periodenHtml(cfg,t.jaar)+"\n":""}${cfg.uitleg.bron?`<p class="klein">Bron: <a href="${esc(cfg.uitleg.bron.url)}" rel="noopener">${esc(cfg.uitleg.bron.naam)}</a></p>\n`:""}${vakantie?REGIO_BRONVERMELDING+"</div>\n</div>\n":""}${witteKerst?'</section><section class="wk-related"><h2>Verder ontdekken</h2>':""}${zieOokHtml(cfg)}${witteKerst?'</section><section class="wk-weather">':""}<h2>Het weer voor jouw plaats</h2>
 <p>Bekijk het actuele weer en de 7-daagse verwachting voor <a href="/">jouw plaats</a>, of kies een plaats bij <a href="/weer/">Weer per plaats</a>.</p>
 ${witteKerst?"</section>":""}
 ${witteKerst?"</main>\n"+WK.FOOTER:""}

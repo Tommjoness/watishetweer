@@ -27,7 +27,8 @@ for(const p of htmlBestanden(OUT)){
   assert.equal(tel(paneel,RAIL_KOP),1,rel+": zijbalkkop 'Snel naar' ontbreekt in het menupaneel");
   assert.equal(tel(paneel,'<details class="wiw-menu-groep" name="wiw-menu-groep">'),4,rel+": verwacht vier menugroepen");
   const w=paneel.indexOf('<div class="wiw-weergave-boven">');
-  assert(w>paneel.lastIndexOf("</ul></details>")&&paneel.includes('id="thema"',w),rel+": weergavekeuze staat niet in het menupaneel onder de groepen");
+  /* Sinds 25 november (eigenaar): bovenaan in het paneel, vóór "Snel naar" en de vier groepen. */
+  assert(w>=0&&w<paneel.indexOf(RAIL_KOP)&&w<paneel.indexOf('<details class="wiw-menu-groep"')&&paneel.includes('id="thema"',w),rel+": weergavekeuze staat niet bovenaan in het menupaneel, boven de groepen");
   assert.equal(tel(html,'id="thema"'),1,rel+": weergavekeuze niet precies eenmaal");
   assert(!html.includes('<a href="#nachtzicht">')||paneel.includes('<a href="#nachtzicht">'),rel+": Nachtzicht vanavond ontbreekt in het menu");
   assert(html.includes('id="nachtzicht"'),rel+": anker #nachtzicht ontbreekt");

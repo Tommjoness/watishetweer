@@ -58,8 +58,8 @@ const SCRIPT_BRON=`(()=>{"use strict";
   const menu=doc.getElementById("wiw-menu");if(!menu)return;
   const knop=menu.querySelector(":scope > summary");
   const groepen=[...menu.querySelectorAll(".wiw-menu-groep")];
-  /* Zijbalk "Snel naar" vanaf 1440px (K2): menu en alle groepen open, vast links naast de inhoud. */
-  const railMq=typeof matchMedia==="function"?matchMedia("(min-width: 1440px)"):null;
+  /* Zijbalk "Snel naar" vanaf 1600px (sinds 25 november gelijk aan de homepage; was 1440px): menu en alle groepen open, vast links naast de inhoud. */
+  const railMq=typeof matchMedia==="function"?matchMedia("(min-width: 1600px)"):null;
   const rail=()=>!!(railMq&&railMq.matches);
   const zetRail=()=>{
     if(rail()){html.classList.add("wiw-sk-rail");menu.open=true;groepen.forEach(g=>{g.removeAttribute("name");g.open=true;});}
@@ -83,8 +83,8 @@ const TERUG=`<p class="wiw-sk-terug"><a href="/">← Terug naar het weer</a></p>
 function kopHtml(vandaag,thema){
   const menu=menuHtml(vandaag).replace('<a href="#nachtzicht">','<a href="/#nachtzicht">');
   if(!menu.endsWith("</nav></details>"))throw new Error("Menu-opbouw onverwacht; kan de weergavekeuze niet toevoegen.");
-  /* Weergavekeuze onderaan in het (uitklap)paneel, onder de vier groepen. */
-  const metThema=menu.replace('<nav class="wiw-menu-paneel" aria-label="Menu">','<nav class="wiw-menu-paneel" aria-label="Menu"><p class="wiw-rail-kop" aria-hidden="true">Snel naar</p>').slice(0,-"</nav></details>".length)+`<div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div></nav></details>`;
+  /* Weergavekeuze bovenaan in het (uitklap)paneel, boven "Snel naar" en de vier groepen (eigenaar 25 november). */
+  const metThema=menu.replace('<nav class="wiw-menu-paneel" aria-label="Menu">',`<nav class="wiw-menu-paneel" aria-label="Menu"><div class="wiw-sk-weergave"><span class="wiw-sk-weergave-kop" aria-hidden="true">Weergave</span>${thema}</div><p class="wiw-rail-kop" aria-hidden="true">Snel naar</p>`);
   return `<header class="wiw-sitekop" id="${KOP_ID}">${metThema}<a class="wiw-sk-merk" href="/" translate="no" aria-label="watishetweer.nl">${LOGO}<span>watishetweer.nl</span></a></header>`;
 }
 
@@ -115,7 +115,7 @@ html[data-thema="donker"] .wiw-sitekop{--wiw-sk-stip:#d2455d}
 .wiw-sitekop .wiw-menu-paneel ul{list-style:none;margin:0;padding:0 0 8px 22px}
 .wiw-sitekop .wiw-menu-paneel a{display:flex;align-items:center;min-height:44px;color:var(--ink,#152019);text-decoration:none;font:400 15px/1.25 var(--sans,"Instrument Sans",system-ui,sans-serif);overflow-wrap:anywhere}
 .wiw-sitekop .wiw-menu-paneel a:hover,.wiw-sitekop .wiw-menu-paneel a:focus-visible{text-decoration:underline;text-underline-offset:3px}
-.wiw-sk-weergave{border-top:1px solid var(--rule,#d9ddd8);padding:12px 0 14px}
+.wiw-sk-weergave{border-bottom:1px solid var(--rule,#d9ddd8);padding:12px 0 14px;margin-bottom:6px}
 .wiw-sk-weergave-kop{display:block;margin:0 0 8px;font:600 13px/1 var(--sans,"Instrument Sans",system-ui,sans-serif);color:var(--ink-70,#4a5650)}
 .wiw-sitekop #thema{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin:0;padding:3px;border:1px solid var(--rule,#d9ddd8);border-radius:7px;background:var(--paper,#f4f5f3)}
 .wiw-sitekop #thema button{min-width:0;min-height:44px;margin:0;padding:6px 8px;border:0;border-radius:5px;background:transparent;color:var(--ink-70,#4a5650);font:500 13px/1.2 var(--sans,"Instrument Sans",system-ui,sans-serif);cursor:pointer}
@@ -137,7 +137,7 @@ html:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{content:"";position:f
 html[data-thema="donker"]:not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}
 @media(prefers-color-scheme:dark){html:not([data-thema="licht"]):not(.wiw-sk-rail) .wiw-sitekop .wiw-menu[open]::after{background:rgba(0,0,0,.5)}}
 .wiw-sitekop .wiw-menu>summary{position:relative;z-index:61}
-/* Zijbalk "Snel naar" vanaf 1440px (K2, eigenaar 24 november): vast links, alle groepen open, weergavekeuze
+/* Zijbalk "Snel naar" vanaf 1600px (K2, eigenaar 24 november; grens sinds 25 november gelijk aan de homepage): vast links, alle groepen open, weergavekeuze
    eronder. De inhoud schuift alleen zoveel naar rechts als nodig (de breedste inhoud is 1184px) en wordt
    tot 1476px hooguit 36px smaller; vanaf 1768px staat hij weer precies in het midden. Zonder JavaScript
    blijft het gewone menu (de zijbalk hangt aan de klasse wiw-sk-rail van het kopscript). */
