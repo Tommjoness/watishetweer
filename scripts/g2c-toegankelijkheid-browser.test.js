@@ -43,7 +43,7 @@ function aanraakvlak([sel,i,richtingen]){
 
 server.listen(0,async()=>{
   const base=`http://127.0.0.1:${server.address().port}`;
-  const browser=await chromium.launch();
+  const browser=await chromium.launch({headless:true,executablePath:require("./vind-browser.js").vindBrowser()||undefined});
   let geslaagd=0;
   const open=async(url,breedte,aanraak)=>{
     const page=await browser.newPage({viewport:{width:breedte,height:900},hasTouch:aanraak,isMobile:aanraak});
