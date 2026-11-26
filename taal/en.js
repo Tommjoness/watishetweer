@@ -1257,6 +1257,8 @@
     [/^De komende twee uur is er een (zeer kleine|kleine|grote|zeer grote) kans op (.+)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours.`; }],
     [/^Er is een (zeer kleine|kleine|grote|zeer grote) kans op (.+) in de komende twee uur \(hoogste uurkans (\d+)%\)\.$/, (m) => { const w = WEER[m[2].toLowerCase()]; return w && `There is a ${KANS[m[1]]} chance of ${w} in the next two hours (highest hourly chance ${m[3]}%).`; }],
     [new RegExp(`^De temperatuur blijft de komende uren rond ${G}( ?)°C\\.$`), (m) => `The temperature stays around ${getal(m[1])}${m[2]}°C over the coming hours.`],
+    /* Verborgen zin bij de temperatuurtrend voor schermlezers (G2-C): "Van 5 naar 7 °C". */
+    [new RegExp(`^Van ${G} naar ${G} °C$`), (m) => `From ${getal(m[1])} to ${getal(m[2])} °C`],
     [/^Zonsondergang over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunset in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
     [/^Zonsopkomst over (\d+) (minuut|minuten), (vandaag|morgen) om (\d{1,2}:\d{2})\.$/, (m) => `Sunrise in ${m[1]} ${meervoud(m[1], "minute", "minutes")}, ${vandaagMorgen(m[3])} at ${m[4]}.`],
 

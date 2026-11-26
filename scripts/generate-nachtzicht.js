@@ -90,6 +90,9 @@ const EXTRA_STIJL = `
 .nz-licht-mob{display:none;font-size:14px;font-weight:400;color:var(--muted)}
 .nz-n{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink)!important}.nz-n span{color:var(--muted)}
 .nz-tabel a{text-decoration:none;border-bottom:1px solid var(--rule)}.nz-tabel a:hover,.nz-tabel a:focus-visible{border-bottom-color:var(--ink)}
+/* Aanraakschermen (G2-C, eigenaar 23 november): de parknaam krijgt een aanraakvlak van 44px hoog (onzichtbaar,
+   binnen de rij van ruim 90px), zonder dat de tekst of de onderstreping verschuift. */
+@media (pointer:coarse){.nz-tabel tbody th a{position:relative}.nz-tabel tbody th a::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}}
 /* Score: een korte meter (alleen sieraad, de score staat ook als tekst) naast cijfer en oordeel, en een lichte scheiding waar de lichtvervuilingsklasse wisselt. */
 .nz-n .nz-w{display:flex;align-items:center;gap:0 8px;font-weight:500}.nz-n .nz-w span{order:2;font-weight:400}.nz-n .nz-w .nz-meter{order:1}
 .nz-meter{display:block;position:relative;flex:none;width:52px;height:4px;background:var(--rule)}

@@ -71,14 +71,23 @@ const Q1_DAG_MM_NIEUW=`  const hoeveelheid=mm!==null&&(mm>=MM_MEETBAAR||(mm===0&
 /* De Q1-owner bepaalt de richting op afgeronde, getoonde waarden. De
    presentatie gebruikt voor alle drie mogelijke richtingen een betekenisvolle
    pijl: stijgend ↗, dalend ↘ en gelijkblijvend →. Voor gelijke temperatuur
-   blijft de begeleidende tekst expliciet "rond" de getoonde waarde. */
-const TEMP_TREND_OUD=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
+   blijft de begeleidende tekst expliciet "rond" de getoonde waarde.
+   Schermlezers (G2-C, eigenaar 23 november): de pijl is verborgen, dus de zichtbare
+   waarde "−1 → 3 °C" zou als "−1 3 °C" klinken. De zichtbare waarde is daarom
+   aria-hidden en een verborgen zin ervóór zegt "Van −1 naar 3 °C" (EN: "From −1
+   to 3 °C"); de zichtbare tekst en de structuur van #prec blijven gelijk. */
+const TEMP_TREND_OUD=String.raw`  if(!t.genoeg){waarde.textContent="–";sub.textContent="Er is niet genoeg data voor een betrouwbare trend.";return;}
+  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
   waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur verandert de komende uren nauwelijks.";`;
-const TEMP_TREND_NIEUW=String.raw`  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
+const TEMP_TREND_NIEUW=String.raw`  const trendSr=stat.querySelector(".wiw-trend-sr")||stat.insertBefore(Object.assign(document.createElement("span"),{className:"sr-only wiw-trend-sr"}),waarde);
+  if(!t.genoeg){waarde.removeAttribute("aria-hidden");trendSr.textContent="";waarde.textContent="–";sub.textContent="Er is niet genoeg data voor een betrouwbare trend.";return;}
+  const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"↘":"→";
   waarde.innerHTML=String(t.van)+" <span aria-hidden=\"true\" translate=\"no\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";
+  waarde.setAttribute("aria-hidden","true");
+  trendSr.textContent="Van "+String(t.van)+" naar "+String(t.naar)+"\u00a0°C";
   sub.textContent=t.richting==="stijgt"?"Het wordt de komende uren warmer."
     :t.richting==="daalt"?"Het wordt de komende uren koeler."
     :"De temperatuur blijft de komende uren rond "+String(t.van)+"\u00a0°C.";`;

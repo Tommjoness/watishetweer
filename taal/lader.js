@@ -56,7 +56,11 @@
     ".mast.taal-keuze-ruimte h1{padding-right:48px}" +
     ".tools>.taal-keuze{border-left:none;padding:0 14px;min-height:0}" +
     ".taal-keuze-rij{display:flex;justify-content:space-between;align-items:baseline;gap:12px}" +
-    ".taal-keuze-boven{display:flex;justify-content:flex-end;margin:0 0 12px}";
+    ".taal-keuze-boven{display:flex;justify-content:flex-end;margin:0 0 12px}" +
+    /* Aanraakschermen (G2-C, eigenaar 23 november): het aanraakvlak is minstens 44 × 44px,
+       met een onzichtbare uitbreiding rond het zichtbare vakje, dat zelf gelijk blijft. */
+    "@media (pointer:coarse){.taal-keuze:not(.taal-keuze-hoek){position:relative}" +
+    ".taal-keuze::after{content:\"\";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}}";
   function zetSchakelaar() {
     if (!SCHAKELAAR || document.querySelector("[data-taal-keuze]")) return;
     var doel = taal === "en" ? "nl" : "en";
