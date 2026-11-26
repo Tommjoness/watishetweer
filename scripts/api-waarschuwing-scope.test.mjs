@@ -164,7 +164,7 @@ try {
   assert.equal(usBody.lijst.length,1);
   assert.equal(usBody.lijst[0].titel,"Heat Advisory");
   assert.equal(usBody.lijst[0].plaatsSpecifiek,true);
-  /* Met opt-in mag alleen GET DeepL aanroepen; HEAD heeft geen body en geen vertaalreden. */
+  /* Veiligheidslock: zelfs GET met opt-in roept geen DeepL aan; HEAD blijft leeg. */
   const nwsBronFetch=globalThis.fetch;
   let deeplAanroepen=0;
   globalThis.fetch=async (...args)=>{
@@ -178,11 +178,11 @@ try {
   const nwsUrl="https://watishetweer.nl/api/waarschuwingen?lat=32.783&lon=-96.807&land=US";
   const nwsGet=await api.fetch(new Request(nwsUrl),testEnv);
   assert.equal(nwsGet.status,200);
-  assert.equal(deeplAanroepen,1,"GET met opt-in doorloopt vertaalroute");
+  assert.equal(deeplAanroepen,0,"GET mag ondanks opt-in geen DeepL-aanroep doen");
   const nwsHead=await api.fetch(new Request(nwsUrl,{method:"HEAD"}),testEnv);
   assert.equal(nwsHead.status,200);
   assert.equal(await nwsHead.text(),"","HEAD antwoord blijft leeg");
-  assert.equal(deeplAanroepen,1,"HEAD mag geen extra DeepL-aanroep doen");
+  assert.equal(deeplAanroepen,0,"HEAD mag geen DeepL-aanroep doen");
 
   /* Lange NWS-description én aparte instruction; DeepL blijft op 1.200 beperkt. */
   const langeNwsBeschrijving="Dangerous heat expected. "+"Heat index values could be dangerously high. ".repeat(60);
