@@ -25,21 +25,36 @@ const PLAATSEN=[
   {naam:"Sydney",lat:-33.87,lon:151.21,tz:"Australia/Sydney"}
 ];
 
-async function haal(p){
-  const url="https://api.open-meteo.com/v1/forecast?latitude="+p.lat+"&longitude="+p.lon
-    +"&hourly=precipitation_probability&daily=precipitation_probability_max&timezone="+encodeURIComponent(p.tz)+"&forecast_days=7";
-  let laatste=null;
-  for(let poging=1;poging<=3;poging++){
-    try{
-      const r=await fetch(url,{signal:AbortSignal.timeout(15000)});
-      if(!r.ok)throw new Error("HTTP "+r.status);
-      return await r.json();
-    }catch(e){laatste=e;await new Promise(res=>setTimeout(res,1000*poging));}
-  }
-  throw new Error("EXTERN: Open-Meteo niet bereikbaar voor "+p.naam+": "+(laatste&&laatste.message));
-}
+/* Diagnostiek (alleen logging): per mislukte poging één OPENMETEO_POGING-regel en na de laatste
+   mislukte poging een afzonderlijke, begrensde meting van DNS, TCP en TLS. Pogingen, wachttijden,
+   time-out, foutmelding en assertions zijn ongewijzigd. Zie scripts/openmeteo-verbindingsdiagnose.js. */
+const diagnose=require("./openmeteo-verbindingsdiagnose.js");
 
-(async()=>{
+function maakHaal({fetchImpl=(...a)=>fetch(...a),slaap=ms=>new Promise(res=>setTimeout(res,ms)),log=console.log,nu=()=>Date.now(),
+  fasemeting=plaats=>diagnose.logFasemeting({plaats,log})}={}){
+  return async function haal(p){
+    const url="https://api.open-meteo.com/v1/forecast?latitude="+p.lat+"&longitude="+p.lon
+      +"&hourly=precipitation_probability&daily=precipitation_probability_max&timezone="+encodeURIComponent(p.tz)+"&forecast_days=7";
+    let laatste=null;
+    for(let poging=1;poging<=3;poging++){
+      const start=nu();
+      try{
+        const r=await fetchImpl(url,{signal:AbortSignal.timeout(15000)});
+        if(!r.ok)throw new Error("HTTP "+r.status);
+        return await r.json();
+      }catch(e){
+        laatste=e;
+        log(diagnose.pogingRegel({plaats:p.naam,poging,duurMs:nu()-start,fout:e}));
+        await slaap(1000*poging);
+      }
+    }
+    await fasemeting(p.naam);
+    throw new Error("EXTERN: Open-Meteo niet bereikbaar voor "+p.naam+": "+(laatste&&laatste.message));
+  };
+}
+const haal=maakHaal();
+
+if(require.main===module)(async()=>{
   let totaal=0,tijdstempels=0,uren=0,verschil=0;
   for(const p of PLAATSEN){
     const d=await haal(p),h=d.hourly,dag=d.daily;
@@ -58,3 +73,5 @@ async function haal(p){
   assert(totaal>=6,"te weinig volledige dagen om het contract vast te stellen ("+totaal+")");
   assert.equal(tijdstempels,totaal,"precipitation_probability_max volgt niet overal het tijdstempelvenster 00:00-23:00");
 })().catch(e=>{console.error(e&&e.stack||e);process.exit(1);});
+
+module.exports={maakHaal,PLAATSEN};
