@@ -90,25 +90,31 @@ async function controleerKlokwissels(browser, basis, kern) {
     } finally { await app.context.close(); }
   }
 
-  /* Ook met een nog geldige oude respons moet het tweede 02:00 een nieuwe
-     berekening veroorzaken. De parkpagina heeft dan geen nieuw verzoek nodig. */
-  const nu = Date.parse("2026-10-25T00:30:00Z"), d = verwachting(nu, 24);
-  for (const pad of [parkPad, weerPad(PARK)]) {
-    const tab = await bezoek(browser, basis, d, nu, pad, { doorlopendeKlok: true });
-    try {
-      const eerste = tab.page.locator(".nz-gegevens tbody th").first();
-      if (pad === parkPad) assert.equal(await eerste.textContent(), "02:30");
-      await tab.page.clock.fastForward(31 * 60000);
-      if (pad === parkPad) {
-        await tab.page.waitForFunction(() => document.querySelector(".nz-gegevens tbody th")?.textContent === "02:01");
-        assert.equal(tab.aanvragen.primair, 1, "park berekent tweede 02:00 opnieuw op de aanwezige data");
-      } else {
-        await tab.page.waitForFunction(() => S.op >= Date.parse("2026-10-25T01:00:00Z"));
-        const bijgewerkt = kern.nachten(d, PARK.lat, PARK.lon, PARK.tz, 1, Date.parse("2026-10-25T01:01:00Z"))[0];
-        assert.equal((await leesApp(tab.page)).score, bijgewerkt.scoreTekst, "app ververst op de juiste UTC-klok");
-      }
-      assert.deepEqual(tab.fouten, []);
-    } finally { await tab.context.close(); }
+  /* De bronrespons blijft dezelfde. Het park moet ook het herhaalde 02:00
+     opnieuw beoordelen voordat de verversingstermijn van één uur verstreken is. */
+  for (const [klok, voor, na] of [
+    ["2026-03-29T00:30:00Z", "01:30", "03:01"],
+    ["2026-10-25T00:30:00Z", "02:30", "02:01"]
+  ]) {
+    const nu = Date.parse(klok), d = verwachting(nu, 24);
+    const sprong = 31 * 60000, nieuw = nu + sprong;
+    for (const pad of [parkPad, weerPad(PARK)]) {
+      const tab = await bezoek(browser, basis, d, nu, pad, { doorlopendeKlok: true });
+      try {
+        const eerste = tab.page.locator(".nz-gegevens tbody th").first();
+        if (pad === parkPad) assert.equal(await eerste.textContent(), voor);
+        await tab.page.clock.fastForward(sprong);
+        if (pad === parkPad) {
+          await tab.page.waitForFunction(tijd => document.querySelector(".nz-gegevens tbody th")?.textContent === tijd, na);
+          assert.equal(tab.aanvragen.primair, 1, klok + ": park beoordeelt de aanwezige forecast opnieuw");
+        } else {
+          await tab.page.waitForFunction(ms => S.op >= ms, nieuw);
+          const bijgewerkt = kern.nachten(d, PARK.lat, PARK.lon, PARK.tz, 1, nieuw)[0];
+          assert.equal((await leesApp(tab.page)).score, bijgewerkt.scoreTekst, klok + ": app ververst op de juiste UTC-klok");
+        }
+        assert.deepEqual(tab.fouten, []);
+      } finally { await tab.context.close(); }
+    }
   }
 
   for (const [plaats, klok] of [
@@ -141,7 +147,7 @@ async function controleerKlokwissels(browser, basis, kern) {
   const najaar = Date.parse("2026-10-24T12:30:00Z");
   const invoer = { timezone: PARK.tz, nuEpochS: najaar / 1000, startDatum: "2026-10-24" };
   for (const [reserve, weer] of [
-    ["visual-crossing", normaliseerVisualCrossing(vcPayload(invoer))],
+    ["visualcrossing", normaliseerVisualCrossing(vcPayload(invoer))],
     ["weatherapi", normaliseerWeatherApi(weatherApiPayload(invoer))]
   ]) {
     assert.equal(weer.utc_offset_seconds, 7200);
@@ -162,7 +168,7 @@ async function controleerKlokwissels(browser, basis, kern) {
       } finally { await tab.context.close(); }
     }
   }
-  console.log("Nachtzicht-klokwissel: vijf T02-fixtures, dubbele 02:00 in open tabbladen, Kathmandu, Lord Howe en beide reserveproviders groen.");
+  console.log("Nachtzicht-klokwissel: vijf T02-fixtures, beide overgangen in open tabbladen, Kathmandu, Lord Howe en beide reserveproviders groen.");
 }
 
 module.exports = { controleerKlokwissels };

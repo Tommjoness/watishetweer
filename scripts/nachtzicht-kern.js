@@ -166,7 +166,7 @@
     function vensterZin(venster, horizon, zichtbaar, vensterUtc) {
       const sr = V.hhmmIso(day.sunrise && day.sunrise[horizon + 1]);
       const avondDatum = Array.isArray(day.time) ? day.time[horizon] : null, zonsondergang = Array.isArray(day.sunset) ? day.sunset[horizon] : null;
-      const nachtDatum = G.nachtVensterStartDatum(venster, avondDatum, zonsondergang);
+      const nachtDatum = vensterUtc ? null : G.nachtVensterStartDatum(venster, avondDatum, zonsondergang);
       const opties = { zonsopkomst: sr, actief: !!actief && horizon === 0, nuTijd: V.hhmmIso(nuLokaal), nuDatumTijd: nuLokaal, nachtDatum, tijdzone: tz, nuEpochMs: klokMs, vensterUtc, uurTekst: ms => naarLokaal(ms, tz) };
       let lokaal = V.corrigeerNachtVensterBron(venster, horizon, zichtbaar, opties);
       const geen = /^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal || "").trim());

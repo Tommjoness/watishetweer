@@ -55,7 +55,7 @@ const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
   const beleid=globalThis.WeatherNowFinalGlobalCorrectness;
   const avondDatum=Array.isArray(day.time)?day.time[horizon]:null;
   const zonsondergang=Array.isArray(day.sunset)?day.sunset[horizon]:null;
-  const nachtDatum=beleid&&typeof beleid.nachtVensterStartDatum==="function"
+  const nachtDatum=!tijdOpties.vensterUtc&&beleid&&typeof beleid.nachtVensterStartDatum==="function"
     ?beleid.nachtVensterStartDatum(venster,avondDatum,zonsondergang):avondDatum;
   const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now(),...tijdOpties};
   let lokaal=corrigeerNachtVensterBron(venster,horizon,zichtbaar,optiesNacht);
