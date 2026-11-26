@@ -1,0 +1,37 @@
+name: Nachtzicht KNMI-weekcontrole
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  weekcontrole:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment:
+      name: provider-controles
+      deployment: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: Controleer de uurkoppeling met testgegevens
+        run: node --test scripts/nachtzicht-knmi-weekcontrole.test.js
+      - name: Vergelijk de twee KNMI-uurbronnen
+        env:
+          KNMI_EDR_API_KEY: ${{ secrets.KNMI_CONTROLE_EDR_API_KEY }}
+        run: node scripts/nachtzicht-knmi-weekcontrole.js
+      - name: Bewaar het controlebestand en de bronbestanden
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: nachtzicht-knmi-weekcontrole
+          path: nachtzicht-knmi-resultaten/
+          retention-days: 14
+          if-no-files-found: warn
