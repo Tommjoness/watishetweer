@@ -24,6 +24,7 @@ const { chromium } = require("playwright");
 const { bouw } = require("../data.js");
 const { stub } = require("./taal-catalogus-browser.js");
 const { laadKern } = require("./nachtzicht-bron.js");
+const { controleerKlokwissels } = require("./nachtzicht-klokwissel-browser.js");
 const { parkenMetLicht } = require("./generate-nachtzicht.js");
 const { BASIS, MAAN } = require("./nachtzicht.config.js");
 
@@ -72,7 +73,8 @@ const server = http.createServer((req, res) => {
   const f = path.join(PUBLIC, pad.endsWith("/") ? pad + "index.html" : pad);
   if (!f.startsWith(PUBLIC) || !fs.existsSync(f) || !fs.statSync(f).isFile()) { res.writeHead(404); return res.end(); }
   if (f.endsWith(".html")) {
-    const html = fs.readFileSync(f, "utf8").replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi, "")
+    let html = fs.readFileSync(f, "utf8");
+    if (actief) html = html.replace(/<meta\b[^>]*Content-Security-Policy[^>]*>/gi, "")
       .replace("<head>", "<head>" + stub({ forecast: () => pad === BASIS ? PARKEN.map(() => actief.d) : actief.d, nu: actief.nu }, ""));
     res.writeHead(200, { "content-type": "text/html" });
     return res.end(html);
@@ -156,6 +158,8 @@ server.listen(0, async () => {
     assert(alle.some(n => n.oordeel.startsWith("Voorlopig")), "geen voorlopige nacht getoetst");
     assert(new Set(alle.map(n => n.scoreTekst)).size >= 4, "te weinig verschillende scores getoetst");
     console.log(`Nachtzicht-pagina's gelijk aan de app: ${SITUATIES.length} situaties, ${rijen} nachten (label, score, oordeel en kijkvenster); parkpagina en overzicht tonen dezelfde uitkomst.`);
+    actief = null;
+    await controleerKlokwissels(browser, `http://127.0.0.1:${port}`, K);
   } finally {
     await browser.close();
     server.close();

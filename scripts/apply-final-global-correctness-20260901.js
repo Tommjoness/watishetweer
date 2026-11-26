@@ -50,18 +50,18 @@ const DEDUP_NIEUW=`function dedupliceerZoekresultaten(resultaten,max){
 
 const NACHT_HORIZON_OUD=`const horizon=nachtHorizonIndex(rij.dataset&&rij.dataset.d,h);`;
 const NACHT_HORIZON_NIEUW=`const horizon=Math.max(h,nachtHorizonIndex(rij.dataset&&rij.dataset.d,h));if(rij.dataset)rij.dataset.d=String(horizon);`;
-const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";`;
+const NACHT_CALL_OUD=`const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),...tijdOpties}):"";`;
 const NACHT_CALL_NIEUW=`const detail=venster?(()=>{
   const beleid=globalThis.WeatherNowFinalGlobalCorrectness;
   const avondDatum=Array.isArray(day.time)?day.time[horizon]:null;
   const zonsondergang=Array.isArray(day.sunset)?day.sunset[horizon]:null;
   const nachtDatum=beleid&&typeof beleid.nachtVensterStartDatum==="function"
     ?beleid.nachtVensterStartDatum(venster,avondDatum,zonsondergang):avondDatum;
-  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now()};
+  const optiesNacht={zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),nuDatumTijd:nuLokaal,nachtDatum,tijdzone:S.d&&S.d.timezone,nuEpochMs:Date.now(),...tijdOpties};
   let lokaal=corrigeerNachtVensterBron(venster,horizon,zichtbaar,optiesNacht);
   const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal||"").trim());
   if(beleid&&geen&&typeof beleid.nachtAdvies==="function")lokaal=beleid.nachtAdvies(zichtbaar,geen[1]);
-  return beleid&&typeof beleid.nachtVensterTijdsvorm==="function"
+  return !optiesNacht.vensterUtc&&beleid&&typeof beleid.nachtVensterTijdsvorm==="function"
     ?beleid.nachtVensterTijdsvorm(lokaal,{horizonDagen:horizon,nuDatumTijd:optiesNacht.nuDatumTijd,nachtDatum:optiesNacht.nachtDatum,tijdzone:optiesNacht.tijdzone,nuEpochMs:optiesNacht.nuEpochMs})
     :lokaal;
 })():"";`;
@@ -91,7 +91,7 @@ if(typeof corrigeerNachtVensterBron==="function"){
     const geen=/^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(t);
     if(geen)return G.nachtAdvies(score,geen[1]);
     const h=Number(horizon);
-    if(Number.isFinite(h)&&h>=0){
+    if(!opties.vensterUtc&&Number.isFinite(h)&&h>=0){
       /* De oude owner krijgt bewust een toekomstige horizon om alleen de
          inhoud/scorecopy te normaliseren. De tijdsvorm wordt daarna voor
          iedere rij uitsluitend door de datum-/tijdpolicy bepaald. */

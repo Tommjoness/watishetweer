@@ -84,7 +84,9 @@
        terugkeer naar de pagina; de maan verandert doorlopend en wordt iedere minuut bijgewerkt. */
     const tik = e => {
       if (document.hidden) return;
-      const uur = K.lokaleTijd(Date.now(), TZ).slice(0, 13);
+      // De parkzone gebruikt hele offsets. Het twee keer getoonde 02:00 zijn
+      // verschillende verstreken uren en vragen elk een nieuwe beoordeling.
+      const uur = Math.floor(Date.now() / 3600000);
       let bruikbaar = true;
       if (elkeMinuut || e || uur !== st.uur) { st.uur = uur; bruikbaar = herreken() !== false; }
       if (ververs && !st.laden && (!bruikbaar || Date.now() - st.opgehaald >= MAX_LEEFTIJD_MS) && Date.now() >= st.volgende) {
@@ -95,6 +97,7 @@
       }
       bijgewerkt();
     };
+    st.uur = Math.floor(Date.now() / 3600000);
     st.timer = setInterval(() => tik(false), HERREKEN_MS);
     document.addEventListener("visibilitychange", () => tik(true));
     window.addEventListener("pageshow", e => { if (e.persisted) tik(true); });
@@ -217,7 +220,7 @@ ${urenTabel(n.uren)}`;
     }
     metReserve(p.lat, p.lon, 170).then(d => {
       toon(d);
-      st.d = d; st.opgehaald = Date.now(); st.uur = K.lokaleTijd(st.opgehaald, TZ).slice(0, 13);
+      st.d = d; st.opgehaald = Date.now();
       bijgewerkt();
       klaar(status, uit);
       houdBij(() => { try { toon(st.d); return true; } catch (e) { return false; } },
@@ -300,7 +303,7 @@ ${urenTabel(n.uren)}`;
       parken.forEach(p => rijStatus(document.querySelector(`tr[data-park="${p.slug}"]`), "laden"));
       vraag().then(lijst => {
         const inhoud = toon(lijst);
-        st.d = lijst; st.opgehaald = Date.now(); st.uur = K.lokaleTijd(st.opgehaald, TZ).slice(0, 13);
+        st.d = lijst; st.opgehaald = Date.now();
         bijgewerkt();
         klaar(status, inhoud);
         houdBij(() => { try { toon(st.d); return true; } catch (e) { return false; } },
@@ -337,7 +340,8 @@ ${urenTabel(n.uren)}`;
     const eigen = eigenPlaats(), r = eigen || { ...cfg.referentie, tz: TZ, nl: true };
     const m = K.maanOverzicht(Date.now(), r.lat, r.lon, r.tz);
     /* Ongewijzigde uitkomst (de pagina wordt iedere minuut opnieuw berekend) raakt de DOM en de maanfoto niet. */
-    const handtekening = JSON.stringify([r.naam, r.tz, r.nl, m.datum, m.naam, Math.round(m.ill * 100), m.op, m.onder, Math.round(m.rand), m.draai, m.fasen.map(f => f.datum + f.tijd)]);
+    const momenten = K.maanTijdenOpVolgorde(m);
+    const handtekening = JSON.stringify([r.naam, r.tz, r.nl, m.datum, m.naam, Math.round(m.ill * 100), momenten.map(e => [e.type, e.tijd]), Math.round(m.rand), m.draai, m.fasen.map(f => f.datum + f.tijd)]);
     if (handtekening === st.html.maan) return;
     st.html.maan = handtekening;
     const set = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
@@ -346,7 +350,7 @@ ${urenTabel(n.uren)}`;
        waarden blijven gelijk; een ontbrekende opkomst of ondergang wordt expliciet genoemd.
        Harde spatie vóór "·": op mobiel begint een regel nooit met de punt (zoals bij Witte kerst). */
     set("nz-maan-wanneer", "Vandaag, " + datumTekst(m.datum) + ", in " + r.naam);
-    const tijden = [["Maanopkomst", m.op], ["Maanondergang", m.onder]].filter(x => x[1]).sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(x => x[0] + " " + x[1]);
+    const tijden = momenten.map(e => (e.type === "op" ? "Maanopkomst " : "Maanondergang ") + e.tijd);
     if (!m.op && m.onder) tijden.push("geen maanopkomst vandaag");
     if (m.op && !m.onder) tijden.push("geen maanondergang vandaag");
     set("nz-maan-tijden", tijden.length ? tijden.join("\u00a0· ") : "De maan komt vandaag niet op en gaat niet onder.");

@@ -275,7 +275,7 @@ function maanPagina(kern, nuMs) {
   const naam = m.naam.charAt(0).toUpperCase() + m.naam.slice(1) + ", " + Math.round(m.ill * 100) + "% verlicht";
   /* Zonder JavaScript alleen een duidelijk gedateerde momentopname; geen verouderde tijden als "vandaag". */
   const berekendOp = new Date(nuMs).toISOString().slice(0, 16).replace("T", " ") + " UTC";
-  const tijdenMoment = [["op", m.op], ["onder", m.onder]].filter(x => x[1]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0] + " " + x[1]).join(", ") || "geen opkomst of ondergang op deze dag";
+  const tijdenMoment = K.maanTijdenOpVolgorde(m).map(e => e.type + " " + e.tijd).join(", ") || "geen opkomst of ondergang op deze dag";
   const fasenMoment = m.fasen.map(f => `<li>${esc(f.naam.charAt(0).toUpperCase() + f.naam.slice(1))}: ${esc(f.datum)}, ${esc(f.tijd)} uur</li>`).join("");
   return kop({ titel, beschrijving, canonical, breed: true, paginaClass: "nz-maan-pagina" }) + `<p class="nz-terug"><a href="/">← Terug naar het weer</a></p>
 <h1>De maan vandaag</h1>

@@ -165,4 +165,29 @@ assert.equal(vertalerPark.vertaal("De maan komt vandaag niet op en gaat niet ond
 assert.equal(vertalerPark.vertaal("Berekende tijden in Nederlandse tijd."),"Calculated times are in Dutch time.");
 assert.equal(vertalerPark.vertaal("Tijden in Nederlandse tijd."),"Times are in Dutch time.");
 
+const { PARK, GEVALLEN, verwachting, verwachteUurlabels } = require("./fixtures/nachtzicht-klokwissel.js");
+for (const g of GEVALLEN) {
+  const nu = Date.parse(g.klok), d = verwachting(nu, g.wolken);
+  const [nacht] = K.nachten(d, PARK.lat, PARK.lon, PARK.tz, 1, nu);
+  assert.strictEqual(d.utc_offset_seconds, g.offset, g.naam + ": responsoffset");
+  assert(Math.abs(nacht.score - g.score) < 1e-9, g.naam + ": ruwe Nachtzicht-score");
+  assert.strictEqual(nacht.uren.length, g.uren, g.naam + ": aantal uurregels");
+  assert.deepStrictEqual(gewoon(nacht.uren.map(u => u.tijd)), verwachteUurlabels(d, nu), g.naam + ": lokale uren");
+  assert.strictEqual(nacht.zonOp, g.zonOp, g.naam + ": zonsopkomst in lokale tijd");
+  assert(nacht.maan.momenten.some(m => m.type === "onder" && m.tijd === g.maanOnder), g.naam + ": maanondergang binnen de nacht");
+  if (g.venster) assert.strictEqual(nacht.zin, g.venster, g.naam + ": bestaand kijkvenster");
+  else assert.strictEqual(nacht.venster, null, g.naam + ": geen vals kijkvenster");
+  if (g.naam === "voorjaar") assert.strictEqual(nacht.uren.find(u => u.tijd === "07:00").maanOp, false, "maart: maan al onder om 07:00 CEST");
+  if (g.naam === "najaar") {
+    assert.strictEqual(nacht.uren.find(u => u.tijd === "05:00").goed, false, "oktober: te veel maanlicht om 05:00 CET");
+    assert.strictEqual(nacht.uren.find(u => u.tijd === "06:00").maanOp, true, "oktober: maan nog op om 06:00 CET");
+  }
+}
+
+const herfstOp = Date.parse("2026-10-25T00:55:00Z"), herfstOnder = Date.parse("2026-10-25T01:05:00Z");
+assert.deepStrictEqual(gewoon(K.maanTijdenOpVolgorde({op:"02:55",opMs:herfstOp,onder:"02:05",onderMs:herfstOnder})),
+  [{type:"op",tijd:"02:55",ms:herfstOp},{type:"onder",tijd:"02:05",ms:herfstOnder}], "volgorde over het herhaalde uur");
+assert.deepStrictEqual(gewoon(K.maanTijdenOpVolgorde({op:null,opMs:null,onder:"02:05",onderMs:herfstOnder})),
+  [{type:"onder",tijd:"02:05",ms:herfstOnder}], "ontbrekende gebeurtenis");
+
 console.log(`Nachtzicht: ${PARKEN.length} parken in de lijst, ${parken.length} met volledige lichtkaart; ${BEKEND.length} maanfasen binnen 5 minuten; kern en aanvraag gelijk aan de app; pagina-opbouw klopt.`);
