@@ -14,7 +14,7 @@
       (data-current/aria-current) en verliest zijn selectiemarkering; één rij is gemarkeerd, nooit een andere.
    C. Tabel: een klik op de rij of de knop (muis, toetsenbord) kiest het uur; de focus blijft op de knop; alleen na een handeling
       wordt "Geselecteerd: …" aangekondigd.
-   D. Een gekozen uur buiten de zichtbare rijen: verwijzing zonder layoutverschuiving (mobiel markering op "Alle uren bekijken", desktop op "Grafiekgegevens als tabel"; tekst voor schermlezers),
+   D. Een gekozen uur buiten de zichtbare rijen: verwijzing zonder layoutverschuiving (mobiel markering op "Alle uren bekijken", desktop op "Alle uurdetails"; tekst voor schermlezers),
       geen automatisch uitklappen en geen scrollen.
    E. Hover is een voorvertoning en wijzigt de selectie niet; Escape sluit alleen de tijdelijke doos.
    F. Dag uit de zevendaagse lijst: vandaag begint bij het eerstvolgende toekomstige uur, een andere dag bij het eerste uur van
@@ -194,7 +194,7 @@ let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStr
     }
 
 
-    /* ---------- E: desktop, hover en verwijzing naar Grafiekgegevens als tabel ---------- */
+    /* ---------- E: desktop, hover en verwijzing naar Alle uurdetails ---------- */
     {
       const {context,page,fouten}=await open(browser,root,{w:1440,nuIso:"2026-07-22T12:10:00Z",offsetS:7200});
       try{
@@ -214,13 +214,13 @@ let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStr
         /* Escape op een niet-gefocust vlak doet niets met de selectie. */
         const ver=Date.parse("2026-07-23T06:00:00Z"),pv=await geoXY(page,ver);ok(pv,"E: uur ligt in de grafiek");
         const e0=await lees(page),y0=Math.round(e0.scrollY),h0=e0.docH,samH0=e0.samH;
-        gelijk(e0.samTekst,"Grafiekgegevens als tabel","E: zonder verborgen keuze blijft de samenvatting ongewijzigd");
+        gelijk(e0.samTekst,"Alle uurdetails","E: zonder verborgen keuze blijft de samenvatting ongewijzigd");
         await page.mouse.click(pv.x,pv.y);await sleep(300);await page.mouse.move(3,3);await sleep(300);
         m=await lees(page);
         gelijk(m.gekozen,[],"E: geen rij gemarkeerd als het uur niet in de zichtbare rijen staat");
-        ok(/staat niet in dit overzicht; zie Grafiekgegevens als tabel/.test(m.verwijzing)&&m.verwDoel==="SUMMARY|wiw-uur-verwijzing","E: verwijzing naar Grafiekgegevens als tabel ("+m.verwijzing+" "+m.verwDoel+")");
+        ok(/staat niet in dit overzicht; zie Alle uurdetails/.test(m.verwijzing)&&m.verwDoel==="SUMMARY|wiw-uur-verwijzing","E: verwijzing naar Alle uurdetails ("+m.verwijzing+" "+m.verwDoel+")");
         ok(m.docH===h0,"E: de verwijzing verschuift de pagina niet ("+h0+" → "+m.docH+")");
-        gelijk(m.samTekst,"Grafiekgegevens als tabel · 08:00 gekozen","E: de samenvatting toont zichtbaar welk uur is gekozen (niet alleen kleur)");
+        gelijk(m.samTekst,"Alle uurdetails · 08:00 gekozen","E: de samenvatting toont zichtbaar welk uur is gekozen (niet alleen kleur)");
         ok(Math.abs(m.samH-samH0)<=0.5,"E: de samenvatting blijft even hoog ("+samH0+" → "+m.samH+")");
         gelijk(await page.evaluate(()=>document.querySelector("details#chartdata").open),false,"E: uitklap ongewijzigd (niet automatisch geopend)");
         ok(Math.abs(m.scrollY-y0)<=2,"E: niet gescrold");gelijk(await page.evaluate(()=>(document.querySelector("#wiw-hour-table tbody tr")||{dataset:{}}).dataset.instant),sleutel("2026-07-22T13:00:00Z"),"E: de eerste rij blijft het eerstvolgende uur (desktoptabel heeft geen aria-current-rij, bestaand gedrag)");
@@ -366,7 +366,7 @@ let n=0;const ok=(c,m)=>{assert(c,m);n++;};const gelijk=(a,b,m)=>{assert.deepStr
         await page.mouse.click(pv.x,pv.y);await sleep(300);await page.mouse.move(3,3);await sleep(300);
         const mut=await page.evaluate(()=>new Promise(res=>{const t=document.querySelector("details#chartdata > summary");let n=0;const o=new MutationObserver(l=>{n+=l.length;});o.observe(t,{childList:true,characterData:true,subtree:true,attributes:true});setTimeout(()=>{o.disconnect();res(n);},1500);}));
         const m=await lees(page);
-        gelijk(m.samTekst,"Chart data as a table · 08:00 selected","J: samenvatting in het Engels (desktop)");
+        gelijk(m.samTekst,"All hourly details · 08:00 selected","J: samenvatting in het Engels (desktop)");
         ok(Math.abs(m.samH-j0.samH)<=0.5&&m.docH===j0.docH,"J: samenvatting en pagina houden hun hoogte (desktop, Engels)");
         ok(mut<=2,"J: de samenvatting blijft stabiel in het Engels ("+mut+" mutaties)");
         const k=await page.evaluate(()=>{const e=document.querySelector("#wiw-hour-table span.wiw-hour-pick");return {label:e.getAttribute("aria-label"),rol:e.getAttribute("role")};});

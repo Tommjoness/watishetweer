@@ -99,9 +99,9 @@ const verwacht = {
   "Toon morgen 00:00 in de grafiek": "Show tomorrow 00:00 in the chart",
   "17:00 is geselecteerd; die rij staat in Alle uren bekijken.": "17:00 is selected; that row is under ‘See all hours’.",
   "Alle uren bekijken · 07:00 gekozen": "See all hours · 07:00 selected",
-  "Grafiekgegevens als tabel · 08:00 gekozen": "Chart data as a table · 08:00 selected",
+  "Alle uurdetails · 08:00 gekozen": "All hourly details · 08:00 selected",
   "· 08:00 gekozen": "· 08:00 selected",
-  "02:00 (wintertijd) is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel.": "02:00 (winter time) is selected but is not in this overview; see ‘Chart data as a table’.",
+  "02:00 (wintertijd) is geselecteerd, maar staat niet in dit overzicht; zie Alle uurdetails.": "02:00 (winter time) is selected but is not in this overview; see ‘All hourly details’.",
   "Geen uurgegevens": "No hourly data",
   "Geen komende uren meer vandaag.": "No more upcoming hours today.",
   "Voor dit venster zijn geen geldige uurwaarden beschikbaar. Probeer te verversen of kies een andere dag.": "No valid hourly values are available for this period. Try refreshing or choose another day."

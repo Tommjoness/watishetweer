@@ -54,6 +54,10 @@ function meet(){
   const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")].filter(r=>r.getBoundingClientRect().height>0);
   return {
     aantalDetails:det.length,
+    inUurtabel:!!d&&d.previousElementSibling?.id==="wiw-hour-panel",
+    hoogteIngang:sum?Math.round(sum.getBoundingClientRect().height):0,
+    velden:d?[...d.querySelectorAll("thead th")].map(el=>el.textContent.trim()):[],
+    actieveDetails:d?d.querySelector('tbody tr[aria-current="true"]')?.dataset.instant:null,
     isDetails:!!d&&d.tagName==="DETAILS",
     heeftToegankelijkKlasse:!!d&&d.classList.contains("wiw-chartdata-accessible"),
     samenvattingEersteKind:!!sum&&d.firstElementChild===sum,
@@ -104,6 +108,9 @@ function meet(){
         if(taal==="en"&&volgorde==="app-eerst")assert.equal(poorten.appEerst,"open",`${L}: de app had haar tegels niet opgezet vóór de vertaling (testfout, geen bewijs voor de volgorde)`);
         assert.equal(m.taalKlaar,taal==="en",`${L}: vertaalstatus klopt niet`);
 
+        assert(m.inUurtabel&&m.hoogteIngang>=44,`${L}: uurdetails hebben hun ingang in de uurtabel`);
+        assert.deepEqual(m.velden.slice(-2),taal==="en"?["Wind direction","Cloud"]:["Windrichting","Bewolking"],`${L}: aanvullende kaartwaarden hebben kolomkoppen`);
+        assert.equal(m.actieveDetails,await page.evaluate(()=>String(UURSEL.huidig.ms)),`${L}: geselecteerd instant staat ook in de details`);
         assert.equal(m.aantalDetails,1,`${L}: er moet precies één details#chartdata zijn`);
         assert.ok(m.isDetails&&m.samenvattingEersteKind,`${L}: #chartdata is geen details met de samenvatting als eerste kind`);
         assert.ok(m.heeftToegankelijkKlasse,`${L}: details#chartdata mist wiw-chartdata-accessible`);

@@ -6,7 +6,7 @@
  *   gelijknamige bewaarde plaatsen krijgen hun regio erachter;
  * - F04: een reservebron voor de hoofdverwachting staat zichtbaar bij de
  *   ophaaltijd; met Open-Meteo blijft de stempel kort;
- * - F10: de grafiektabel heeft een zichtbare, klikbare link en blijft dicht
+ * - F10: de uitklap met uurdetails is zichtbaar bij de uurtabel en blijft standaard dicht
  *   tot iemand hem opent.
  */
 
@@ -37,7 +37,7 @@ const server = http.createServer((req, res) => {
 });
 
 async function open(browser, port, breedte) {
-  const ctx = await browser.newContext({ viewport: { width: breedte, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { width: breedte, height: 900 }, hasTouch: breedte < 760 });
   const page = await ctx.newPage();
   const fouten = [];
   page.on("pageerror", e => fouten.push(e.message));
@@ -100,21 +100,35 @@ server.listen(0, async () => {
       const reserve = await page.evaluate(() => { S.d.provider = "visualcrossing"; stempel(); const t = document.getElementById("stamp").textContent; S.d.provider = "weatherapi"; stempel(); return [t, document.getElementById("stamp").textContent]; });
       assert(reserve[0].endsWith(" · reservebron Visual Crossing") && reserve[1].endsWith(" · reservebron WeatherAPI"), "reservebron niet zichtbaar: " + reserve);
 
-      /* F10: geen permanente grafieklink; de native tabel blijft via focus en Enter bereikbaar. */
+      /* F10: één native uitklap bij de zichtbare uurtabel, ook zonder focus bedienbaar. */
       const link = await page.evaluate(() => {
         const d = document.getElementById("chartdata"), s = d && d.querySelector(":scope > summary");
         s.scrollIntoView({ block: "center" });
         const r = s.getBoundingClientRect(), stijl = getComputedStyle(s);
-        return { open: d.open, tekst: s.textContent.trim(), b: r.width, h: r.height, links: r.left, rechts: r.right, zicht: stijl.visibility, klik: stijl.pointerEvents, hit: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === s };
+        return { inUurtabel: d.previousElementSibling?.id === 'wiw-hour-panel', open: d.open, tekst: s.textContent.trim(), b: r.width, h: r.height, links: r.left, rechts: r.right, zicht: stijl.visibility, klik: stijl.pointerEvents, hit: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === s };
       });
       assert.strictEqual(link.open, false, "grafiektabel moet standaard dicht blijven");
-      assert.strictEqual(link.tekst, "Grafiekgegevens als tabel");
-      assert(link.b <= 2 && link.h <= 2, `${breedte}px: ongewenste grafieklink blijft zichtbaar: ${JSON.stringify(link)}`);
-      await page.locator("#chartdata > summary").focus();
-      const focusBreedte=await page.locator("#chartdata > summary").evaluate(s=>s.getBoundingClientRect().width);
-      assert(focusBreedte > 40, `${breedte}px: focus maakt de toegankelijke tabelbediening niet zichtbaar`);
+      assert.strictEqual(link.tekst, "Alle uurdetails");
+      assert(link.inUurtabel && link.b >= 44 && link.h >= 44 && link.hit, `${breedte}px: uurdetails zijn niet bereikbaar voor aanwijzers: ${JSON.stringify(link)}`);
+      const details=page.locator("#chartdata"), ingang=details.locator(":scope > summary");
+      if(breedte<760)await ingang.tap();
+      else await ingang.click();
+      assert(await details.evaluate(d=>d.open),`${breedte}px: aanwijzer opent de uurdetails zonder eerdere focus`);
+      assert(await details.locator("tbody tr").count()>0,"uurdetails bevatten de bestaande uurreeks");
+      assert(await details.locator(".chartdata-scrollhint").isVisible(),"de uitleg voor horizontaal scrollen is zichtbaar bij een smalle detailtabel");
+      await ingang.focus();
       await page.keyboard.press("Enter");
-      assert(await page.evaluate(() => document.getElementById("chartdata").open), "Enter opent de toegankelijke grafiektabel");
+      assert(!(await details.evaluate(d=>d.open)),"Enter sluit de uurdetails");
+      await page.keyboard.press("Enter");
+      assert(await details.evaluate(d=>d.open),"Enter opent de uurdetails");
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(()=>document.activeElement.className),"chartdata-scroll","Tab bereikt de scrollbare tabel");
+      const slider=page.getByRole("slider",{name:"Uur in de temperatuurgrafiek"});
+      const waarde=await slider.getAttribute("aria-valuenow");
+      await slider.press("ArrowRight");
+      assert(Number(await slider.getAttribute("aria-valuenow"))>Number(waarde),"de echte slider behoudt zijn bediening");
+      assert.equal(await page.locator("#scrub").getAttribute("aria-label"),null);
+      assert.equal(await page.locator("#scrub").getAttribute("aria-hidden"),"true");
 
       assert.deepStrictEqual(fouten, [], "paginafouten: " + fouten.join(" | "));
       await ctx.close();
@@ -130,11 +144,11 @@ server.listen(0, async () => {
     assert(/^Loaded at \d{2}:\d{2} · (?:less than a minute|\d+ min) ago$/.test(en.stempel), "Engelse stempel: " + en.stempel);
     const enReserve = await page.evaluate(() => { S.d.provider = "visualcrossing"; stempel(); return new Promise(r => setTimeout(() => r(document.getElementById("stamp").textContent), 300)); });
     assert(/^Loaded at \d{2}:\d{2} · .+ ago · backup source Visual Crossing$/.test(enReserve), "Engelse reservebron: " + enReserve);
-    assert.strictEqual(en.link, "Chart data as a table");
+    assert.strictEqual(en.link, "All hourly details");
     assert.deepStrictEqual(fouten, [], "paginafouten (en): " + fouten.join(" | "));
     await ctx.close();
 
-    console.log("Audit-zichtbaarheid groen (390 en 1366px, NL en EN): regio en land onder de plaatsnaam, onderscheidbare gelijknamige bewaarde plaatsen, reservebron zichtbaar bij de ophaaltijd, zichtbare en klikbare link naar de grafiektabel.");
+    console.log("Audit-zichtbaarheid groen (390 en 1366px, NL en EN): regio en land onder de plaatsnaam, onderscheidbare gelijknamige bewaarde plaatsen, reservebron zichtbaar bij de ophaaltijd, één ingang voor muis, touch en toetsenbord bij de zichtbare uurtabel.");
   } finally {
     await browser.close();
     server.close();

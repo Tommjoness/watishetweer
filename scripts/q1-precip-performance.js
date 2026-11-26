@@ -457,7 +457,6 @@ function verrijkTooltip(ev){
   const label=g.querySelector('text[data-tip-rij="3"][data-tip-kol="label"]')||teksten[5],waarde=g.querySelector('text[data-tip-rij="3"][data-tip-kol="waarde"]')||teksten[6];
   label.textContent="neerslagkans";
   waarde.textContent=p.waarde;
-  g.setAttribute("aria-label",(G.TI&&G.TI[i]?(typeof hhmm==="function"?hhmm(G.TI[i]):G.TI[i].slice(11,16))+", ":"")+"neerslagkans "+p.kans+(p.hoeveelheid?", verwacht "+p.hoeveelheid:""));
 }
 
 if(typeof etmaal==="function"){

@@ -47,13 +47,13 @@ const CHART_BRON=`      <svg id="chart" viewBox="0 0 900 296" width="100%" role=
            aria-label="Dag- en nachtverloop met temperatuur, spreiding en neerslagkans"></svg>
       <div id="tip-strook" class="tip-strook" aria-hidden="true"></div>`;
 const CHART_NIEUW=CHART_BRON+`
-      <details id="chartdata" class="chartdata">
-        <summary>Grafiekgegevens als tabel</summary>
-        <p class="chartdata-scrollhint">Veeg horizontaal om alle kolommen te zien.</p>
+      <details id="chartdata" class="chartdata" hidden>
+        <summary>Alle uurdetails</summary>
+        <p class="chartdata-scrollhint">Scrol horizontaal voor alle kolommen.</p>
         <div class="chartdata-scroll" tabindex="0" role="region" aria-label="Grafiekgegevens">
           <table>
             <caption class="sr-only">Alternatieve gegevensweergave van de huidige weergrafiek.</caption>
-            <thead><tr><th scope="col">Tijd</th><th scope="col">Weer</th><th scope="col">Temperatuur</th><th scope="col">Gevoel</th><th scope="col">Neerslagkans</th><th scope="col">Hoeveelheid</th><th scope="col">Wind</th><th scope="col">Windstoot</th></tr></thead>
+            <thead><tr><th scope="col">Tijd</th><th scope="col">Weer</th><th scope="col">Temperatuur</th><th scope="col">Gevoel</th><th scope="col">Neerslagkans</th><th scope="col">Hoeveelheid</th><th scope="col">Wind</th><th scope="col">Windstoot</th><th scope="col">Windrichting</th><th scope="col">Bewolking</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>

@@ -250,7 +250,13 @@ function maakUurPaneel(){
 function vindVolledigeGrafiekTabel(){
   /* Structureel anker (details#chartdata): de tekst van de samenvatting is taalafhankelijk en soms al vertaald vóór deze aanroep. */
   const details=document.querySelector("details#chartdata");
-  if(details){details.classList.add("wiw-chartdata-accessible");const summary=details.querySelector(":scope > summary");if(summary)summary.classList.add("wiw-chartdata-summary");}
+  if(details){
+    const layout=document.getElementById("wiw-chart-layout");
+    if(layout&&details.parentElement!==layout)layout.appendChild(details);
+    details.classList.add("wiw-chartdata-accessible");
+    const summary=details.querySelector(":scope > summary");
+    if(summary)summary.classList.add("wiw-chartdata-summary");
+  }
   const houder=document.getElementById("wiw-full-chart-data");if(houder)houder.remove();
   const knop=document.getElementById("wiw-all-data-button");if(knop)knop.remove();
 }
@@ -351,6 +357,13 @@ function markeerUur(){
     const k=tbody.querySelector('tr[data-instant="'+fokusInstant+'"] .wiw-hour-pick');
     if(k)k.focus({preventScroll:true});
   }
+  const details=document.getElementById("chartdata");
+  const oudeDetailrij=details&&details.querySelector("tr[aria-current]");
+  const detailrij=details&&ms!==null?details.querySelector('tr[data-instant="'+ms+'"]'):null;
+  if(oudeDetailrij!==detailrij){
+    if(oudeDetailrij)oudeDetailrij.removeAttribute("aria-current");
+    if(detailrij)detailrij.setAttribute("aria-current","true");
+  }
   werkVerwijzingBij(ms,gevonden,sel);
 }
 function werkVerwijzingBij(ms,tr,sel){
@@ -359,7 +372,7 @@ function werkVerwijzingBij(ms,tr,sel){
   let el=document.getElementById("wiw-uur-verwijzing");
   const zichtbaar=tr&&!tr.classList.contains("wiw-hour-mobile-hidden");
   /* Doel: de verborgen rij zit achter 'Alle uren bekijken' (mobiel); een uur dat in geen enkele rij staat, zit in de tabel van
-     'Grafiekgegevens als tabel'. */
+     'Alle uurdetails'. */
   /* Alleen bij een uur dat de bezoeker zelf koos: een standaardselectie is bij het laden het eerstvolgende uur en hoort niet te
      melden dat er "iets gekozen" is. */
   const doel=ms===null||zichtbaar||!sel||!sel.handmatig||!S.geo||!S.geo.TI?null:(tr?toggle:samenvatting);
@@ -375,12 +388,11 @@ function werkVerwijzingBij(ms,tr,sel){
   if(actief){
     const tijd=S.geo.TI[sel.k],lokaal=typeof root.weatherNowLokaleTijd==="function"?root.weatherNowLokaleTijd(tijd):tijd;
     const label=rijLabel({tijd:lokaal},typeof uurAanduiding==="function"?uurAanduiding(ms):"");
-    tekst=tr?label+" is geselecteerd; die rij staat in Alle uren bekijken.":label+" is geselecteerd, maar staat niet in dit overzicht; zie Grafiekgegevens als tabel.";
+    tekst=tr?label+" is geselecteerd; die rij staat in Alle uren bekijken.":label+" is geselecteerd, maar staat niet in dit overzicht; zie Alle uurdetails.";
     /* Compact (alleen het kloktijdstip) zodat de bediening op één regel blijft: de volledige dag en aanduiding staan op de kaart. */
     toevoeging=hhmm(lokaal)+" gekozen";
   }
-  /* Zichtbare tekst in de bestaande bediening, zonder extra regel: achter 'Alle uren bekijken' (mobiel) of achter 'Grafiekgegevens
-     als tabel'. Idempotent, om schrijflussen met de vertaallaag te voorkomen. */
+  /* Zichtbare tekst in de bestaande bediening, zonder extra regel: achter 'Alle uren bekijken' (mobiel) of achter 'Alle uurdetails'. Idempotent, om schrijflussen met de vertaallaag te voorkomen. */
   if(toggle){
     const wens=actief===toggle?toevoeging:"";
     if((toggle.dataset.uurToevoeging||"")!==wens){
