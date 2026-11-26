@@ -35,6 +35,8 @@ ok(html.includes('const pijl=t.richting==="stijgt"?"↗":t.richting==="daalt"?"�
 ok(html.includes('waarde.innerHTML=String(t.van)+" <span aria-hidden=\\"true\\" translate=\\"no\\">"+pijl+"</span> "+String(t.naar)+"<s>°C</s>";'),"de temperatuurtrend toont de pijl met behoud van de getoonde waarden");
 ok(html.includes(':"De temperatuur blijft de komende uren rond "+String(t.van)+"\\u00a0°C.";'),"gelijkblijvende temperatuur krijgt een expliciete toelichting");
 ok(!html.includes('De temperatuur verandert de komende uren nauwelijks.'),"oude vage copy voor gelijke temperatuurtrend is verwijderd");
+ok(html.includes('waarde.setAttribute("aria-hidden","true");')&&html.includes('trendSr.textContent="Van "+String(t.van)+" naar "+String(t.naar)+"\\u00a0°C";'),"schermlezers horen de trend als volledige zin (\"Van … naar … °C\") in plaats van twee losse getallen (G2-C)");
+ok(html.includes('if(!t.genoeg){waarde.removeAttribute("aria-hidden");trendSr.textContent="";'),"zonder betrouwbare trend is de zichtbare waarde weer leesbaar en de verborgen zin leeg (G2-C)");
 
 ok(html.includes("function weatherNowDagenNeerslagUitleg(){"),"weekverwachting heeft een finale uitleg-owner voor niet-nul kans met 0,0 mm");
 ok(html.includes('uitleg.id="dagenneerslaguitleg"'),"nul-mm-uitleg krijgt een eigen regel en overschrijft de bedieningshint niet");
