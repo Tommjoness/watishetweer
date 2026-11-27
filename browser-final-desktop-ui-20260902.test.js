@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded',()=>{const zet=(k,v)=>document.body
  const rr=e=>{const r=e?.getBoundingClientRect();return r?{l:r.left,r:r.right,t:r.top,b:r.bottom,w:r.width,h:r.height}:null;},gm=rr(main),gh=rr(hour);
  const stats=[...document.querySelectorAll('.final-top-grid>.stats .stat')].filter(e=>getComputedStyle(e).display!=='none'),st=stats.map(e=>getComputedStyle(e));
  zet('pressure-visible',!!document.getElementById('wiw-more-measurements'));zet('pressure-retired',!document.getElementById('pres')&&!document.getElementById('wiw-pressure-diagnostic')?'ok':'fout');
- zet('tiles',stats.length);zet('tiles-centered',st.every(s=>s.textAlign==='center'&&s.alignItems==='center'&&s.justifyContent==='flex-start')?'ok':'fout');
+ /* Chrome 158 serialiseert de bestaande startuitlijning als flow-start.
+    Controleer beide namen binnen dezelfde flexkolom. */
+ zet('tiles',stats.length);zet('tiles-centered',st.every(s=>s.display==='flex'&&s.flexDirection==='column'&&s.textAlign==='center'&&s.alignItems==='center'&&['flex-start','flow-start'].includes(s.justifyContent))?'ok':'fout');
  zet('rows',document.querySelectorAll('#wiw-hour-table tbody tr').length);zet('scopes',[...document.querySelectorAll('#wiw-hour-table th')].filter(th=>th.getAttribute('scope')==='col').length);zet('headers',[...document.querySelectorAll('#wiw-hour-table thead th')].map(th=>th.textContent.trim()).join('|'));zet('row-shape',[...document.querySelectorAll('#wiw-hour-table tbody tr')].every(tr=>tr.children.length===(desktop?5:4))?'ok':'fout');zet('tabindex',document.getElementById('wiw-hour-scroll')?.tabIndex);zet('current',document.querySelectorAll('#wiw-hour-table tr[data-current="1"]').length);zet('marker',document.querySelector('#wiw-hour-table tr[data-current="1"] .wiw-hour-marker')?.textContent||'');zet('hour-title',document.getElementById('wiw-hour-title')?.textContent||'');
  /* Controleer de UI in normale en in 0%-bij-positieve-mm toestand. */
  const uitleg=document.getElementById('wiw-hour-precip-context');
