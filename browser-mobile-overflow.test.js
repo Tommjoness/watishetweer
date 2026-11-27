@@ -199,8 +199,9 @@ async function controleer(type,naam,breedte){
         assert.ok(resultaat.scrollProbe&&resultaat.scrollProbe.max>0&&resultaat.scrollProbe.na>resultaat.scrollProbe.voor,`${naam} ${breedte}: grafiekdatatabel is breed maar kan niet echt horizontaal worden gescrold; ${diagnose}`);
       }
     }
-    if(breedte<=430)assert.notEqual(resultaat.scrollHint,"none",`${naam} ${breedte}: horizontaal scrollbare grafiektabel mist een zichtbare aanwijzing; ${diagnose}`);
-    else assert.equal(resultaat.scrollHint,"none",`${naam} ${breedte}: mobiele scrollaanwijzing blijft onnodig zichtbaar op desktop; ${diagnose}`);
+    const scrolluitlegNodig=breedte<=430||(resultaat.scrollProbe?.max??0)>1;
+    assert.equal(resultaat.scrollHint!=="none",scrolluitlegNodig,
+      `${naam} ${breedte}: de scrolluitleg moet bij de breedte van de detailtabel passen; ${diagnose}`);
     assert.deepEqual(fouten,[],`${naam} ${breedte}: pageerrors; ${JSON.stringify(fouten)}`);
     console.log(`Mobiele overflow OK: ${naam} ${breedte}px; chart ${resultaat.modules.chart.width}px; labels ${resultaat.q4Labels.join(" | ")}`);
   }finally{await context.close();await browser.close();}
