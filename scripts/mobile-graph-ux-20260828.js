@@ -1033,14 +1033,25 @@ function bouwDesktopGrafiekAccenten(){
 
   /* 1. Zacht vlak onder ieder lijnstuk, in temperatuurkleur die naar onderen wegvalt. */
   const lijnen=[...svg.querySelectorAll("polyline")].filter(el=>!el.closest("#scrub"));
-  if(lijnen.length){
+  const verbinding=svg.querySelector("line[data-nu-aanloop]");
+  const aanloop=verbinding&&getComputedStyle(verbinding).strokeDasharray==="none"?verbinding:null;
+  if(lijnen.length||aanloop){
     const defs=document.createElementNS(SVG_NS,"defs");defs.setAttribute("data-desktop-temp-area","defs");
     const verloop=document.createElementNS(SVG_NS,"linearGradient");
     verloop.setAttribute("id","desktopTempVlak");verloop.setAttribute("x1","0");verloop.setAttribute("y1","0");verloop.setAttribute("x2","0");verloop.setAttribute("y2","1");
     vulTemperatuurVerloop(verloop,g,top,bottom);
     defs.appendChild(verloop);svg.insertBefore(defs,svg.firstChild);
-    lijnen.forEach(lijn=>{
-      const punten=String(lijn.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite));
+    const vlakken=lijnen.map(lijn=>({
+      lijn,
+      punten:String(lijn.getAttribute("points")||"").trim().split(/\s+/).map(p=>p.split(",").map(Number)).filter(p=>p.length===2&&p.every(Number.isFinite))
+    }));
+    if(aanloop){
+      const punt=i=>["x","y"].map(as=>Number(aanloop.getAttribute(as+i)));
+      const start=punt(1),einde=punt(2),eerste=vlakken[0];
+      if(eerste?.punten[0]?.join(",")===einde.join(",")) eerste.punten.unshift(start);
+      else vlakken.unshift({lijn:lijnen[0]||aanloop,punten:[start,einde]});
+    }
+    vlakken.forEach(({lijn,punten})=>{
       if(punten.length<2)return;
       const vlak=document.createElementNS(SVG_NS,"path");
       vlak.setAttribute("d","M"+punten.map(p=>p.join(",")).join(" L")+` L${punten[punten.length-1][0]},${bottom} L${punten[0][0]},${bottom} Z`);
