@@ -22,7 +22,12 @@ const PUBLIC=path.join(__dirname,"..","public");
 if(!fs.existsSync(path.join(PUBLIC,"index.html")))throw new Error("public/index.html ontbreekt; draai eerst de build.");
 const mime={".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".woff2":"font/woff2",".png":"image/png",".webp":"image/webp",".svg":"image/svg+xml",".css":"text/css; charset=utf-8"};
 const NU=Date.UTC(2026,6,22,12,10,0);
-const VIEWPORTS=[{naam:"desktop 1440",width:1440,height:900},{naam:"desktop 1920",width:1920,height:1080}];
+const VIEWPORTS=[
+  {naam:"desktop 1100",width:1100,height:900},
+  {naam:"desktop 1440",width:1440,height:900},
+  {naam:"desktop 1920",width:1920,height:1080},
+  {naam:"desktop 3440",width:3440,height:1080}
+];
 const VOLGORDES=["normaal","vertaling-eerst","app-eerst"];
 
 function bouwServer(){
@@ -51,8 +56,13 @@ function meet(){
   const d=det[0],sum=d&&d.querySelector(":scope > summary");
   const layout=document.getElementById("wiw-chart-layout"),main=document.querySelector(".wiw-chart-main");
   const tegels=document.querySelector(".final-top-grid>.stats");
+  const paneel=document.getElementById("wiw-hour-panel");
   const rijen=[...document.querySelectorAll("#wiw-hour-table tbody tr")].filter(r=>r.getBoundingClientRect().height>0);
+  const ingang=sum?.getBoundingClientRect(), kop=document.querySelector(".chartkop")?.getBoundingClientRect();
   return {
+    ingangInKop:!!ingang&&!!kop&&ingang.left>=paneel.getBoundingClientRect().left&&
+      ingang.right<=kop.right+1&&ingang.bottom<=layout.getBoundingClientRect().top+1&&
+      ingang.top+ingang.height/2>=kop.top,
     aantalDetails:det.length,
     inUurtabel:!!d&&d.previousElementSibling?.id==="wiw-hour-panel",
     hoogteIngang:sum?Math.round(sum.getBoundingClientRect().height):0,
@@ -108,7 +118,17 @@ function meet(){
         if(taal==="en"&&volgorde==="app-eerst")assert.equal(poorten.appEerst,"open",`${L}: de app had haar tegels niet opgezet vóór de vertaling (testfout, geen bewijs voor de volgorde)`);
         assert.equal(m.taalKlaar,taal==="en",`${L}: vertaalstatus klopt niet`);
 
-        assert(m.inUurtabel&&m.hoogteIngang>=44,`${L}: uurdetails hebben hun ingang in de uurtabel`);
+        assert(m.inUurtabel&&m.ingangInKop&&m.hoogteIngang>=44,`${L}: uurdetails hebben hun ingang in de bestaande kop`);
+        const meetGesloten=()=>page.evaluate(()=>{
+          const d=document.getElementById("chartdata");
+          const geometrie=()=>[".wiw-chart-main","#wiw-hour-panel","#wiw-hour-table","#wiw-chart-layout",".dashrow-days"]
+            .map(s=>{const r=document.querySelector(s).getBoundingClientRect();return [r.x,r.y,r.width,r.height];});
+          const met=geometrie();
+          try{d.hidden=true;return {met,zonder:geometrie()};}
+          finally{d.hidden=false;}
+        });
+        const {met,zonder}=await meetGesloten();
+        assert.deepEqual(met,zonder,`${L}: de gesloten uitklap verandert de hoogte of uitlijning van de weersectie`);
         assert.deepEqual(m.velden.slice(-2),taal==="en"?["Wind direction","Cloud"]:["Windrichting","Bewolking"],`${L}: aanvullende kaartwaarden hebben kolomkoppen`);
         assert.equal(m.actieveDetails,await page.evaluate(()=>String(UURSEL.huidig.ms)),`${L}: geselecteerd instant staat ook in de details`);
         assert.equal(m.aantalDetails,1,`${L}: er moet precies één details#chartdata zijn`);
@@ -151,5 +171,5 @@ function meet(){
         assert.ok(lijst.every(([,r])=>r===lijst[0][1]),`${vpNaam}: bij ${tegels} tegels verschilt het aantal uurrijen per situatie: ${JSON.stringify(lijst)}`);
     }
   }finally{srv.close();await browser.close();}
-  console.log(`Grafiektabel taalneutraal: ${n} situaties (2 breedtes, NL en EN, 3 volgordes van renderen en vertalen): details#chartdata met wiw-chartdata-accessible en wiw-chartdata-summary, dicht bij start, openen en sluiten met klik en Enter, gelijke hoogtes van uitklap, grafiek en paneel, NL en EN gelijk.`);
+  console.log(`Grafiektabel taalneutraal: ${n} situaties (4 breedtes, NL en EN, 3 volgordes van renderen en vertalen): details#chartdata met wiw-chartdata-accessible en wiw-chartdata-summary, dicht bij start, openen en sluiten met klik en Enter, gelijke grafiek-, tabel- en sectiegeometrie met en zonder gesloten uitklap, NL en EN gelijk.`);
 })().catch(e=>{console.error(e);process.exit(1);});
