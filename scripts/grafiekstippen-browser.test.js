@@ -141,25 +141,45 @@ function meet(){
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
         /* Iedere astijd: stip en eigen temperatuur. */
-        /* Desktop: "nu 18°" staat links van de rode nu-lijn (eigenaar, 1 oktober)
-           en raakt geen andere tekst. */
+        const selectieFouten=await page.evaluate(async()=>{
+          const svg=document.getElementById("chart"),hit=svg.querySelector("#hit"),scrub=svg.querySelector("#scrub");
+          const nu=[...svg.querySelectorAll("text")].find(el=>/^nu\s/.test(el.textContent.trim()));
+          const g=S.geo,r=svg.getBoundingClientRect(),schaal=r.width/g.W;
+          const fouten=[];
+          const plek=()=>[nu.getAttribute("x"),nu.getAttribute("y")].join(",");
+          scrub.style.display="none";
+          await Promise.resolve();
+          const begin=plek(),rustvak=nu.getBBox();
+          for(const [i,v] of g.T.entries()){
+            if(!Number.isFinite(v))continue;
+            hit.dispatchEvent(new PointerEvent("pointermove",{clientX:r.left+g.x(i)*schaal,clientY:r.top+g.pt*schaal,pointerType:"mouse"}));
+            await Promise.resolve();
+            const kruis=svg.querySelector("#scrub > line"),stijl=kruis&&getComputedStyle(kruis);
+            if(!nu?.getClientRects().length||!stijl||stijl.maskImage!=="none"||stijl.strokeDasharray!=="none"){
+              fouten.push(i);continue;
+            }
+            const b=nu.getBBox(),x=Number(kruis.getAttribute("x1"));
+            if(x>=b.x&&x<=b.x+b.width&&Number(kruis.getAttribute("y1"))<b.y+b.height&&Number(kruis.getAttribute("y2"))>b.y)fouten.push(i);
+            if((x<rustvak.x-3||x>rustvak.x+rustvak.width+3)&&plek()!==begin)fouten.push(i);
+          }
+          hit.dispatchEvent(new PointerEvent("pointerleave",{pointerType:"mouse"}));
+          scrub.style.display="none";
+          await Promise.resolve();
+          if(plek()!==begin)fouten.push("rustpositie");
+          return fouten;
+        });
+        assert.deepEqual(selectieFouten,[],label+": het nu-label wijkt alleen uit voor de doorlopende selectielijn en keert terug");
+        /* Desktop: het nu-label houdt rechts van de rode lijn een vrije plek. */
         if(w>=1100){
           const nu=await page.evaluate(()=>{const svg=document.getElementById("chart"),t=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getAttribute("display")!=="none"&&e.getClientRects().length);
             const nu=t.find(e=>/^nu /.test(e.textContent.trim())),lijn=[...svg.querySelectorAll("line")].find(l=>/carmine/.test(l.getAttribute("stroke")||"")&&!l.hasAttribute("data-nu-aanloop"));
             if(!nu||!lijn)return null;const r=nu.getBoundingClientRect(),lr=lijn.getBoundingClientRect();
             const raakt=t.filter(e=>e!==nu).filter(e=>{const b=e.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;}).map(e=>e.textContent.trim());
-            /* Geen asgetal direct boven of onder het nu-label: "nu 16°" boven
-               "16°" leest als een dubbeling (eigenaar, 2 oktober). */
-            const hoogte=r.height||14,midden=(r.top+r.bottom)/2;
-            const stapel=t.filter(e=>e!==nu&&/^-?\d+°$/.test(e.textContent.trim())).filter(e=>{const b=e.getBoundingClientRect();return b.right<=lr.left+0.5&&Math.abs((b.top+b.bottom)/2-midden)<hoogte*1.6;}).map(e=>e.textContent.trim());
-            const sr=svg.getBoundingClientRect();return {links:r.right<=lr.left+0.5,rechts:r.left>=lr.right-0.5,raakt,stapel,svgLinks:r.left>=sr.left-0.5,svgBinnen:r.left>=sr.left-0.5&&r.right<=sr.right+0.5};});
-          /* Typografie-ronde 29 oktober 2026 (akkoord eigenaar): past het label op de grotere grafiektekst (14px) links van de nu-lijn niet meer, dan
-             staat het rechts van de lijn (bestaande plaatsingslogica). Het staat dan nog steeds naast de lijn en volledig binnen de grafiek. */
-          assert(nu&&(nu.links||nu.rechts),label+": het nu-label staat niet naast de rode nu-lijn (links of rechts)");
+            const sr=svg.getBoundingClientRect();
+            return {rechts:r.left>=lr.right+1,raakt,svgBinnen:r.right<=sr.right+0.5};});
+          assert(nu&&nu.rechts,label+": het nu-label staat niet vrij rechts van de rode nu-lijn");
           assert(nu.svgBinnen,label+": het nu-label valt buiten de grafiek");
           assert.deepEqual(nu.raakt,[],label+": het nu-label raakt andere tekst");
-          /* De stapel-eis ("nu 16°" direct boven "16°") geldt voor een label links van de lijn, tussen de asgetallen; rechts van de lijn staat de lijn ertussen. */
-          if(nu.links)assert.deepEqual(nu.stapel,[],label+": asgetal direct boven of onder het nu-label: "+nu.stapel.join(", "));
         }
         if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
         const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
@@ -215,5 +235,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK: hoogste en laagste punt en iedere astijd met stip en eigen temperatuur, op 390, 820, 1366 en 1920px, voor twee reeksen; op desktop staat het nu-label naast de nu-lijn: links, en rechts als de grotere grafiektekst links niet past.");
+  console.log("Grafiekstippen OK op 390, 820, 1366 en 1920px voor twee reeksen; het nu-label ontwijkt de doorlopende selectielijn en staat op desktop rechts van de nu-lijn.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});
