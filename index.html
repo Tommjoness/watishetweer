@@ -2398,7 +2398,7 @@ function etmaal(start,n){
       ).join("");
     })()}
     ${dots}${labs}${ticks}${nu}
-    <g id="scrub" style="display:none"></g>
+    <g id="scrub" aria-hidden="true" style="display:none"></g>
     <rect id="hit" x="${pl-cw/2}" y="${pt-14}" width="${iw+cw}" height="${ih+20}" fill="transparent" style="cursor:crosshair"/>`;
 
   const geldigeKansen=P.filter(v=>Number.isFinite(v));

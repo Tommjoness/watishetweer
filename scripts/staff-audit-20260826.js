@@ -273,26 +273,42 @@ function lokaleTijdLabel(iso,meerdereDagen){
   return d.toLocaleString("nl-NL",{timeZone:"UTC",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}).replace(",","");
 }
 function werkGrafiekTabelBij(){
-  const body=document.querySelector("#chartdata tbody"),regio=document.querySelector("#chartdata .chartdata-scroll");
-  if(!body||!S.geo||!Array.isArray(S.geo.TI)){return;}
-  const g=S.geo,h=S.d&&S.d.hourly,meer=g.TI.length>1&&String(g.TI[0]).slice(0,10)!==String(g.TI[g.TI.length-1]).slice(0,10);
+  const details=document.getElementById("chartdata"),body=details&&details.querySelector("tbody");
+  if(!body)return;
+  const regio=details.querySelector(".chartdata-scroll");
+  const heeftUren=Array.isArray(S.geo&&S.geo.TI)&&S.geo.TI.length>0;
+  if(details.hidden===heeftUren)details.hidden=!heeftUren;
+  if(!heeftUren){
+    details.open=false;
+    body.replaceChildren();
+    return;
+  }
+  const g=S.geo,h=S.d&&S.d.hourly;
+  const tijden=g.TI.map(t=>typeof weatherNowLokaleTijd==="function"?weatherNowLokaleTijd(t):t);
+  const meer=tijden.length>1&&String(tijden[0]).slice(0,10)!==String(tijden[tijden.length-1]).slice(0,10);
   const uurIndex=new Map(Array.isArray(h&&h.time)?h.time.map((t,i)=>[String(t),i]):[]);
   const frag=document.createDocumentFragment();
   for(let i=0;i<g.TI.length;i++){
     const tr=document.createElement("tr"),hi=uurIndex.get(String(g.TI[i]));
+    const ms=typeof uurInstant==="function"?uurInstant(g.TI[i]):null;
+    if(Number.isFinite(ms))tr.dataset.instant=String(ms);
+    const aanduiding=Number.isFinite(ms)&&typeof uurAanduiding==="function"?uurAanduiding(ms):"";
     const code=eindig(g.D&&g.D[i]),isDag=eindig(g.ND&&g.ND[i]);
     const kans=eindig(g.P&&g.P[i]),temp=eindig(g.T&&g.T[i]),gevoel=eindig(g.A&&g.A[i]),wind=eindig(g.W_&&g.W_[i]),gust=eindig(g.G&&g.G[i]);
+    const richting=eindig(g.WD&&g.WD[i]),bewolking=eindig(g.C&&g.C[i]);
     /* Neerslag voor het uur dat op dit tijdstip begint: bronindex +1. */
     const mm=Number.isInteger(hi)?eindig(h&&h.precipitation&&h.precipitation[hi+1]):null;
     const waarden=[
-      lokaleTijdLabel(g.TI[i],meer),
+      lokaleTijdLabel(tijden[i],meer)+(aanduiding?" ("+aanduiding+")":""),
       code===null?"–":(typeof txt==="function"?txt(code,isDag!==0):"Weercode "+code),
       temp===null?"–":Math.round(temp)+" °C",
       gevoel===null?"–":Math.round(gevoel)+" °C",
       kans===null?"–":Math.round(Math.max(0,Math.min(100,kans)))+"%",
       mm===null?"–":formatMm(mm),
       wind===null?"–":Math.round(wind)+" km/u",
-      gust===null?"–":Math.round(gust)+" km/u"
+      gust===null?"–":Math.round(gust)+" km/u",
+      richting!==null&&typeof kompas==="function"?kompas(richting):"–",
+      bewolking===null?"–":bewolking+"%"
     ];
     waarden.forEach((waarde,j)=>{const el=document.createElement(j===0?"th":"td");if(j===0)el.scope="row";el.textContent=waarde;tr.appendChild(el);});
     frag.appendChild(tr);

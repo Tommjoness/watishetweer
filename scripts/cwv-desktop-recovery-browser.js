@@ -157,7 +157,8 @@ async function run(){
             sunDayVisible:!!(sunDay&&sunDay.getClientRects().length),
             nightCells,
             rainVisible:document.getElementById("wiw-rain-section")?.getClientRects().length>0,
-            chartDataVisible:[...document.querySelectorAll("details")].some(d=>/grafiekgegevens.*tabel/i.test(d.querySelector("summary")?.textContent||"")&&d.open&&d.getClientRects().length>0),
+            chartDataVisible:!!document.querySelector("details#chartdata[open]:not([hidden])"),
+            chartDataEntry:(()=>{const d=document.getElementById("chartdata"),s=d?.querySelector("summary");return !!d&&!d.hidden&&d.previousElementSibling===panel&&s?.getBoundingClientRect().height>=44;})(),
             hourOverflow:scroll&&getComputedStyle(scroll).overflowY,
             hourPanelVisibility:panel&&getComputedStyle(panel).visibility,
             hourButtons:panel&&[...panel.querySelectorAll("button")].filter(e=>e.getClientRects().length>0).length,
@@ -268,7 +269,8 @@ async function run(){
           assert.equal(result.sunDayVisible,false,"los Vandaag/Morgen-label staat nog boven de grafiek");
           assert.equal(result.hourCells,true,"uurregels missen weericoon, gevoel, neerslagkans of wind");
           assert.equal(result.rainVisible,false,"korte neerslagsectie is nog zichtbaar");
-          assert.equal(result.chartDataVisible,false,"grafiektabelbediening is nog zichtbaar");
+          assert.equal(result.chartDataVisible,false,"de volledige uurdetails blijven standaard gesloten");
+          assert.equal(result.chartDataEntry,true,"de ingang naar de uurdetails blijft zichtbaar na de uurtabel");
           assert.equal(result.hourOverflow,"visible");assert.equal(result.hourPanelVisibility,"visible","rijke uurkolom is niet zichtbaar");assert.equal(result.hourButtons,0,"geen extra uurbediening");
           /* Typografie-ronde 29 oktober 2026: de uurregels hebben 16px en 14px tekst en de hoogtegestuurde spreiding verdeelt de paneelhoogte over
              minder rijen. Gemeten (main eerder): 1100px 43px, 1280 tot 1366px 39px; nu 1100 px 57px (6 rijen), 1200px 55px, 1280 tot 1366px 48px, vanaf 1440px

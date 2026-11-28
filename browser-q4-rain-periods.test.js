@@ -187,6 +187,10 @@ async function controleer(type,naam,breedte){
       };
     });
 
+    assert.equal(await page.locator("#scrub").getAttribute("aria-hidden"),"true","De visuele markering is decoratief");
+    assert.equal(await page.locator("#scrub").getAttribute("aria-label"),null,"De markering heeft geen ARIA-naam");
+    const slider=page.getByRole("slider",{name:"Uur in de temperatuurgrafiek"});
+    assert(await slider.getAttribute("aria-valuetext"),"De echte slider behoudt zijn toegankelijke waarde");
     const grafiekAria=await page.locator("#chart").getAttribute("aria-label")||"";
     assert(!grafiekAria.includes(".;")&&!/;\s*een deels verstreken modeluur/i.test(grafiekAria),naam+" "+breedte+": grafieklabel bevat achtergebleven interpunctie of een halve verwijderde zin: "+grafiekAria);
 
@@ -207,6 +211,7 @@ async function controleer(type,naam,breedte){
     };
 
     const interactie=await interacteer(coords);
+    assert.equal(interactie.aria,"","ook na aanraken of hover houdt de visuele markering geen ARIA-naam");
     assert(interactie.teksten.some(t=>/0,4\s*mm/.test(t)),naam+" "+breedte+": interactie op 16:00 toont dezelfde 0,4 mm; diagnose="+JSON.stringify({coords,interactie})+"; pageerrors="+JSON.stringify(fouten));
     assert(/neerslagkans\s+86%/i.test(interactie.groepTekst),naam+" "+breedte+": volledige kansinformatie blijft via tooltip beschikbaar");
     assert.equal(interactie.display,"block",naam+" "+breedte+": interactie maakt tooltip zichtbaar");
