@@ -141,25 +141,30 @@ function meet(){
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
         /* Iedere astijd: stip en eigen temperatuur. */
-        /* Desktop: het nu-label staat rechts en de selectielijn heeft
-           uitsparingen voor het nu-label en de temperatuurcijfers. */
+        const selectielijnVrij=await page.evaluate(()=>{
+          const svg=document.getElementById("chart"),kruis=svg.querySelector("#scrub > line");
+          const uitsparingen=svg.querySelector("#wiw-scrub-labelmask path[fill=black]");
+          const labels=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getClientRects().length
+            &&/^(?:(?:nu|now)(?:\s|$)|[-−]?\d+°$)/i.test(e.textContent.trim()));
+          const uurLijnen=S.geo.T.flatMap((v,i)=>Number.isFinite(v)?[S.geo.x(i)]:[]);
+          return kruis&&getComputedStyle(kruis).maskImage.includes("#wiw-scrub-labelmask")&&labels.length>0&&labels.every(e=>{
+            const {x,y,width,height}=e.getBBox();
+            return uurLijnen.filter(lijnX=>lijnX>=x&&lijnX<=x+width).every(lijnX=>
+              uitsparingen?.isPointInFill(new DOMPoint(lijnX,y))&&uitsparingen.isPointInFill(new DOMPoint(lijnX,y+height)));
+          });
+        });
+        assert(selectielijnVrij,label+": de selectielijn houdt de temperatuurtekst vrij");
+        /* Desktop: het nu-label houdt rechts van de rode lijn een vrije plek. */
         if(w>=1100){
           const nu=await page.evaluate(()=>{const svg=document.getElementById("chart"),t=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getAttribute("display")!=="none"&&e.getClientRects().length);
             const nu=t.find(e=>/^nu /.test(e.textContent.trim())),lijn=[...svg.querySelectorAll("line")].find(l=>/carmine/.test(l.getAttribute("stroke")||"")&&!l.hasAttribute("data-nu-aanloop"));
             if(!nu||!lijn)return null;const r=nu.getBoundingClientRect(),lr=lijn.getBoundingClientRect();
             const raakt=t.filter(e=>e!==nu).filter(e=>{const b=e.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;}).map(e=>e.textContent.trim());
-            const kruis=svg.querySelector("#scrub > line"),uitsparingen=svg.querySelector("#wiw-scrub-labelmask path[fill=black]");
-            const afgedekt=t.filter(e=>e===nu||/Bodoni/i.test(e.getAttribute("font-family")||"")&&/^-?\d+°$/.test(e.textContent.trim())).every(e=>{
-              const {x,y,width,height}=e.getBBox();
-              return uitsparingen?.isPointInFill(new DOMPoint(x,y))&&uitsparingen.isPointInFill(new DOMPoint(x+width,y+height));
-            });
             const sr=svg.getBoundingClientRect();
-            return {rechts:r.left>=lr.right+1,raakt,svgBinnen:r.right<=sr.right+0.5,
-              selectielijnVrij:afgedekt&&kruis&&getComputedStyle(kruis).maskImage.includes("#wiw-scrub-labelmask")};});
+            return {rechts:r.left>=lr.right+1,raakt,svgBinnen:r.right<=sr.right+0.5};});
           assert(nu&&nu.rechts,label+": het nu-label staat niet vrij rechts van de rode nu-lijn");
           assert(nu.svgBinnen,label+": het nu-label valt buiten de grafiek");
           assert.deepEqual(nu.raakt,[],label+": het nu-label raakt andere tekst");
-          assert(nu.selectielijnVrij,label+": de selectielijn houdt de temperatuurtekst vrij");
         }
         if(m.nuAnker!==null)assert(m.M&&m.nuAnker===m.asUren[0],label+": alleen op de telefoon en alleen het eerste uur mag zijn temperatuur aan het nu-label overlaten");
         const leeg=m.astijden.filter(a=>a.i!==m.nuAnker&&(!a.stip||a.cijfer!==a.verwacht)).map(a=>a.tijd+(a.stip?"":" zonder stip")+(a.cijfer===a.verwacht?"":" cijfer "+(a.cijfer||"ontbreekt")+" (verwacht "+a.verwacht+")"));
@@ -215,5 +220,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK op 390, 820, 1366 en 1920px voor twee reeksen; op desktop staat het nu-label rechts van de nu-lijn en houdt de selectielijn de temperatuurtekst vrij.");
+  console.log("Grafiekstippen OK op 390, 820, 1366 en 1920px voor twee reeksen; de selectielijn houdt temperatuurtekst vrij en op desktop staat het nu-label rechts.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

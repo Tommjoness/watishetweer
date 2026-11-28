@@ -1475,14 +1475,14 @@ function bewakingsBox(el){
   if(!m)return null;
   const s=Number(m[3]);return {x:Number(m[1]),y:Number(m[2]),width:24*s,height:24*s};
 }
-let desktopTekstmeter;
-function desktopTekstVak(el){
+let grafiekTekstmeter;
+function grafiekTekstVak(el){
   const fallback=bewakingsBox(el);
-  desktopTekstmeter??=document.createElement("canvas").getContext("2d");
-  if(!fallback||!desktopTekstmeter)return fallback;
+  grafiekTekstmeter??=document.createElement("canvas").getContext("2d");
+  if(!fallback||!grafiekTekstmeter)return fallback;
   const stijl=getComputedStyle(el),fs=parseFloat(stijl.fontSize);
-  desktopTekstmeter.font=`${stijl.fontStyle} ${stijl.fontWeight} ${stijl.fontSize} ${stijl.fontFamily}`;
-  const m=desktopTekstmeter.measureText(el.textContent.trim());
+  grafiekTekstmeter.font=`${stijl.fontStyle} ${stijl.fontWeight} ${stijl.fontSize} ${stijl.fontFamily}`;
+  const m=grafiekTekstmeter.measureText(el.textContent.trim());
   const anker=el.getAttribute("text-anchor"),x=Number(el.getAttribute("x"));
   const basis=x-(anker==="middle"?m.width/2:anker==="end"?m.width:0);
   const y=Number(el.getAttribute("y"))+(Number(el.getAttribute("dy"))||0);
@@ -1574,7 +1574,8 @@ function bewaakGrafiekLabels(){
   const isNu=el=>(desktop?/^(?:nu|now)(?:\s|$)/i:/^nu(?:\s|$)/i).test(String(el.textContent||"").trim());
   const isTijd=el=>el.hasAttribute("data-temp-time")||el.hasAttribute("data-mobile-temp-marker-time");
   const beweegbaar=teksten.filter(el=>isWaarde(el)||isNu(el));
-  if(!beweegbaar.length)return;
+  const maskerTeksten=teksten.filter(el=>/^(?:(?:nu|now)(?:\s|$)|[-−]?\d+°$)/i.test(el.textContent.trim()));
+  if(!beweegbaar.length&&!maskerTeksten.length)return;
   const lijnen=getekendeLijnPunten(svg);
   const cirkels=[...svg.querySelectorAll("circle")].filter(el=>!el.closest("#scrub")&&Number(el.getAttribute("r"))>0&&zichtbaarInGrafiek(el,svg))
     .map(el=>({el,x:Number(el.getAttribute("cx")),y:Number(el.getAttribute("cy")),r:Number(el.getAttribute("r"))})).filter(c=>[c.x,c.y,c.r].every(Number.isFinite));
@@ -1720,7 +1721,7 @@ function bewaakGrafiekLabels(){
   if(desktop){
     /* Plaats nu als laatste. Meet de tekst met het effectieve lettertype
        en de huidige vertaling, zonder de SVG-layout op te vragen. */
-    teksten.forEach(el=>vakken.set(el,zichtbaarInGrafiek(el,svg)?desktopTekstVak(el):null));
+    teksten.forEach(el=>vakken.set(el,zichtbaarInGrafiek(el,svg)?grafiekTekstVak(el):null));
     const nu=beweegbaar.find(isNu);
     if(nu&&nuLijnen.length){
       const box=vakken.get(nu),links=nuLijnen[0].x+8;
@@ -1741,8 +1742,10 @@ function bewaakGrafiekLabels(){
         vakken.set(nu,null);
       }
     }
-    schermGrafiekLabelsAf(svg,beweegbaar.map(el=>vakken.get(el)),W,H);
   }
+  const maskerVakken=maskerTeksten.filter(el=>el.isConnected&&zichtbaarInGrafiek(el,svg))
+    .map(el=>desktop?vakken.get(el):grafiekTekstVak(el));
+  schermGrafiekLabelsAf(svg,maskerVakken,W,H);
 }
 
 let uurAsToken=0;
