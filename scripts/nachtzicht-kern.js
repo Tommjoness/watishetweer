@@ -67,9 +67,10 @@
      een klokwissel heen; zichtbare tijden gaan daarom via die afwijking naar de
      echte lokale tijd, zoals weatherNowLokaleTijd() in de app. */
   function providerLokaal(t, d, tz) {
-    const s = String(t == null ? "" : t), m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s), off = getal(d && d.utc_offset_seconds);
-    if (!m || off === null) return s;
-    return lokaleTijd(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - off * 1000, tz) || s;
+    const s = String(t == null ? "" : t), off = getal(d && d.utc_offset_seconds);
+    if (off === null) return s;
+    const ms = wereld.WeatherNowNachtzichtProductie.providerInstant(s, off);
+    return Number.isFinite(ms) ? lokaleTijd(ms, tz) || s : s;
   }
   /* Index van het huidige uur, zoals actueelUurIndex() in de app. */
   function actueelUurIndex(d, nuMs) {
@@ -97,32 +98,36 @@
     tz = d.timezone || tz;
     const klokMs = Number.isFinite(nuMs) ? nuMs : Date.now();
     const nuLokaal = lokaleTijd(klokMs, tz) || String(c.time || "").slice(0, 16);
-    const nuUtc = naarUTC(nuLokaal, tz), i0 = actueelUurIndex(d, klokMs);
+    const nuUtc = Math.floor(klokMs / 60000) * 60000, i0 = actueelUurIndex(d, klokMs);
+    const providerInstant = t => d.utc_offset_seconds != null ? P.providerInstant(t, d.utc_offset_seconds) : naarUTC(t, tz);
+    const lokaal = t => providerLokaal(t, d, tz);
     const S = P.senior, V = P.presentatie;
     /* Tussen middernacht en zonsopkomst hoort de lopende nacht bij de zonsondergang
        van gisteren; de app rekent dan met een aangevulde dagreeks. */
-    const data = V.normaliseerNachtDagdata(d, nuLokaal), day = data.daily || {};
-    const actief = V.nachtIsActiefNu(d, nuLokaal);
+    const lokaleData = V.nachtDagdataLokaal(d, lokaal);
+    const day = V.normaliseerNachtDagdata(lokaleData, nuLokaal).daily || {};
+    const actief = V.nachtIsActiefNu(lokaleData, nuLokaal);
 
-    function maanFactor(t) {
+    function maanFactor(ms) {
+      if (!Number.isFinite(ms)) return 0;
       try {
-        const ms = naarUTC(t, tz), m = maan(new Date(ms)), hg = maanHoogte(ms, lat, lon);
+        const m = maan(new Date(ms)), hg = maanHoogte(ms, lat, lon);
         return (hg <= 0 ? 0 : Math.min(1, Math.sin(hg * Math.PI / 180) / Math.sin(45 * Math.PI / 180))) * m.ill;
       } catch (e) { return 0; }
     }
     function uurRij(i) {
-      const t = h.time[i], temp = getal(h.temperature_2m && h.temperature_2m[i]), dp = getal(h.dew_point_2m && h.dew_point_2m[i]);
-      return { tijd: t, ms: naarUTC(t, tz), cloud: getal(h.cloud_cover && h.cloud_cover[i]), visibility: getal(h.visibility && h.visibility[i]),
+      const t = h.time[i], ms = providerInstant(t), temp = getal(h.temperature_2m && h.temperature_2m[i]), dp = getal(h.dew_point_2m && h.dew_point_2m[i]);
+      return { tijd: t, ms, cloud: getal(h.cloud_cover && h.cloud_cover[i]), visibility: getal(h.visibility && h.visibility[i]),
         precip: getal(h.precipitation && h.precipitation[i]), code: getal(h.weather_code && h.weather_code[i]),
         humidity: getal(h.relative_humidity_2m && h.relative_humidity_2m[i]), spread: temp !== null && dp !== null ? temp - dp : null,
-        gust: getal(h.wind_gusts_10m && h.wind_gusts_10m[i]), moon: maanFactor(t) };
+        gust: getal(h.wind_gusts_10m && h.wind_gusts_10m[i]), moon: maanFactor(ms) };
     }
     function actueleRij() {
       const temp = getal(c.temperature_2m), rhNu = getal(c.relative_humidity_2m);
       const g = temp !== null && rhNu !== null && rhNu > 0 && rhNu <= 100 ? Math.log(rhNu / 100) + 17.625 * temp / (243.04 + temp) : null;
       const dp = g !== null ? 243.04 * g / (17.625 - g) : getal(h.dew_point_2m && h.dew_point_2m[i0]);
-      return { tijd: nuLokaal, ms: naarUTC(nuLokaal, tz), cloud: getal(c.cloud_cover), visibility: getal(c.visibility), precip: getal(c.precipitation), code: getal(c.weather_code),
-        humidity: rhNu, spread: temp !== null && dp !== null ? temp - dp : null, gust: getal(c.wind_gusts_10m), moon: maanFactor(nuLokaal) };
+      return { tijd: nuLokaal, ms: nuUtc, cloud: getal(c.cloud_cover), visibility: getal(c.visibility), precip: getal(c.precipitation), code: getal(c.weather_code),
+        humidity: rhNu, spread: temp !== null && dp !== null ? temp - dp : null, gust: getal(c.wind_gusts_10m), moon: maanFactor(nuUtc) };
     }
     function segmenten() {
       const is = h.is_day, uit = []; let begin = null;
@@ -137,14 +142,16 @@
       return uit;
     }
     function nachtGrenzen(s, vanafMs) {
-      let start = naarUTC(h.time[s.begin], tz), eind = naarUTC(h.time[s.eind], tz) + 3600000;
-      if (!Number.isFinite(start) || !Number.isFinite(eind)) return null;
-      const zonOnder = (day.sunset || []).map(t => naarUTC(t, tz)).filter(Number.isFinite).filter(ms => ms >= start - 12 * 3600000 && ms <= start + 3600000).sort((a, b) => b - a)[0];
-      const zonOp = (day.sunrise || []).map(t => naarUTC(t, tz)).filter(Number.isFinite).filter(ms => ms >= eind - 2 * 3600000 && ms <= eind + 4 * 3600000).sort((a, b) => a - b)[0];
+      let start = providerInstant(h.time[s.begin]);
+      const laatsteMs = providerInstant(h.time[s.eind]), bronDag = d.daily || {};
+      if (!Number.isFinite(start) || !Number.isFinite(laatsteMs)) return null;
+      let eind = laatsteMs + 3600000;
+      const zonOnder = (bronDag.sunset || []).map(providerInstant).filter(Number.isFinite).filter(ms => ms >= start - 12 * 3600000 && ms <= start + 3600000).sort((a, b) => b - a)[0];
+      const zonOp = (bronDag.sunrise || []).map(providerInstant).filter(Number.isFinite).filter(ms => ms >= eind - 2 * 3600000 && ms <= eind + 4 * 3600000).sort((a, b) => a - b)[0];
       if (Number.isFinite(zonOnder)) start = zonOnder;
       if (Number.isFinite(zonOp)) eind = zonOp;
       if (Number.isFinite(vanafMs)) start = Math.max(start, vanafMs);
-      return eind > start ? { start, eind } : null;
+      return eind > start ? { start, eind, zonOp } : null;
     }
     function maanInfo(s, vanafMs) {
       const grens = nachtGrenzen(s, vanafMs); if (!grens) return null;
@@ -156,15 +163,15 @@
     }
     /* De zichtbare vensterzin, met dezelfde stappen als de app na het tekenen
        van de rij (presentatielaag, finale correctheidslaag). */
-    function vensterZin(venster, horizon, zichtbaar) {
+    function vensterZin(venster, horizon, zichtbaar, vensterUtc) {
       const sr = V.hhmmIso(day.sunrise && day.sunrise[horizon + 1]);
       const avondDatum = Array.isArray(day.time) ? day.time[horizon] : null, zonsondergang = Array.isArray(day.sunset) ? day.sunset[horizon] : null;
-      const nachtDatum = G.nachtVensterStartDatum(venster, avondDatum, zonsondergang);
-      const opties = { zonsopkomst: sr, actief: !!actief && horizon === 0, nuTijd: V.hhmmIso(nuLokaal), nuDatumTijd: nuLokaal, nachtDatum, tijdzone: tz, nuEpochMs: klokMs };
+      const nachtDatum = vensterUtc ? null : G.nachtVensterStartDatum(venster, avondDatum, zonsondergang);
+      const opties = { zonsopkomst: sr, actief: !!actief && horizon === 0, nuTijd: V.hhmmIso(nuLokaal), nuDatumTijd: nuLokaal, nachtDatum, tijdzone: tz, nuEpochMs: klokMs, vensterUtc, uurTekst: ms => naarLokaal(ms, tz) };
       let lokaal = V.corrigeerNachtVensterBron(venster, horizon, zichtbaar, opties);
       const geen = /^Geen (?:gunstig|goed) kijkvenster door (.+?)[.!?]*$/i.exec(String(lokaal || "").trim());
       if (geen) lokaal = G.nachtAdvies(zichtbaar, geen[1]);
-      return G.nachtVensterTijdsvorm(lokaal, { horizonDagen: horizon, nuDatumTijd: opties.nuDatumTijd, nachtDatum: opties.nachtDatum, tijdzone: opties.tijdzone, nuEpochMs: opties.nuEpochMs });
+      return vensterUtc ? lokaal : G.nachtVensterTijdsvorm(lokaal, { horizonDagen: horizon, nuDatumTijd: opties.nuDatumTijd, nachtDatum: opties.nachtDatum, tijdzone: opties.tijdzone, nuEpochMs: opties.nuEpochMs });
     }
 
     const stukken = segmenten().filter(s => s.eind >= i0), uit = [];
@@ -174,44 +181,46 @@
       const rijen = [];
       if (actueel) rijen.push(actueleRij());
       const vanaf = actueel ? Math.max(i0 + 1, s.begin) : s.begin;
-      for (let i = vanaf; i <= s.eind; i++) { const r = uurRij(i); if (r.ms >= nuUtc) rijen.push(r); }
+      for (let i = vanaf; i <= s.eind; i++) { const r = uurRij(i); if (Number.isFinite(r.ms) && r.ms >= nuUtc) rijen.push(r); }
       if (!rijen.length) continue;
       const eerste = rijen[0], laatste = rijen[rijen.length - 1];
-      const bronHorizon = S.nachtSegmentHorizon(eerste.tijd, laatste.tijd, nuLokaal, actueel);
+      const van = actueel ? nuLokaal : lokaal(eerste.tijd), tot = laatste === eerste ? van : lokaal(laatste.tijd);
+      const bronHorizon = S.nachtSegmentHorizon(van, tot, nuLokaal, actueel);
       if (bronHorizon === null) continue;
       const a = S.nachtzichtScore(rijen), mi = maanInfo(s, actueel ? nuUtc : null), zon = nachtGrenzen(s, null);
-      let venster;
+      let venster, vensterUtc;
       if (!a.genoeg) venster = "Geen betrouwbare zichtscore";
       else if (a.beste) {
         const bs = a.beste[0], be = a.beste[a.beste.length - 1];
         const eindIndex = h.time.indexOf(be.tijd), volgende = eindIndex >= 0 && h.time[eindIndex + 1] ? h.time[eindIndex + 1] : null;
-        venster = "Beste periode " + (actueel && bs === eerste ? nuLokaal.slice(11, 16) : providerLokaal(bs.tijd, d, tz).slice(11, 16))
-          + "–" + (volgende ? providerLokaal(volgende, d, tz) : providerLokaal(be.tijd, d, tz)).slice(11, 16);
+        vensterUtc = { begin: bs.ms, eind: volgende ? providerInstant(volgende) : be.ms, zonOp: zon?.zonOp };
+        venster = "Beste periode " + (actueel && bs === eerste ? nuLokaal.slice(11, 16) : lokaal(bs.tijd).slice(11, 16))
+          + "–" + lokaal(volgende || be.tijd).slice(11, 16);
       } else venster = T.geenZichtvensterZin(a.redenen).replace(/Geen goed zichtvenster/g, "Geen gunstig kijkvenster");
       /* De presentatielaag houdt de rijvolgorde als ondergrens voor de horizon. */
       const horizon = Math.max(uit.length, bronHorizon);
       const zichtbaar = a.genoeg ? Math.round(a.score) : null;
       const oordeel = V.nachtAdviesMetHorizon(zichtbaar === null ? "Onvoldoende data" : V.nachtOordeelGetoond(zichtbaar), horizon);
-      const zin = vensterZin(venster, horizon, zichtbaar);
+      const zin = vensterZin(venster, horizon, zichtbaar, vensterUtc);
       const tijden = /(\d{2}:\d{2})[–-](\d{2}:\d{2})/.exec(zin), nuTot = /nu tot (\d{2}:\d{2})/.exec(zin);
       const goed = r => getal(r.cloud) !== null && r.cloud < 35 && getal(r.visibility) !== null && r.visibility >= 8000
         && (getal(r.precip) || 0) < 0.05 && !isMist(r.code) && !isNat(r.code) && Math.max(0, Math.min(1, getal(r.moon) || 0)) < 0.2;
       uit.push({
         index: uit.length, horizon,
-        label: actueel || bronHorizon === 0 ? "vannacht" : labelDag(eerste.tijd) + " op " + labelDag(laatste.tijd),
+        label: actueel || bronHorizon === 0 ? "vannacht" : labelDag(van) + " op " + labelDag(tot),
         score: a.genoeg ? a.score : null, scoreTekst: zichtbaar === null ? "–" : zichtbaar + "/10",
         oordeel, zin,
         venster: tijden ? { van: tijden[1], tot: tijden[2], nu: false } : nuTot ? { van: "nu", tot: nuTot[1], nu: true } : null,
         redenen: a.genoeg ? a.redenen.slice() : [], reden: a.genoeg ? T.opsomming(a.redenen) : "onvoldoende data",
         bewolking: a.genoeg ? a.gemBewolking : null, zicht: a.genoeg ? a.gemZicht : null,
         maan: mi, zonOnder: zon ? naarLokaal(zon.start, tz) : null, zonOp: zon ? naarLokaal(zon.eind, tz) : null,
-        uren: rijen.map(r => ({ tijd: (r === eerste && actueel ? nuLokaal : providerLokaal(r.tijd, d, tz)).slice(11, 16), bewolking: getal(r.cloud), maanOp: (getal(r.moon) || 0) > 0, goed: goed(r) }))
+        uren: rijen.map(r => ({ tijd: (r === eerste && actueel ? nuLokaal : lokaal(r.tijd)).slice(11, 16), bewolking: getal(r.cloud), maanOp: (getal(r.moon) || 0) > 0, goed: goed(r) }))
       });
     }
     /* Na middernacht heten de lopende nacht en de volgende nacht allebei
        "vannacht"; de app noemt de lopende nacht dan "nu" en de volgende nacht
        naar het dagpaar (herstelNachtlabels in mobile-truth-ux-20260828.js). */
-    const dagen = d.daily || {};
+    const dagen = lokaleData.daily || {};
     for (let i = 1; i < uit.length; i++) {
       if (uit[i - 1].label.toLowerCase() !== uit[i].label.toLowerCase()) continue;
       if (i === 1) uit[0].label = "nu";
@@ -321,7 +330,12 @@
     };
   }
 
-  const kern = { nachten, maanOverzicht, maanStand, hoofdfasen, faseMoment, naarUTC, naarLokaal, lokaleDatum, lokaleTijd, DAGEN };
+  function maanTijdenOpVolgorde(m) {
+    return [{ type: "op", tijd: m.op, ms: m.opMs }, { type: "onder", tijd: m.onder, ms: m.onderMs }]
+      .filter(e => Number.isFinite(e.ms)).sort((a, b) => a.ms - b.ms);
+  }
+
+  const kern = { nachten, maanOverzicht, maanTijdenOpVolgorde, maanStand, hoofdfasen, faseMoment, naarUTC, naarLokaal, lokaleDatum, lokaleTijd, DAGEN };
   if (typeof module === "object" && module.exports) module.exports = kern;
   wereld.WeatherNowNachtzichtKern = kern;
 })(typeof globalThis !== "undefined" ? globalThis : this);

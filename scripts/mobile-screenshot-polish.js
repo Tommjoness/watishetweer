@@ -19,6 +19,15 @@ function datumVerschuif(datum,dagen){
   return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
 }
 
+/* De presentatielaag vergelijkt lokale kalenderdagen en kloktijden. Bewaar
+   de originele providerwaarden voor de astronomische nachtgrenzen. */
+function nachtDagdataLokaal(data, lokaal) {
+  const dag = data && data.daily;
+  if (!dag || !Array.isArray(dag.sunrise) || !Array.isArray(dag.sunset)) return data;
+  const tijd = t => t ? lokaal(t) : t;
+  return {...data, daily: {...dag, sunrise: dag.sunrise.map(tijd), sunset: dag.sunset.map(tijd)}};
+}
+
 /* Open-Meteo daily begint normaal op de huidige lokale kalenderdag. Tussen
    middernacht en zonsopkomst hoort de actieve nacht echter bij de zonsondergang
    van de vorige dag. De canonieke renderer koppelt sunset[d] aan sunrise[d+1]
@@ -147,19 +156,27 @@ function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
   const m=/^Beste periode:?\s+(\d{2}:\d{2})[–-](\d{2}:\d{2})$/i.exec(t);if(!m)return t;
   const start=m[1],rawEind=m[2],startMin=minuutVanTijd(start),rawEindMin=minuutVanTijd(rawEind);if(startMin===null||rawEindMin===null)return t;
   const zon=String(opties.zonsopkomst||""),zonMin=minuutVanTijd(zon);
-  let eind=rawEind===zon?rawEind:tijdVanMinuut(rawEindMin-60);
-  let eindLijn=opTijdlijn(minuutVanTijd(eind),startMin);
-  const zonLijn=opTijdlijn(zonMin,startMin);
+  const utc=opties.vensterUtc, bekend=Number.isFinite(utc?.begin)&&Number.isFinite(utc?.eind);
+  const minuut=bekend?60000:1, beginLijn=bekend?utc.begin:startMin;
+  const zonLijn=bekend?(Number.isFinite(utc.zonOp)?utc.zonOp:null):opTijdlijn(zonMin,startMin);
+  let eindLijn, eind;
+  if(bekend){
+    eindLijn=utc.eind===zonLijn?utc.eind:utc.eind-60*minuut;
+    eind=opties.uurTekst(eindLijn);
+  }else{
+    eind=rawEind===zon?rawEind:tijdVanMinuut(rawEindMin-60);
+    eindLijn=opTijdlijn(minuutVanTijd(eind),startMin);
+  }
   /* Contract nachtvenster: het getoonde venster duurt minstens twee uur. De detectie
      (MIN_VENSTER_RIJEN, drie uurpunten) telt echte uurpunten en is daarom
      wintertijd-veilig. Hier vangen we alleen af dat het afkappen op de zonsopkomst
      een venster onder de twee uur laat. De klok-minuten zelf zijn geen maat in de
      herhaalde nacht-uur van de wintertijd, dus er is geen algemene klokcontrole. */
   if(zonLijn!==null&&eindLijn!==null&&eindLijn>zonLijn){
-    eind=zon;eindLijn=zonLijn;
-    if(!(h===0&&opties.actief)&&eindLijn-startMin<120)return "Geen gunstig kijkvenster.";
+    eind=bekend?opties.uurTekst(zonLijn):zon;eindLijn=zonLijn;
+    if(!(h===0&&opties.actief)&&eindLijn-beginLijn<120*minuut)return "Geen gunstig kijkvenster.";
   }
-  if(eindLijn===null||eindLijn<=startMin)return "Geen gunstig kijkvenster.";
+  if(eindLijn===null||eindLijn<=beginLijn)return "Geen gunstig kijkvenster.";
 
   if(h!==null&&h>=3){
     const a=dagdeelVanUur(start),b=dagdeelVanUur(eind);if(!a||!b)return relatief?"Relatief beste periode.":"Beste periode.";
@@ -168,9 +185,9 @@ function corrigeerNachtVensterBron(tekst,horizonDagen,score,opties={}){
     return (h>=5?"Waarschijnlijk beste periode ":"Beste periode ")+deel+".";
   }
 
-  const nu=minuutVanTijd(opties.nuTijd),nuLijn=opTijdlijn(nu,startMin);
+  const nuLijn=bekend?getal(opties.nuEpochMs):opTijdlijn(minuutVanTijd(opties.nuTijd),startMin);
   const label=relatief?"Relatief beste periode":"Beste periode";
-  if(h===0&&nuLijn!==null&&nuLijn>=startMin&&nuLijn<eindLijn)return label+": nu tot "+eind+".";
+  if(h===0&&nuLijn!==null&&nuLijn>=beginLijn&&nuLijn<eindLijn)return label+": nu tot "+eind+".";
   if(h===0&&nuLijn!==null&&nuLijn>=eindLijn)return label+" was "+start+"–"+eind+".";
   return label+": "+start+"–"+eind+".";
 }
@@ -235,7 +252,9 @@ function verbeterNachtzicht(data,nuLokaal,actief){
       const delen=String(advies.textContent||"").split(/\s+·\s+/),venster=nachtVensterTekst(advies.textContent,vensterEl&&vensterEl.textContent);
       const oordeel=zichtbaar===null?(delen[0]||advies.textContent):nachtOordeelGetoond(zichtbaar),hoofd=nachtAdviesMetHorizon(oordeel,horizon);
       const sr=Array.isArray(day.sunrise)?hhmmIso(day.sunrise[horizon+1]):null;
-      const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal)}):"";
+      const data=vensterEl?.dataset, begin=getal(data?.vensterBegin), eind=getal(data?.vensterEind);
+      const tijdOpties=begin!==null&&eind!==null?{vensterUtc:{begin,eind,zonOp:getal(data.vensterZonop)},uurTekst:naarLokaal,nuEpochMs:uurNuMs()}:{};
+      const detail=venster?corrigeerNachtVensterBron(venster,horizon,zichtbaar,{zonsopkomst:sr,actief:!!actief&&horizon===0,nuTijd:hhmmIso(nuLokaal),...tijdOpties}):"";
       advies.innerHTML='<span class="nachtoordeel">'+esc(hoofd)+'</span>';
       if(detail&&vensterLos)vensterEl.textContent=detail;
       else if(detail)advies.insertAdjacentHTML("beforeend",'<span class="nachtvenster">'+esc(detail)+'</span>');
@@ -351,7 +370,7 @@ function structureerBronnen(){
 const api={
   maanFaseUitBeschrijving,maanFaseSvgV2,pollenEenheid,pollenKop,nachtOordeelGetoond,
   nachtBalkPercentageGetoond,nachtHorizonIndex,nachtLabelVarianten,nachtAdviesMetHorizon,nachtzichtCompactAantal,
-  corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,normaliseerNachtDagdata,
+  corrigeerNachtVensterBron,dagdeelVanUur,datumVerschuif,nachtDagdataLokaal,normaliseerNachtDagdata,
   nachtIsActiefNu,formatteerMaanTekst,nachtMetaDelen,nachtVensterTekst,structureerBronnen
 };
 if(typeof module!=="undefined"&&module.exports)module.exports=api;
@@ -364,9 +383,9 @@ structureerBronnen();
 const basisNachten=nachten;
 nachten=function(){
   const origineel=S.d,nu=typeof weatherNowActueleLokaleTijd==="function"?weatherNowActueleLokaleTijd():(origineel&&origineel.current&&origineel.current.time)||"";
-  const actief=nachtIsActiefNu(origineel,nu),renderData=normaliseerNachtDagdata(origineel,nu);
-  try{if(renderData!==origineel)S.d=renderData;basisNachten();}
-  finally{S.d=origineel;}
+  const lokaal=nachtDagdataLokaal(origineel,weatherNowLokaleTijd);
+  const actief=nachtIsActiefNu(lokaal,nu),renderData=normaliseerNachtDagdata(lokaal,nu);
+  basisNachten();
   verbeterNachtzicht(renderData,nu,actief);
   werkNachtzichtCompactBij();
   structureerBronnen();

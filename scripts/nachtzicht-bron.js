@@ -30,6 +30,7 @@ const MAAN_EIND = "  return {fase:f,ill:ill,naam:naam};\n}";
 
 const BESTAND = {
   senior: path.join(ROOT, "senior-correctness-v2.js"),
+  interpretatie: path.join(ROOT, "interpretatie-engine.js"),
   polish: path.join(__dirname, "mobile-screenshot-polish.js"),
   presentatie: path.join(__dirname, "apply-final-presentation-consistency.js"),
   finaal: path.join(__dirname, "final-global-correctness-20260901.js"),
@@ -98,21 +99,30 @@ function presentatieBron() {
   const tekst = lees(BESTAND.polish), mod = require(BESTAND.polish), build = lees(BESTAND.presentatie);
   const helpers = ["const getal=", "const begrens=", "const hhmmIso="].map(b => regel(tekst, b, "polish " + b));
   const los = ["function minuutVanTijd(", "function tijdVanMinuut(", "function opTijdlijn("].map(b => regel(tekst, b, "polish " + b));
-  const fns = ["nachtOordeelGetoond", "nachtAdviesMetHorizon", "dagdeelVanUur", "datumVerschuif", "normaliseerNachtDagdata", "nachtIsActiefNu"].map(n => functie(mod, n, "polish"));
+  const fns = ["nachtOordeelGetoond", "nachtAdviesMetHorizon", "dagdeelVanUur", "datumVerschuif", "nachtDagdataLokaal", "normaliseerNachtDagdata", "nachtIsActiefNu"].map(n => functie(mod, n, "polish"));
   let venster = functie(mod, "corrigeerNachtVensterBron", "polish");
   /* apply-unified-weather-truth.js: "Geen goed zichtvenster" heet in de app "Geen gunstig kijkvenster". */
   if (!/Geen goed zichtvenster/.test(venster)) throw new Error("Nachtzicht-bron: zichtvenster-tekst in corrigeerNachtVensterBron ontbreekt.");
   venster = venster.replace(/Geen goed zichtvenster/g, "Geen gunstig kijkvenster");
   /* apply-final-presentation-consistency.js: scorebewuste zin zonder venster. */
   venster = vervangEenmaal(venster, letterlijk(build, "NACHT_OUD"), letterlijk(build, "NACHT_NIEUW"), "NACHT_OUD in corrigeerNachtVensterBron");
-  return `(function(){\n"use strict";\n${helpers.join("\n")}\n${los.join("\n")}\n${fns.join("\n")}\n${venster}\nreturn {nachtOordeelGetoond,nachtAdviesMetHorizon,corrigeerNachtVensterBron,hhmmIso,normaliseerNachtDagdata,nachtIsActiefNu};\n})()`;
+  return `(function(){\n"use strict";\n${helpers.join("\n")}\n${los.join("\n")}\n${fns.join("\n")}\n${venster}\nreturn {nachtOordeelGetoond,nachtAdviesMetHorizon,corrigeerNachtVensterBron,hhmmIso,nachtDagdataLokaal,normaliseerNachtDagdata,nachtIsActiefNu};\n})()`;
+}
+
+/* Dezelfde providerconversie als uurInstant() in de weerapp, zonder de
+   overige forecastinterpretatie in de informatiepagina's te bundelen. */
+function providerTijdBron() {
+  const tekst = lees(BESTAND.interpretatie);
+  const helpers = ["getal", "parseLokaleTijd", "providerNaarMinuten", "uurInstantMs"]
+    .map(naam => knip(tekst, "function " + naam + "(", "\n}", naam));
+  return `(function(){\n"use strict";\n${helpers.join("\n")}\nreturn uurInstantMs;\n})()`;
 }
 
 function kernBron(indexHtml) {
   return zonMaanBron(indexHtml)
     + lees(BESTAND.grammatica) + "\n"
     + lees(BESTAND.finaal) + "\n"
-    + `globalThis.WeatherNowNachtzichtProductie={senior:${seniorBron()},presentatie:${presentatieBron()}};\n`
+    + `globalThis.WeatherNowNachtzichtProductie={senior:${seniorBron()},presentatie:${presentatieBron()},providerInstant:${providerTijdBron()}};\n`
     + lees(BESTAND.kern);
 }
 

@@ -240,6 +240,44 @@ server.listen(0, async () => {
     }
     console.log("Maanpagina UX: vier breedtes, themakeuze, systeem-Auto, disclosure, overflow en foutvrij geslaagd.");
 
+    const url = `http://127.0.0.1:${port}/maan/`;
+    const overgang = await browser.newPage();
+    try {
+      await overgang.clock.setFixedTime(new Date("2026-10-25T12:00:00Z"));
+      await overgang.addInitScript(() => {
+        Object.defineProperty(window, "WeatherNowNachtzichtKern", {
+          configurable: true,
+          set(kern) {
+            Object.defineProperty(window, "WeatherNowNachtzichtKern", { value: kern, configurable: true });
+            const origineel = kern.maanOverzicht;
+            kern.maanOverzicht = (...args) => {
+              const opMs = Date.parse("2026-10-25T00:55:00Z"), onderMs = Date.parse("2026-10-25T01:05:00Z");
+              return { ...origineel(...args), opMs, onderMs, op: kern.naarLokaal(opMs, args[3]), onder: kern.naarLokaal(onderMs, args[3]) };
+            };
+          }
+        });
+      });
+      await overgang.goto(url);
+      assert.strictEqual(await overgang.locator("#nz-maan-tijden").textContent(), "Maanopkomst 02:55\u00a0· Maanondergang 02:05",
+        "eerste 02:55 (CEST) komt vóór tweede 02:05 (CET)");
+    } finally { await overgang.close(); }
+
+    const zonderJs = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const pagina = await zonderJs.newPage();
+      await pagina.goto(url);
+      const statisch = await pagina.locator(".nz-maan noscript").innerText();
+      const stempel = /momentopname van (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC/.exec(statisch);
+      assert(stempel, "no-JS toont de datum en tijd van de build");
+      const m = K.maanOverzicht(Date.parse(stempel[1] + "T" + stempel[2] + "Z"), 52.1009, 5.1801, "Europe/Amsterdam");
+      const tijdregel = [["op", m.opMs, m.op], ["onder", m.onderMs, m.onder]]
+        .filter(([, ms]) => ms !== null).sort((a, b) => a[1] - b[1]).map(([type, , tijd]) => type + " " + tijd).join(", ");
+      assert(statisch.includes("Voor De Bilt op " + m.datum + ": " + (tijdregel || "geen opkomst of ondergang op deze dag")));
+      assert.strictEqual(await pagina.locator("noscript li").count(), 4, "hoofdfasen staan ook in de no-JS-weergave");
+    } finally { await zonderJs.close(); }
+    console.log("Maanpagina: dubbel klokuur chronologisch en gedateerde momentopname zonder JavaScript.");
+
+
   } finally {
     await browser.close();
     server.close();
