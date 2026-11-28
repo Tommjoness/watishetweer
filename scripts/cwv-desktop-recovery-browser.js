@@ -179,7 +179,12 @@ async function run(){
               const lijn=[...svg.querySelectorAll("line")].find(e=>/carmine/i.test(e.getAttribute("stroke")||""));
               if(!lijn)return {ontbreekt:true};
               const x=Number(lijn.getAttribute("x1")),x0=g.x(0);
-              return {x,x0,pl:g.pl,uren:(x0-x)/g.cw,tot:(naarUTC(g.TI[0])-Date.now())/3600000,aanloop:!!svg.querySelector("line[data-nu-aanloop]")};
+              const aanloop=svg.querySelector("line[data-nu-aanloop]");
+              const y1=Number(aanloop?.getAttribute("y1")),y2=Number(aanloop?.getAttribute("y2"));
+              const onderAanloop=new DOMPoint((x+x0)/2,((y1+y2)/2+g.pt+g.ih)/2);
+              return {x,x0,pl:g.pl,uren:(x0-x)/g.cw,tot:(naarUTC(g.TI[0])-Date.now())/3600000,
+                aanloop:!!aanloop&&getComputedStyle(aanloop).strokeDasharray==="none",
+                aanloopVlak:[...svg.querySelectorAll('path[data-desktop-temp-area="1"]')].some(vlak=>vlak.isPointInFill(onderAanloop))};
             })(),
             sha:document.querySelector('meta[name="weather-build-sha"]')?.content
           };
@@ -225,7 +230,7 @@ async function run(){
           if(nl.tot>0){
             assert(Math.abs(nl.uren-nl.tot)<0.02,"nu-lijn staat niet op het echte moment vóór het eerste uur: "+JSON.stringify({route,width,nl}));
             assert(nl.x>=nl.pl-0.5,"nu-lijn valt buiten de grafiek: "+JSON.stringify({route,width,nl}));
-            assert(nl.aanloop,"nu-stip is niet verbonden met het eerste uurpunt: "+JSON.stringify({route,width,nl}));
+            assert(nl.aanloop&&nl.aanloopVlak,"tussen nu en het eerste uur ontbreekt de doorgetrokken lijn of vulling: "+JSON.stringify({route,width,nl}));
           }
           const g=result.geometry;
           /* Desktop-layoutronde (A+B+C): het uurpaneel eindigt op één lijn met de detailstrook onder de grafiek (lijstOnderkant in final-desktop-ui-runtime-20260902.js);
