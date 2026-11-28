@@ -141,19 +141,34 @@ function meet(){
         const laagste=Math.min(...m.zichtbaar),hoogste=Math.max(...m.zichtbaar);
         assert.equal(laagste,reeks.laagste,label+": de testreeks moet het dal van "+reeks.laagste+"° in beeld hebben");
         /* Iedere astijd: stip en eigen temperatuur. */
-        const selectielijnVrij=await page.evaluate(()=>{
-          const svg=document.getElementById("chart"),kruis=svg.querySelector("#scrub > line");
-          const uitsparingen=svg.querySelector("#wiw-scrub-labelmask path[fill=black]");
-          const labels=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getClientRects().length
-            &&/^(?:(?:nu|now)(?:\s|$)|[-−]?\d+°$)/i.test(e.textContent.trim()));
-          const uurLijnen=S.geo.T.flatMap((v,i)=>Number.isFinite(v)?[S.geo.x(i)]:[]);
-          return kruis&&getComputedStyle(kruis).maskImage.includes("#wiw-scrub-labelmask")&&labels.length>0&&labels.every(e=>{
-            const {x,y,width,height}=e.getBBox();
-            return uurLijnen.filter(lijnX=>lijnX>=x&&lijnX<=x+width).every(lijnX=>
-              uitsparingen?.isPointInFill(new DOMPoint(lijnX,y))&&uitsparingen.isPointInFill(new DOMPoint(lijnX,y+height)));
-          });
+        const selectieFouten=await page.evaluate(async()=>{
+          const svg=document.getElementById("chart"),hit=svg.querySelector("#hit"),scrub=svg.querySelector("#scrub");
+          const nu=[...svg.querySelectorAll("text")].find(el=>/^nu\s/.test(el.textContent.trim()));
+          const g=S.geo,r=svg.getBoundingClientRect(),schaal=r.width/g.W;
+          const fouten=[];
+          const plek=()=>[nu.getAttribute("x"),nu.getAttribute("y")].join(",");
+          scrub.style.display="none";
+          await Promise.resolve();
+          const begin=plek(),rustvak=nu.getBBox();
+          for(const [i,v] of g.T.entries()){
+            if(!Number.isFinite(v))continue;
+            hit.dispatchEvent(new PointerEvent("pointermove",{clientX:r.left+g.x(i)*schaal,clientY:r.top+g.pt*schaal,pointerType:"mouse"}));
+            await Promise.resolve();
+            const kruis=svg.querySelector("#scrub > line"),stijl=kruis&&getComputedStyle(kruis);
+            if(!nu?.getClientRects().length||!stijl||stijl.maskImage!=="none"||stijl.strokeDasharray!=="none"){
+              fouten.push(i);continue;
+            }
+            const b=nu.getBBox(),x=Number(kruis.getAttribute("x1"));
+            if(x>=b.x&&x<=b.x+b.width&&Number(kruis.getAttribute("y1"))<b.y+b.height&&Number(kruis.getAttribute("y2"))>b.y)fouten.push(i);
+            if((x<rustvak.x-3||x>rustvak.x+rustvak.width+3)&&plek()!==begin)fouten.push(i);
+          }
+          hit.dispatchEvent(new PointerEvent("pointerleave",{pointerType:"mouse"}));
+          scrub.style.display="none";
+          await Promise.resolve();
+          if(plek()!==begin)fouten.push("rustpositie");
+          return fouten;
         });
-        assert(selectielijnVrij,label+": de selectielijn houdt de temperatuurtekst vrij");
+        assert.deepEqual(selectieFouten,[],label+": het nu-label wijkt alleen uit voor de doorlopende selectielijn en keert terug");
         /* Desktop: het nu-label houdt rechts van de rode lijn een vrije plek. */
         if(w>=1100){
           const nu=await page.evaluate(()=>{const svg=document.getElementById("chart"),t=[...svg.querySelectorAll("text")].filter(e=>!e.closest("#scrub")&&e.getAttribute("display")!=="none"&&e.getClientRects().length);
@@ -220,5 +235,5 @@ function meet(){
       }finally{await context.close();}
     }
   }finally{await browser.close();server.close();}
-  console.log("Grafiekstippen OK op 390, 820, 1366 en 1920px voor twee reeksen; de selectielijn houdt temperatuurtekst vrij en op desktop staat het nu-label rechts.");
+  console.log("Grafiekstippen OK op 390, 820, 1366 en 1920px voor twee reeksen; het nu-label ontwijkt de doorlopende selectielijn en staat op desktop rechts van de nu-lijn.");
 })().catch(e=>{console.error(e);server.close();process.exit(1);});

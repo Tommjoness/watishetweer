@@ -1476,7 +1476,19 @@ function bewakingsBox(el){
   const s=Number(m[3]);return {x:Number(m[1]),y:Number(m[2]),width:24*s,height:24*s};
 }
 let grafiekTekstmeter;
-function grafiekTekstVak(el){
+function grafiekTekstVak(el,meetLabel=false){
+  if(meetLabel){
+    /* Gebruik het getekende SVG-label: een fallbackfont kan in canvas
+       afwijken. Meet eenmaal per render, zonder layoutread bij uurselectie. */
+    const r=el.getBoundingClientRect(),m=el.getScreenCTM();
+    if(m&&r.width&&r.height){
+      const omgekeerd=m.inverse();
+      const begin=new DOMPoint(r.left,r.top).matrixTransform(omgekeerd);
+      const einde=new DOMPoint(r.right,r.bottom).matrixTransform(omgekeerd);
+      const rand=(Number(el.getAttribute("stroke-width"))||0)/2;
+      return {x:begin.x-rand,y:begin.y-rand,width:einde.x-begin.x+2*rand,height:einde.y-begin.y+2*rand};
+    }
+  }
   const fallback=bewakingsBox(el);
   grafiekTekstmeter??=document.createElement("canvas").getContext("2d");
   if(!fallback||!grafiekTekstmeter)return fallback;
@@ -1492,19 +1504,57 @@ function grafiekTekstVak(el){
   const onder=Math.max(m.fontBoundingBoxDescent||fs*0.22,m.actualBoundingBoxDescent);
   return {x:links-1,y:y-boven-1,width:rechts-links+2,height:boven+onder+2};
 }
-/* Pauzeer de selectielijn rond de tekst. Zo kan het geselecteerde uur
-   wisselen zonder dat de temperatuurcijfers telkens verspringen. */
-function schermGrafiekLabelsAf(svg,vakken,W,H){
-  let masker=svg.querySelector("#wiw-scrub-labelmask");
-  if(!masker){
-    masker=document.createElementNS(SVG_NS,"mask");
-    masker.id="wiw-scrub-labelmask";
-    masker.setAttribute("maskUnits","userSpaceOnUse");
-    svg.prepend(masker);
-  }
-  for(const [naam,waarde] of Object.entries({x:0,y:0,width:W,height:H})) masker.setAttribute(naam,waarde);
-  const uitsparingen=vakken.filter(Boolean).map(({x,y,width,height})=>`M${x-3},${y-3}h${width+6}v${height+6}h-${width+6}Z`);
-  masker.innerHTML=`<path fill="white" d="M0,0H${W}V${H}H0Z"/><path fill="black" d="${uitsparingen.join("")}"/>`;
+/* De uurselectie vervangt de inhoud van #scrub, zonder opnieuw te tekenen.
+   Gebruik bij iedere selectie hetzelfde vertrekpunt, zodat het label terugkeert
+   zodra de oorspronkelijke plek weer vrij is. */
+let nuSelectieObserver;
+function plaatsNuBijSelectie(svg,nu,box,geometrie,botst){
+  nuSelectieObserver?.disconnect();
+  const scrub=svg.querySelector("#scrub");
+  if(!scrub||!nu||!box)return;
+  const oorsprong=["x","y"].map(a=>Number(nu.getAttribute(a)));
+  const kandidaten=bewakingsKandidaten(box,geometrie.stip);
+  const langsPlot=Array.from({length:Math.ceil(geometrie.H/4)},(_,i)=>i*4).flatMap(d=>[-d,d]);
+  const vasteKolommen=[0,geometrie.rood+6-box.x,geometrie.rood-6-box.width-box.x];
+  const vakOp=(dx,dy)=>({...box,x:box.x+dx,y:box.y+dy});
+  const vrijInGrafiek=(dx,dy)=>!botst(vakOp(dx,dy));
+  /* Leg de rustpositie vast vóór de selectielijn meespeelt. Anders kan een
+     extra kandidaat naast de selectielijn een al vrije rustpositie verdringen. */
+  const basis=vrijInGrafiek(0,0)?[0,0]:kiesVrijeVerschuiving(vrijInGrafiek,kandidaten)
+    ||kiesVrijeVerschuiving(vrijInGrafiek,langsPlot.flatMap(dy=>vasteKolommen.map(dx=>[dx,dy])));
+  let laatsteLijn;
+  const plaats=()=>{
+    const lijn=zichtbaarInGrafiek(scrub,svg)?scrub.querySelector(":scope > line"):null;
+    const [x,y1,y2]=lijn?["x1","y1","y2"].map(a=>Number(lijn.getAttribute(a))):[NaN,NaN,NaN];
+    const sleutel=`${x},${y1},${y2}`;
+    if(sleutel===laatsteLijn)return;
+    laatsteLijn=sleutel;
+    const lijnVak={x:x-0.5,y:Math.min(y1,y2),width:1,height:Math.abs(y2-y1)};
+    let plek=basis;
+    if(plek&&rechthoekenBotsen(vakOp(...plek),lijnVak)){
+      const vrij=(dx,dy)=>vrijInGrafiek(dx,dy)&&!rechthoekenBotsen(vakOp(dx,dy),lijnVak);
+      /* De tekstrand zit al in box. Laat één eenheid vrij naast de lijn. */
+      const naast=[x+1.5-box.x,x-1.5-box.width-box.x];
+      const afstand=([dx,dy])=>Math.hypot(dx-basis[0],dy-basis[1]);
+      const opties=[[0,0],...kandidaten,...naast.flatMap(dx=>langsPlot.slice(0,16).map(dy=>[dx,dy+basis[1]]))]
+        .sort((a,b)=>afstand(a)-afstand(b));
+      plek=kiesVrijeVerschuiving(vrij,opties);
+      if(!plek){
+        const kolommen=[...vasteKolommen,...naast];
+        plek=kiesVrijeVerschuiving(vrij,langsPlot.flatMap(dy=>kolommen.map(dx=>[dx,dy])));
+      }
+    }
+    if(!plek){nu.setAttribute("display","none");nu.setAttribute("data-now-select-verborgen","1");return;}
+    nu.removeAttribute("display");
+    nu.removeAttribute("data-now-select-verborgen");
+    for(const [i,a] of ["x","y"].entries()){
+      const v=String(oorsprong[i]+plek[i]);
+      if(nu.getAttribute(a)!==v)nu.setAttribute(a,v);
+    }
+  };
+  nuSelectieObserver=new MutationObserver(plaats);
+  nuSelectieObserver.observe(scrub,{childList:true,attributes:true,attributeFilter:["style"]});
+  plaats();
 }
 /* Punten langs een pad met M/L/C-commando's (zoals monotoonPad ze maakt):
    de vloeiende lijn zoals ze getekend is, niet de rechte stukken ertussen. */
@@ -1574,8 +1624,8 @@ function bewaakGrafiekLabels(){
   const isNu=el=>(desktop?/^(?:nu|now)(?:\s|$)/i:/^nu(?:\s|$)/i).test(String(el.textContent||"").trim());
   const isTijd=el=>el.hasAttribute("data-temp-time")||el.hasAttribute("data-mobile-temp-marker-time");
   const beweegbaar=teksten.filter(el=>isWaarde(el)||isNu(el));
-  const maskerTeksten=teksten.filter(el=>/^(?:(?:nu|now)(?:\s|$)|[-−]?\d+°$)/i.test(el.textContent.trim()));
-  if(!beweegbaar.length&&!maskerTeksten.length)return;
+  const nuTekst=teksten.find(el=>/^(?:nu|now)(?:\s|$)/i.test(el.textContent.trim()));
+  if(!beweegbaar.length&&!nuTekst)return;
   const lijnen=getekendeLijnPunten(svg);
   const cirkels=[...svg.querySelectorAll("circle")].filter(el=>!el.closest("#scrub")&&Number(el.getAttribute("r"))>0&&zichtbaarInGrafiek(el,svg))
     .map(el=>({el,x:Number(el.getAttribute("cx")),y:Number(el.getAttribute("cy")),r:Number(el.getAttribute("r"))})).filter(c=>[c.x,c.y,c.r].every(Number.isFinite));
@@ -1626,10 +1676,11 @@ function bewaakGrafiekLabels(){
   const asKolom=g.M&&typeof g.x==="function"&&Number.isFinite(Number(g.x(0)))?Number(g.x(0))-4:null;
   const botst=(el,box,groep)=>{
     if(!box)return false;
-    const negeerNu=!isNu(el)&&(desktop||isAnker(el)||isMarkering(el));
+    const betreftNu=el===nuTekst||isNu(el);
+    const negeerNu=!betreftNu&&(desktop||isAnker(el)||isMarkering(el));
     if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
-    if(desktop&&isNu(el)&&nuLijnen.length&&box.x<nuLijnen[0].x+4)return true;
-    if(asKolom!==null&&!isNu(el)&&box.x<asKolom)return true;
+    if(desktop&&betreftNu&&nuLijnen.length&&box.x<nuLijnen[0].x+4)return true;
+    if(asKolom!==null&&!betreftNu&&box.x<asKolom)return true;
     if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
     if(staven.some(s=>rechthoekenBotsen(box,s,1)))return true;
@@ -1718,34 +1769,13 @@ function bewaakGrafiekLabels(){
       vakken.set(t,verschoven(vakken.get(t),keuzeXY[0],keuzeXY[1]));
     });
   });
-  if(desktop){
-    /* Plaats nu als laatste. Meet de tekst met het effectieve lettertype
-       en de huidige vertaling, zonder de SVG-layout op te vragen. */
-    teksten.forEach(el=>vakken.set(el,zichtbaarInGrafiek(el,svg)?grafiekTekstVak(el):null));
-    const nu=beweegbaar.find(isNu);
-    if(nu&&nuLijnen.length){
-      const box=vakken.get(nu),links=nuLijnen[0].x+8;
-      const vrij=(dx,dy)=>!botst(nu,verschoven(box,dx,dy),[nu]);
-      const startY=nuStip?nuStip.y-box.height/2:box.y;
-      const dx=links-box.x;
-      const langsLijn=Array.from({length:Math.ceil(H/4)},(_,i)=>i*4)
-        .flatMap(stap=>[-stap,stap].map(d=>[dx,startY+d-box.y]));
-      const zet=kiesVrijeVerschuiving(vrij,langsLijn.slice(0,18))
-        ||kiesVrijeVerschuiving((dx,dy)=>Math.abs(dy)<=38&&vrij(dx,dy),bewakingsKandidaten(box,nuStip))
-        ||kiesVrijeVerschuiving(vrij,langsLijn);
-      if(zet){
-        for(const [i,as] of ["x","y"].entries())nu.setAttribute(as,String(Number(nu.getAttribute(as))+zet[i]));
-        vakken.set(nu,verschoven(box,...zet));
-      }else{
-        nu.setAttribute("display","none");
-        nu.setAttribute("data-label-verborgen","botsing");
-        vakken.set(nu,null);
-      }
-    }
+  if(nuTekst&&nuLijnen.length){
+    /* Gebruik het effectieve font en de eindposities van de andere labels. */
+    teksten.forEach(el=>vakken.set(el,el.isConnected&&zichtbaarInGrafiek(el,svg)?grafiekTekstVak(el,el===nuTekst):null));
+    plaatsNuBijSelectie(svg,nuTekst,vakken.get(nuTekst),
+      {H,stip:nuStip,rood:nuLijnen[0].x+0.75},
+      vak=>botst(nuTekst,vak,[nuTekst]));
   }
-  const maskerVakken=maskerTeksten.filter(el=>el.isConnected&&zichtbaarInGrafiek(el,svg))
-    .map(el=>desktop?vakken.get(el):grafiekTekstVak(el));
-  schermGrafiekLabelsAf(svg,maskerVakken,W,H);
 }
 
 let uurAsToken=0;
@@ -1771,6 +1801,9 @@ function polishNuLabel(){
   const desktop=window.innerWidth>=1100;
   const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>(desktop?/^(?:nu|now)(?:\s|$)/i:/^nu(?:\s|$)/i).test(String(el.textContent||"").trim()));
   if(!nu)return;
+  if(nu.hasAttribute("data-now-select-verborgen")){
+    nu.removeAttribute("display");nu.removeAttribute("data-now-select-verborgen");
+  }
   nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
   if(!mobiel()||window.innerWidth>430){
     /* Desktop en tablet: "nu 20°" staat links van de rode nu-lijn, naast de

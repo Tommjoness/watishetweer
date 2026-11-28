@@ -136,7 +136,6 @@ const EERSTVOLGEND_OUD='if(r.marker){const m=document.createElement("span");m.cl
 const EERSTVOLGEND_NIEUW='if(r.marker&&r.marker!=="Eerstvolgend"){const m=document.createElement("span");m.className="wiw-hour-marker";m.textContent=r.marker;tijd.appendChild(m);}';
 const STYLE=`
 ${STYLE_MARKER}
-#chart:has(> mask#wiw-scrub-labelmask) #scrub > line:first-of-type{mask:url(#wiw-scrub-labelmask)}
 /* Gerichte desktopafronding op basis van productiebeelden. Mobiele layout,
    data-interpretatie en providerlogica blijven onaangeraakt. */
 @media(min-width:1100px){
