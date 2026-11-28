@@ -140,6 +140,7 @@ ${STYLE_MARKER}
    data-interpretatie en providerlogica blijven onaangeraakt. */
 @media(min-width:1100px){
   #chart line[data-nu-aanloop]{stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1}
+  #chart:has(> mask#wiw-scrub-labelmask) #scrub > line:first-of-type{mask:url(#wiw-scrub-labelmask)}
   #place{
     display:flex!important;
     justify-content:center!important;

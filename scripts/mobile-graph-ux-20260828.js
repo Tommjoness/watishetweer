@@ -1475,6 +1475,37 @@ function bewakingsBox(el){
   if(!m)return null;
   const s=Number(m[3]);return {x:Number(m[1]),y:Number(m[2]),width:24*s,height:24*s};
 }
+let desktopTekstmeter;
+function desktopTekstVak(el){
+  const fallback=bewakingsBox(el);
+  desktopTekstmeter??=document.createElement("canvas").getContext("2d");
+  if(!fallback||!desktopTekstmeter)return fallback;
+  const stijl=getComputedStyle(el),fs=parseFloat(stijl.fontSize);
+  desktopTekstmeter.font=`${stijl.fontStyle} ${stijl.fontWeight} ${stijl.fontSize} ${stijl.fontFamily}`;
+  const m=desktopTekstmeter.measureText(el.textContent.trim());
+  const anker=el.getAttribute("text-anchor"),x=Number(el.getAttribute("x"));
+  const basis=x-(anker==="middle"?m.width/2:anker==="end"?m.width:0);
+  const y=Number(el.getAttribute("y"))+(Number(el.getAttribute("dy"))||0);
+  const links=Math.min(basis,basis-m.actualBoundingBoxLeft);
+  const rechts=Math.max(basis+m.width,basis+m.actualBoundingBoxRight);
+  const boven=Math.max(m.fontBoundingBoxAscent||fs,m.actualBoundingBoxAscent);
+  const onder=Math.max(m.fontBoundingBoxDescent||fs*0.22,m.actualBoundingBoxDescent);
+  return {x:links-1,y:y-boven-1,width:rechts-links+2,height:boven+onder+2};
+}
+/* Pauzeer de selectielijn rond de tekst. Zo kan het geselecteerde uur
+   wisselen zonder dat de temperatuurcijfers telkens verspringen. */
+function schermGrafiekLabelsAf(svg,vakken,W,H){
+  let masker=svg.querySelector("#wiw-scrub-labelmask");
+  if(!masker){
+    masker=document.createElementNS(SVG_NS,"mask");
+    masker.id="wiw-scrub-labelmask";
+    masker.setAttribute("maskUnits","userSpaceOnUse");
+    svg.prepend(masker);
+  }
+  for(const [naam,waarde] of Object.entries({x:0,y:0,width:W,height:H})) masker.setAttribute(naam,waarde);
+  const uitsparingen=vakken.filter(Boolean).map(({x,y,width,height})=>`M${x-3},${y-3}h${width+6}v${height+6}h-${width+6}Z`);
+  masker.innerHTML=`<path fill="white" d="M0,0H${W}V${H}H0Z"/><path fill="black" d="${uitsparingen.join("")}"/>`;
+}
 /* Punten langs een pad met M/L/C-commando's (zoals monotoonPad ze maakt):
    de vloeiende lijn zoals ze getekend is, niet de rechte stukken ertussen. */
 function padPunten(d,stappen=10){
@@ -1539,7 +1570,8 @@ function bewaakGrafiekLabels(){
   if(!Number.isFinite(W)||!Number.isFinite(H)||W<=0||H<=0)return;
   const teksten=[...svg.querySelectorAll("text")].filter(el=>!el.closest("#scrub")&&String(el.textContent||"").trim()&&zichtbaarInGrafiek(el,svg));
   const isWaarde=el=>/Bodoni/i.test(String(el.getAttribute("font-family")||""))&&/^-?\d+°$/.test(String(el.textContent||"").trim());
-  const isNu=el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim());
+  const desktop=window.innerWidth>=1100;
+  const isNu=el=>(desktop?/^(?:nu|now)(?:\s|$)/i:/^nu(?:\s|$)/i).test(String(el.textContent||"").trim());
   const isTijd=el=>el.hasAttribute("data-temp-time")||el.hasAttribute("data-mobile-temp-marker-time");
   const beweegbaar=teksten.filter(el=>isWaarde(el)||isNu(el));
   if(!beweegbaar.length)return;
@@ -1593,8 +1625,9 @@ function bewaakGrafiekLabels(){
   const asKolom=g.M&&typeof g.x==="function"&&Number.isFinite(Number(g.x(0)))?Number(g.x(0))-4:null;
   const botst=(el,box,groep)=>{
     if(!box)return false;
-    const negeerNu=!isNu(el)&&(isAnker(el)||isMarkering(el));
+    const negeerNu=!isNu(el)&&(desktop||isAnker(el)||isMarkering(el));
     if(box.x<1||box.x+box.width>W-1||box.y<1||box.y+box.height>H-1)return true;
+    if(desktop&&isNu(el)&&nuLijnen.length&&box.x<nuLijnen[0].x+4)return true;
     if(asKolom!==null&&!isNu(el)&&box.x<asKolom)return true;
     if(lijnen.some(p=>lijnRaaktTekstBox(p,box,1)))return true;
     if(stipVakken.some(s=>rechthoekenBotsen(box,s,0.5)))return true;
@@ -1609,7 +1642,7 @@ function bewaakGrafiekLabels(){
   const rang=el=>isNu(el)?2:isAnker(el)?0:isMarkering(el)?1:3;
   beweegbaar.sort((a,b)=>rang(a)-rang(b)).forEach(el=>{
     /* "nu 20°" links van de nu-lijn is al vrij geplaatst (polishNuLabel). */
-    if(isNu(el)&&el.hasAttribute("data-now-left"))return;
+    if(isNu(el)&&(desktop||el.hasAttribute("data-now-left")))return;
     const tijd=tijdBij.get(el)||null,groep=tijd?[el,tijd]:[el];
     const box=vakken.get(el),tbox=tijd?vakken.get(tijd):null;
     if(!box)return;
@@ -1684,6 +1717,32 @@ function bewaakGrafiekLabels(){
       vakken.set(t,verschoven(vakken.get(t),keuzeXY[0],keuzeXY[1]));
     });
   });
+  if(desktop){
+    /* Plaats nu als laatste. Meet de tekst met het effectieve lettertype
+       en de huidige vertaling, zonder de SVG-layout op te vragen. */
+    teksten.forEach(el=>vakken.set(el,zichtbaarInGrafiek(el,svg)?desktopTekstVak(el):null));
+    const nu=beweegbaar.find(isNu);
+    if(nu&&nuLijnen.length){
+      const box=vakken.get(nu),links=nuLijnen[0].x+8;
+      const vrij=(dx,dy)=>!botst(nu,verschoven(box,dx,dy),[nu]);
+      const startY=nuStip?nuStip.y-box.height/2:box.y;
+      const dx=links-box.x;
+      const langsLijn=Array.from({length:Math.ceil(H/4)},(_,i)=>i*4)
+        .flatMap(stap=>[-stap,stap].map(d=>[dx,startY+d-box.y]));
+      const zet=kiesVrijeVerschuiving(vrij,langsLijn.slice(0,18))
+        ||kiesVrijeVerschuiving((dx,dy)=>Math.abs(dy)<=38&&vrij(dx,dy),bewakingsKandidaten(box,nuStip))
+        ||kiesVrijeVerschuiving(vrij,langsLijn);
+      if(zet){
+        for(const [i,as] of ["x","y"].entries())nu.setAttribute(as,String(Number(nu.getAttribute(as))+zet[i]));
+        vakken.set(nu,verschoven(box,...zet));
+      }else{
+        nu.setAttribute("display","none");
+        nu.setAttribute("data-label-verborgen","botsing");
+        vakken.set(nu,null);
+      }
+    }
+    schermGrafiekLabelsAf(svg,beweegbaar.map(el=>vakken.get(el)),W,H);
+  }
 }
 
 let uurAsToken=0;
@@ -1706,7 +1765,8 @@ function planUurAsHerstel(){
 
 function polishNuLabel(){
   const svg=document.getElementById("chart");if(!svg)return;
-  const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>/^nu(?:\s|$)/i.test(String(el.textContent||"").trim()));
+  const desktop=window.innerWidth>=1100;
+  const teksten=[...svg.querySelectorAll("text")],nu=teksten.find(el=>(desktop?/^(?:nu|now)(?:\s|$)/i:/^nu(?:\s|$)/i).test(String(el.textContent||"").trim()));
   if(!nu)return;
   nu.removeAttribute("data-now-collision-adjusted");nu.removeAttribute("dy");
   if(!mobiel()||window.innerWidth>430){
@@ -1727,6 +1787,11 @@ function polishNuLabel(){
     /* Een asgetal dat eerder voor het nu-label wegging, komt bij iedere
        nieuwe plaatsing eerst terug. */
     svg.querySelectorAll("text[data-as-wijkt-voor-nu]").forEach(el=>{el.removeAttribute("display");el.removeAttribute("data-as-wijkt-voor-nu");});
+    if(desktop&&Number.isFinite(lx)){
+      nu.removeAttribute("display");nu.removeAttribute("data-label-verborgen");
+      nu.setAttribute("x",String(lx+8));nu.setAttribute("text-anchor","start");
+      return;
+    }
     if(Number.isFinite(lx)&&Number.isFinite(sy)){
       /* Een asgetal op (bijna) dezelfde hoogte als de nu-stip maakt plaats voor
          het nu-label, in plaats van dat het label wegschuift: "nu 16°" direct
